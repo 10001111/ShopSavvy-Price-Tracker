@@ -37,6 +37,7 @@ NO price tracking, NO wishlists, NO alerts yet - just the foundation.
    - `PORT` (default: 3000)
    - `JWT_SECRET` (default: `dev-secret`)
    - `APP_BASE_URL` (default: `http://localhost:3000`)
+   - `BESTBUY_API_KEY` (required for product search)
 3. Start the server: `npm run dev`
 
 The verification link prints to the server console in development.
