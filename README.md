@@ -33,11 +33,67 @@ NO price tracking, NO wishlists, NO alerts yet - just the foundation.
 ## Run Locally
 
 1. Install dependencies: `npm install`
-2. (Optional) Set environment variables:
+2. (Optional) Set up HTTPS: `npm run setup:https`
+   - Generates self-signed certificates for `https://localhost:3000`
+   - Certificates are stored in `./certs/` (auto-detected by the server)
+   - Your browser will show a security warning (click "Advanced" → "Proceed to localhost")
+3. (Optional) Set environment variables in `.env` file:
    - `PORT` (default: 3000)
    - `JWT_SECRET` (default: `dev-secret`)
-   - `APP_BASE_URL` (default: `http://localhost:3000`)
-   - `BESTBUY_API_KEY` (required for product search)
-3. Start the server: `npm run dev`
+   - `APP_BASE_URL` (default: auto-detected based on HTTPS setup)
+   - `BESTBUY_API_KEY` (optional - for real product search)
+   - **`SUPABASE_URL`** (required for Google login - see SUPABASE-SETUP.md)
+   - **`SUPABASE_ANON_KEY`** (required for Google login - see SUPABASE-SETUP.md)
+   - `MERCADO_LIBRE_CLIENT_ID` (optional - for Mercado Libre login)
+   - `MERCADO_LIBRE_CLIENT_SECRET` (optional - for Mercado Libre login)
+4. Start the server: `npm run dev`
+   - Opens at `https://localhost:3000` if certs exist
+   - Falls back to `http://localhost:3000` if not
 
 The verification link prints to the server console in development.
+
+## Google Login Setup
+
+To enable "Login with Google" button:
+
+1. **Get Supabase credentials** from your Supabase dashboard:
+   - Project URL (e.g., `https://xxxxx.supabase.co`)
+   - Anon/Public Key
+
+2. **Add to `.env` file**:
+   ```env
+   SUPABASE_URL=https://your-project.supabase.co
+   SUPABASE_ANON_KEY=your-anon-key-here
+   ```
+
+3. **Restart server**: `npm run dev`
+
+4. **Test**: Visit `/login` and click "Continue with Google"
+
+📖 **Full setup guide**: See `SUPABASE-SETUP.md` for detailed instructions
+
+## Features
+
+✅ User authentication (register, login, logout)  
+✅ **Google OAuth login via Supabase** 🆕  
+✅ Email verification  
+✅ Password reset functionality  
+✅ OAuth callback endpoint (ready for Mercado Libre, Google, etc.)  
+✅ Product search with Best Buy API integration  
+✅ Secure HTTPS with self-signed certificates  
+✅ SQLite database  
+✅ JWT token-based sessions  
+
+## API Endpoints
+
+Your server includes these API endpoints:
+
+- `GET /api/health` - Health check
+- `GET /api/products` - Get all demo products
+- `GET /api/products/search?q=laptop` - Search products
+- `GET /api/products/:sku` - Get single product by SKU
+- `GET /api/me` - Get current user (requires authentication)
+
+## Learning Resources
+
+If you want to learn more about how this project works, check the `/docs` folder for tutorials and explanations about callbacks, APIs, and HTTPS.
