@@ -7,14 +7,23 @@ const fs = require("fs");
 const path = require("path");
 const https = require("https");
 const dotenv = require("dotenv");
-const { initDb } = require("./db");
 
-// Load .env from project root (one level up from src/)
+// Load .env FIRST before checking any environment variables
 dotenv.config({ path: path.join(__dirname, "..", ".env") });
 
-// Debug: Log Supabase config status
+const { initDb } = require("./db");
+const supabaseDb = require("./supabase-db");
+
+// Use Supabase for cloud storage, SQLite as fallback
+const USE_SUPABASE = Boolean(process.env.SUPABASE_URL && process.env.SUPABASE_ANON_KEY);
+console.log("[Config] Database:", USE_SUPABASE ? "Supabase (cloud)" : "SQLite (local)");
+
+// Debug: Log config status
 console.log("[Config] SUPABASE_URL:", process.env.SUPABASE_URL ? "✓ Set" : "✗ Not set");
 console.log("[Config] SUPABASE_ANON_KEY:", process.env.SUPABASE_ANON_KEY ? "✓ Set" : "✗ Not set");
+console.log("[Config] AMAZON_ACCESS_KEY:", process.env.AMAZON_ACCESS_KEY ? "✓ Set" : "✗ Not set");
+console.log("[Config] AMAZON_SECRET_KEY:", process.env.AMAZON_SECRET_KEY ? "✓ Set" : "✗ Not set");
+console.log("[Config] AMAZON_PARTNER_TAG:", process.env.AMAZON_PARTNER_TAG ? "✓ Set" : "✗ Not set");
 
 const PORT = process.env.PORT || 3000;
 const JWT_SECRET = process.env.JWT_SECRET || "dev-secret";
@@ -27,6 +36,16 @@ const ML_SITE = process.env.MERCADO_LIBRE_SITE || "MLM"; // Default to Mexico
 // Cache for ML access token
 let mlAccessToken = null;
 let mlTokenExpiry = 0;
+
+// Amazon Product Advertising API Configuration
+const AMAZON_ACCESS_KEY = process.env.AMAZON_ACCESS_KEY || "";
+const AMAZON_SECRET_KEY = process.env.AMAZON_SECRET_KEY || "";
+const AMAZON_PARTNER_TAG = process.env.AMAZON_PARTNER_TAG || "";
+const AMAZON_REGION = process.env.AMAZON_REGION || "us-east-1";
+const AMAZON_HOST = AMAZON_REGION === "us-east-1" ? "webservices.amazon.com" : `webservices.amazon.${AMAZON_REGION.split("-")[0]}`;
+
+// Check if Amazon PA-API is configured
+const HAS_AMAZON_API = Boolean(AMAZON_ACCESS_KEY && AMAZON_SECRET_KEY && AMAZON_PARTNER_TAG);
 
 // Auto-detect certs in ./certs directory (supports both PEM and PFX)
 const defaultKeyPath = path.join(__dirname, "..", "certs", "localhost-key.pem");
@@ -116,7 +135,15 @@ const translations = {
     passwordTooShort: "Password must be at least 8 characters.",
 
     // Misc
-    priceTracker: "Price Tracker"
+    priceTracker: "Price Tracker",
+
+    // Source selector
+    source: "Source",
+    sourceAll: "All Stores",
+    sourceMercadoLibre: "Mercado Libre",
+    sourceAmazon: "Amazon",
+    fromAmazon: "Amazon",
+    fromMercadoLibre: "Mercado Libre"
   },
   es: {
     // Header
@@ -180,7 +207,15 @@ const translations = {
     passwordTooShort: "La contraseña debe tener al menos 8 caracteres.",
 
     // Misc
-    priceTracker: "Rastreador de Precios"
+    priceTracker: "Rastreador de Precios",
+
+    // Source selector
+    source: "Fuente",
+    sourceAll: "Todas las Tiendas",
+    sourceMercadoLibre: "Mercado Libre",
+    sourceAmazon: "Amazon",
+    fromAmazon: "Amazon",
+    fromMercadoLibre: "Mercado Libre"
   }
 };
 
@@ -190,74 +225,974 @@ function t(lang, key) {
 
 function renderPage(title, body, extraHead = "", isLoggedIn = false, userEmail = "", lang = "en") {
   const otherLang = lang === "en" ? "es" : "en";
-  const langLabel = lang === "en" ? "ES" : "EN";
+  const langLabel = lang === "en" ? "Español" : "English";
   const langFlag = lang === "en" ? "🇪🇸" : "🇺🇸";
 
   return `<!doctype html>
 <html lang="${lang}">
   <head>
     <meta charset="utf-8" />
-    <meta name="viewport" content="width=device-width, initial-scale=1" />
+    <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no" />
     <title>${title} | ShopSavvy</title>
+    <link rel="preconnect" href="https://fonts.googleapis.com">
+    <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+    <link href="https://fonts.googleapis.com/css2?family=Inter:wght@300;400;500;600;700&display=swap" rel="stylesheet">
     <style>
-      * { box-sizing: border-box; }
-      body { font-family: Arial, sans-serif; margin: 0; padding: 0; }
-      .site-header { background: #1a73e8; color: white; padding: 12px 24px; display: flex; justify-content: space-between; align-items: center; }
-      .site-header a { color: white; text-decoration: none; }
-      .site-header .logo { font-size: 20px; font-weight: bold; }
-      .site-header .nav { display: flex; gap: 16px; align-items: center; }
-      .site-header .nav a { padding: 6px 12px; border-radius: 4px; }
-      .site-header .nav a:hover { background: rgba(255,255,255,0.1); }
-      .site-header .user-email { font-size: 13px; opacity: 0.9; }
-      .site-header form { display: inline; }
-      .site-header button { background: rgba(255,255,255,0.2); border: none; color: white; padding: 6px 12px; border-radius: 4px; cursor: pointer; font-size: 14px; }
-      .site-header button:hover { background: rgba(255,255,255,0.3); }
-      .lang-switch { background: rgba(255,255,255,0.15); border: 1px solid rgba(255,255,255,0.3); padding: 4px 10px; border-radius: 4px; font-size: 13px; display: flex; align-items: center; gap: 4px; }
-      .lang-switch:hover { background: rgba(255,255,255,0.25); }
-      .main-content { padding: 24px 40px; max-width: 900px; }
-      form { display: grid; gap: 12px; max-width: 360px; }
-      input { padding: 8px; font-size: 14px; }
-      button { padding: 8px 12px; font-size: 14px; }
-      .muted { color: #666; }
-      .error { color: #b00020; }
-      .success { color: #0a7a2f; }
-      .search-wrapper { max-width: 900px; }
-      .search-form { max-width: 900px; grid-template-columns: 1fr 1fr; }
-      .search-form .full { grid-column: 1 / -1; }
-      .filters { display: grid; gap: 12px; grid-template-columns: repeat(auto-fit, minmax(220px, 1fr)); }
-      .range-row { display: grid; gap: 8px; }
-      .results { margin-top: 24px; }
-      .grid { display: grid; gap: 16px; grid-template-columns: repeat(auto-fit, minmax(220px, 1fr)); }
-      .card { border: 1px solid #ddd; padding: 12px; border-radius: 8px; display: grid; gap: 8px; }
-      .card img { width: 100%; height: 180px; object-fit: contain; background: #fafafa; border-radius: 6px; }
-      .card-title { font-weight: 600; }
-      .card-meta { font-size: 13px; color: #555; }
-      .card-seller { font-size: 12px; color: #888; }
-      .pagination { display: flex; gap: 12px; align-items: center; margin-top: 16px; }
-      .pagination a { text-decoration: none; }
-      .notice { background: #fff7e6; border: 1px solid #ffd591; padding: 12px; border-radius: 8px; margin-bottom: 16px; }
-      .breadcrumb { font-size: 13px; color: #666; margin-bottom: 16px; }
-      .breadcrumb a { color: #1a73e8; text-decoration: none; }
-      .product-detail { display: grid; gap: 20px; grid-template-columns: minmax(220px, 1fr) 2fr; align-items: start; }
-      .product-image { width: 100%; max-width: 420px; height: auto; border-radius: 12px; background: #fafafa; }
-      .product-price { font-size: 28px; font-weight: 700; margin: 12px 0; }
-      .retailer-badge { display: inline-flex; align-items: center; gap: 8px; padding: 6px 10px; border-radius: 999px; background: #f2f2f2; font-size: 13px; }
-      .retailer-badge img { height: 20px; width: auto; }
-      .action-button { display: inline-block; padding: 10px 16px; background: #1a73e8; color: #fff; border-radius: 8px; text-decoration: none; border: none; cursor: pointer; font-size: 14px; }
-      .action-button:hover { background: #1557b0; }
-      @media (max-width: 720px) {
-        .main-content { padding: 16px; }
-        .product-detail { grid-template-columns: 1fr; }
-        .site-header { flex-direction: column; gap: 12px; }
+      /* ==========================================
+         LAYOUT LOUNGE - Mobile-First Design
+         ========================================== */
+
+      :root {
+        --bg-primary: #faf9f7;
+        --bg-secondary: #ffffff;
+        --bg-accent: #f5f3f0;
+        --text-primary: #2d2a26;
+        --text-secondary: #6b6560;
+        --text-muted: #9a958f;
+        --accent-primary: #7c6a5d;
+        --accent-hover: #5d4e43;
+        --accent-light: #d4ccc4;
+        --border-color: #e8e4df;
+        --shadow-soft: 0 2px 8px rgba(45, 42, 38, 0.06);
+        --shadow-medium: 0 4px 20px rgba(45, 42, 38, 0.08);
+        --shadow-hover: 0 8px 30px rgba(45, 42, 38, 0.12);
+        --radius-sm: 8px;
+        --radius-md: 12px;
+        --radius-lg: 16px;
+        --radius-full: 9999px;
+        --mobile-padding: 16px;
+      }
+
+      * {
+        box-sizing: border-box;
+        margin: 0;
+        padding: 0;
+      }
+
+      html {
+        font-size: 16px;
+        -webkit-text-size-adjust: 100%;
+      }
+
+      body {
+        font-family: 'Inter', -apple-system, BlinkMacSystemFont, sans-serif;
+        background: var(--bg-primary);
+        color: var(--text-primary);
+        line-height: 1.6;
+        min-height: 100vh;
+        min-height: -webkit-fill-available;
+        display: flex;
+        flex-direction: column;
+        overflow-x: hidden;
+      }
+
+      /* ==========================================
+         HEADER - Mobile First
+         ========================================== */
+      .site-header {
+        background: rgba(255, 255, 255, 0.95);
+        padding: 12px var(--mobile-padding);
+        display: flex;
+        flex-direction: column;
+        align-items: stretch;
+        gap: 10px;
+        border-bottom: 1px solid var(--border-color);
+        position: sticky;
+        top: 0;
+        z-index: 100;
+        backdrop-filter: blur(10px);
+        -webkit-backdrop-filter: blur(10px);
+      }
+
+      .header-top {
+        display: flex;
+        justify-content: space-between;
+        align-items: center;
+        width: 100%;
+      }
+
+      .site-header .logo {
+        font-size: 18px;
+        font-weight: 700;
+        color: var(--text-primary);
+        text-decoration: none;
+        letter-spacing: -0.5px;
+        flex-shrink: 0;
+      }
+
+      .lang-switch {
+        display: inline-flex;
+        align-items: center;
+        gap: 4px;
+        background: var(--bg-accent);
+        border: 1px solid var(--border-color);
+        padding: 6px 10px;
+        border-radius: var(--radius-full);
+        font-size: 11px;
+        font-weight: 500;
+        color: var(--text-secondary);
+        text-decoration: none;
+        white-space: nowrap;
+        flex-shrink: 0;
+      }
+
+      .site-header .nav {
+        display: flex;
+        flex-direction: row;
+        flex-wrap: nowrap;
+        justify-content: stretch;
+        gap: 6px;
+        width: 100%;
+        overflow-x: auto;
+        -webkit-overflow-scrolling: touch;
+        scrollbar-width: none;
+        -ms-overflow-style: none;
+      }
+
+      .site-header .nav::-webkit-scrollbar {
+        display: none;
+      }
+
+      .site-header .nav a,
+      .site-header .nav span {
+        flex: 1;
+        min-width: 0;
+        color: var(--text-secondary);
+        text-decoration: none;
+        padding: 10px 12px;
+        border-radius: var(--radius-md);
+        font-weight: 500;
+        font-size: 13px;
+        background: var(--bg-accent);
+        text-align: center;
+        white-space: nowrap;
+        overflow: hidden;
+        text-overflow: ellipsis;
+      }
+
+      .site-header .nav a:hover {
+        background: var(--accent-primary);
+        color: white;
+      }
+
+      .site-header .user-email {
+        font-size: 11px;
+        color: var(--text-muted);
+        padding: 10px 12px;
+        background: var(--bg-accent);
+        border-radius: var(--radius-md);
+        max-width: 120px;
+        overflow: hidden;
+        text-overflow: ellipsis;
+        white-space: nowrap;
+        flex-shrink: 1;
+      }
+
+      .site-header form {
+        display: contents;
+      }
+
+      .site-header button {
+        flex: 1;
+        background: var(--accent-primary);
+        border: none;
+        color: white;
+        padding: 10px 12px;
+        border-radius: var(--radius-md);
+        cursor: pointer;
+        font-size: 13px;
+        font-weight: 500;
+        min-height: 44px;
+      }
+
+      /* ==========================================
+         MAIN CONTENT - Mobile First
+         ========================================== */
+      .main-content {
+        flex: 1;
+        padding: 20px var(--mobile-padding);
+        width: 100%;
+        max-width: 100%;
+        overflow-x: hidden;
+      }
+
+      /* ==========================================
+         TYPOGRAPHY - Mobile First
+         ========================================== */
+      h1 {
+        font-size: 22px;
+        font-weight: 700;
+        color: var(--text-primary);
+        letter-spacing: -0.5px;
+        margin-bottom: 8px;
+        line-height: 1.3;
+        word-wrap: break-word;
+      }
+
+      h2 {
+        font-size: 18px;
+        font-weight: 600;
+        color: var(--text-primary);
+      }
+
+      p {
+        color: var(--text-secondary);
+        font-size: 14px;
+        word-wrap: break-word;
+      }
+
+      .muted {
+        color: var(--text-muted);
+        font-size: 13px;
+      }
+
+      .error {
+        color: #c94a4a;
+        background: #fef2f2;
+        padding: 12px 14px;
+        border-radius: var(--radius-md);
+        font-size: 14px;
+        word-wrap: break-word;
+      }
+
+      .success {
+        color: #3d7a5a;
+        background: #f0fdf4;
+        padding: 12px 14px;
+        border-radius: var(--radius-md);
+        font-size: 14px;
+      }
+
+      /* ==========================================
+         FORMS - Mobile First
+         ========================================== */
+      form {
+        display: flex;
+        flex-direction: column;
+        gap: 14px;
+        width: 100%;
+        max-width: 100%;
+      }
+
+      label {
+        font-size: 13px;
+        font-weight: 500;
+        color: var(--text-secondary);
+        margin-bottom: 4px;
+        display: block;
+      }
+
+      input, select {
+        width: 100%;
+        padding: 12px 14px;
+        font-size: 16px;
+        border: 1px solid var(--border-color);
+        border-radius: var(--radius-md);
+        background: var(--bg-secondary);
+        color: var(--text-primary);
+        font-family: inherit;
+        -webkit-appearance: none;
+        appearance: none;
+      }
+
+      input:focus, select:focus {
+        outline: none;
+        border-color: var(--accent-primary);
+        box-shadow: 0 0 0 3px rgba(124, 106, 93, 0.1);
+      }
+
+      input[type="range"] {
+        padding: 0;
+        height: 6px;
+        border-radius: var(--radius-full);
+        background: var(--accent-light);
+        border: none;
+      }
+
+      input[type="range"]::-webkit-slider-thumb {
+        -webkit-appearance: none;
+        width: 22px;
+        height: 22px;
+        border-radius: 50%;
+        background: var(--accent-primary);
+        cursor: pointer;
+        box-shadow: var(--shadow-soft);
+      }
+
+      button, .action-button {
+        display: flex;
+        justify-content: center;
+        align-items: center;
+        width: 100%;
+        padding: 14px 20px;
+        background: var(--accent-primary);
+        color: white;
+        border: none;
+        border-radius: var(--radius-md);
+        font-size: 15px;
+        font-weight: 500;
+        cursor: pointer;
+        text-decoration: none;
+        text-align: center;
+        min-height: 48px;
+        -webkit-tap-highlight-color: transparent;
+      }
+
+      button:hover, .action-button:hover {
+        background: var(--accent-hover);
+      }
+
+      button:active, .action-button:active {
+        transform: scale(0.98);
+      }
+
+      .action-button.secondary {
+        background: var(--bg-secondary);
+        color: var(--text-primary);
+        border: 1px solid var(--border-color);
+      }
+
+      .action-button.secondary:hover {
+        background: var(--bg-accent);
+      }
+
+      /* ==========================================
+         SEARCH SECTION - Mobile First
+         ========================================== */
+      .search-wrapper {
+        width: 100%;
+      }
+
+      .tagline {
+        font-size: 14px;
+        color: var(--text-muted);
+        margin-bottom: 16px;
+        font-weight: 400;
+      }
+
+      .search-form {
+        background: var(--bg-secondary);
+        padding: 16px;
+        border-radius: var(--radius-lg);
+        box-shadow: var(--shadow-soft);
+        display: flex;
+        flex-direction: column;
+        gap: 14px;
+        max-width: 100%;
+      }
+
+      .search-form .full {
+        width: 100%;
+      }
+
+      .filters {
+        display: flex;
+        flex-direction: column;
+        gap: 14px;
+      }
+
+      .filters.full {
+        width: 100%;
+      }
+
+      .range-row {
+        display: flex;
+        flex-direction: column;
+        gap: 8px;
+        width: 100%;
+      }
+
+      .range-row label {
+        font-size: 12px;
+      }
+
+      /* ==========================================
+         PRODUCT GRID - Mobile First (Single Column)
+         ========================================== */
+      .results {
+        margin-top: 20px;
+      }
+
+      .grid {
+        display: flex;
+        flex-direction: column;
+        gap: 14px;
+      }
+
+      .card {
+        background: var(--bg-secondary);
+        padding: 14px;
+        border-radius: var(--radius-lg);
+        box-shadow: var(--shadow-soft);
+        display: flex;
+        flex-direction: column;
+        gap: 10px;
+        border: 1px solid transparent;
+      }
+
+      .card:active {
+        transform: scale(0.99);
+      }
+
+      .card img {
+        width: 100%;
+        height: 160px;
+        object-fit: contain;
+        background: var(--bg-accent);
+        border-radius: var(--radius-md);
+      }
+
+      .card-title {
+        font-weight: 600;
+        font-size: 14px;
+        color: var(--text-primary);
+        line-height: 1.4;
+        display: -webkit-box;
+        -webkit-line-clamp: 2;
+        -webkit-box-orient: vertical;
+        overflow: hidden;
+      }
+
+      .card-meta {
+        font-size: 16px;
+        font-weight: 600;
+        color: var(--accent-primary);
+      }
+
+      .card-seller {
+        font-size: 11px;
+        color: var(--text-muted);
+      }
+
+      /* Source badges */
+      .source-badge {
+        display: inline-block;
+        padding: 2px 8px;
+        border-radius: var(--radius-full);
+        font-size: 10px;
+        font-weight: 600;
+        text-transform: uppercase;
+        letter-spacing: 0.5px;
+        margin-left: 6px;
+        vertical-align: middle;
+      }
+
+      .source-badge.ml {
+        background: #ffe600;
+        color: #333;
+      }
+
+      .source-badge.amazon {
+        background: #ff9900;
+        color: #111;
+      }
+
+      .card a {
+        display: flex;
+        justify-content: center;
+        align-items: center;
+        padding: 12px 16px;
+        background: var(--bg-accent);
+        color: var(--text-primary);
+        text-decoration: none;
+        border-radius: var(--radius-md);
+        font-size: 14px;
+        font-weight: 500;
+        min-height: 44px;
+      }
+
+      .card a:active {
+        background: var(--accent-primary);
+        color: white;
+      }
+
+      /* ==========================================
+         PAGINATION - Mobile First (Stacked)
+         ========================================== */
+      .pagination {
+        display: flex;
+        flex-direction: column;
+        gap: 10px;
+        align-items: center;
+        margin-top: 20px;
+        padding: 16px 0;
+      }
+
+      .pagination a {
+        padding: 12px 20px;
+        background: var(--bg-secondary);
+        border: 1px solid var(--border-color);
+        border-radius: var(--radius-md);
+        text-decoration: none;
+        color: var(--text-primary);
+        font-weight: 500;
+        font-size: 14px;
+        min-height: 44px;
+        display: flex;
+        align-items: center;
+        justify-content: center;
+        width: 100%;
+      }
+
+      .pagination a:active {
+        background: var(--accent-primary);
+        color: white;
+      }
+
+      .pagination span {
+        color: var(--text-muted);
+        font-size: 13px;
+        order: -1;
+        padding: 8px 0;
+      }
+
+      /* ==========================================
+         NOTICES & ALERTS
+         ========================================== */
+      .notice {
+        background: linear-gradient(135deg, #fef7ed, #fdf4e7);
+        border: 1px solid #f5e6d3;
+        padding: 14px;
+        border-radius: var(--radius-md);
+        margin-bottom: 16px;
+        color: #8b6914;
+        font-size: 14px;
+        word-wrap: break-word;
+      }
+
+      .notice a {
+        color: var(--accent-primary);
+        font-weight: 500;
+      }
+
+      /* ==========================================
+         BREADCRUMB
+         ========================================== */
+      .breadcrumb {
+        font-size: 12px;
+        color: var(--text-muted);
+        margin-bottom: 14px;
+        display: flex;
+        flex-wrap: wrap;
+        align-items: center;
+        gap: 4px;
+      }
+
+      .breadcrumb a {
+        color: var(--accent-primary);
+        text-decoration: none;
+      }
+
+      /* ==========================================
+         PRODUCT DETAIL - Mobile First (Stacked)
+         ========================================== */
+      .product-detail {
+        display: flex;
+        flex-direction: column;
+        gap: 20px;
+      }
+
+      .product-image {
+        width: 100%;
+        max-width: 100%;
+        height: auto;
+        border-radius: var(--radius-lg);
+        background: var(--bg-secondary);
+        box-shadow: var(--shadow-soft);
+      }
+
+      .product-price {
+        font-size: 24px;
+        font-weight: 700;
+        color: var(--accent-primary);
+        margin: 10px 0;
+      }
+
+      .product-meta {
+        display: flex;
+        flex-wrap: wrap;
+        gap: 8px;
+        margin: 10px 0;
+      }
+
+      .condition {
+        background: #e8f5e9;
+        color: #2e7d32;
+        padding: 5px 10px;
+        border-radius: var(--radius-full);
+        font-size: 11px;
+        font-weight: 500;
+      }
+
+      .stock {
+        color: var(--text-muted);
+        font-size: 12px;
+        display: flex;
+        align-items: center;
+      }
+
+      .stock.out { color: #c94a4a; }
+
+      .seller-info {
+        margin: 10px 0;
+        font-size: 13px;
+        color: var(--text-secondary);
+        padding: 12px;
+        background: var(--bg-accent);
+        border-radius: var(--radius-md);
+        word-wrap: break-word;
+      }
+
+      .retailer-badge {
+        display: inline-flex;
+        align-items: center;
+        gap: 6px;
+        padding: 6px 12px;
+        border-radius: var(--radius-full);
+        background: var(--bg-accent);
+        font-size: 11px;
+        color: var(--text-secondary);
+      }
+
+      .retailer-badge img {
+        height: 16px;
+        width: auto;
+      }
+
+      .product-actions {
+        display: flex;
+        flex-direction: column;
+        gap: 10px;
+        margin-top: 14px;
+      }
+
+      /* ==========================================
+         PROFILE CARD
+         ========================================== */
+      .profile-card {
+        background: var(--bg-secondary);
+        padding: 20px;
+        border-radius: var(--radius-lg);
+        box-shadow: var(--shadow-soft);
+      }
+
+      .profile-card p {
+        margin: 8px 0;
+        font-size: 14px;
+        word-wrap: break-word;
+      }
+
+      /* ==========================================
+         GOOGLE LOGIN BUTTON
+         ========================================== */
+      #google-login-btn {
+        background: var(--bg-secondary) !important;
+        border: 1px solid var(--border-color) !important;
+        color: var(--text-primary) !important;
+        border-radius: var(--radius-md) !important;
+        padding: 14px 16px !important;
+        font-weight: 500 !important;
+        min-height: 48px !important;
+        width: 100% !important;
+        justify-content: center !important;
+      }
+
+      #google-login-btn:active {
+        background: var(--bg-accent) !important;
+      }
+
+      /* ==========================================
+         AUTH PAGES STYLING
+         ========================================== */
+      .auth-divider {
+        margin: 20px 0;
+        padding: 20px 0 0;
+        border-top: 1px solid var(--border-color);
+        text-align: center;
+      }
+
+      .auth-divider p {
+        color: var(--text-muted);
+        margin-bottom: 14px;
+        font-size: 13px;
+      }
+
+      /* ==========================================
+         SMALL PHONES (max-width: 374px)
+         ========================================== */
+      @media (max-width: 374px) {
+        :root {
+          --mobile-padding: 12px;
+        }
+
+        .site-header .logo {
+          font-size: 16px;
+        }
+
+        .lang-switch {
+          padding: 5px 8px;
+          font-size: 10px;
+        }
+
+        .site-header .nav a,
+        .site-header .nav span,
+        .site-header button {
+          padding: 8px 10px;
+          font-size: 12px;
+        }
+
+        h1 {
+          font-size: 20px;
+        }
+
+        .card-meta {
+          font-size: 15px;
+        }
+
+        .product-price {
+          font-size: 22px;
+        }
+      }
+
+      /* ==========================================
+         TABLET BREAKPOINT (min-width: 600px)
+         ========================================== */
+      @media (min-width: 600px) {
+        :root {
+          --mobile-padding: 24px;
+        }
+
+        .site-header {
+          flex-direction: row;
+          justify-content: space-between;
+          align-items: center;
+          padding: 14px 24px;
+        }
+
+        .header-top {
+          width: auto;
+        }
+
+        .site-header .nav {
+          width: auto;
+          flex-wrap: nowrap;
+          gap: 8px;
+        }
+
+        .site-header .nav a,
+        .site-header .nav span {
+          flex: none;
+          padding: 10px 16px;
+        }
+
+        .site-header .user-email {
+          max-width: 160px;
+        }
+
+        .site-header button {
+          flex: none;
+          width: auto;
+          padding: 10px 18px;
+        }
+
+        .main-content {
+          padding: 28px 24px;
+        }
+
+        h1 {
+          font-size: 26px;
+        }
+
+        .search-form {
+          padding: 24px;
+        }
+
+        .filters {
+          flex-direction: row;
+          flex-wrap: wrap;
+        }
+
+        .filters > .range-row {
+          flex: 1;
+          min-width: 160px;
+        }
+
+        .grid {
+          display: grid;
+          grid-template-columns: repeat(2, 1fr);
+          gap: 16px;
+        }
+
+        .card img {
+          height: 180px;
+        }
+
+        .pagination {
+          flex-direction: row;
+          justify-content: center;
+        }
+
+        .pagination span {
+          order: 0;
+        }
+
+        .pagination a {
+          width: auto;
+          min-width: 140px;
+        }
+      }
+
+      /* ==========================================
+         DESKTOP BREAKPOINT (min-width: 900px)
+         ========================================== */
+      @media (min-width: 900px) {
+        .site-header {
+          padding: 16px 40px;
+        }
+
+        .site-header .logo {
+          font-size: 22px;
+        }
+
+        .site-header .nav a {
+          padding: 10px 20px;
+          font-size: 14px;
+        }
+
+        .lang-switch {
+          padding: 8px 14px;
+          font-size: 12px;
+        }
+
+        .main-content {
+          padding: 40px;
+          max-width: 1100px;
+          margin: 0 auto;
+        }
+
+        h1 {
+          font-size: 30px;
+        }
+
+        .search-form {
+          padding: 28px;
+        }
+
+        .grid {
+          grid-template-columns: repeat(3, 1fr);
+          gap: 20px;
+        }
+
+        .card {
+          padding: 18px;
+        }
+
+        .card:hover {
+          box-shadow: var(--shadow-hover);
+          transform: translateY(-2px);
+        }
+
+        .card img {
+          height: 200px;
+        }
+
+        .card a:hover {
+          background: var(--accent-primary);
+          color: white;
+        }
+
+        .product-detail {
+          flex-direction: row;
+          gap: 36px;
+        }
+
+        .product-detail > *:first-child {
+          flex: 1;
+          max-width: 400px;
+        }
+
+        .product-detail > *:last-child {
+          flex: 1.2;
+        }
+
+        .product-price {
+          font-size: 32px;
+        }
+
+        .product-actions {
+          flex-direction: row;
+        }
+
+        .product-actions .action-button {
+          width: auto;
+          flex: 1;
+        }
+
+        button, .action-button {
+          width: auto;
+        }
+
+        form {
+          max-width: 420px;
+        }
+      }
+
+      /* ==========================================
+         LARGE DESKTOP (min-width: 1200px)
+         ========================================== */
+      @media (min-width: 1200px) {
+        .grid {
+          grid-template-columns: repeat(4, 1fr);
+        }
+      }
+
+      /* ==========================================
+         UTILITIES
+         ========================================== */
+      a, button {
+        -webkit-tap-highlight-color: transparent;
+      }
+
+      /* Smooth scrolling */
+      html {
+        scroll-behavior: smooth;
+      }
+
+      /* Custom Scrollbar - Desktop only */
+      @media (min-width: 900px) {
+        ::-webkit-scrollbar { width: 6px; }
+        ::-webkit-scrollbar-track { background: var(--bg-primary); }
+        ::-webkit-scrollbar-thumb {
+          background: var(--accent-light);
+          border-radius: var(--radius-full);
+        }
+        ::-webkit-scrollbar-thumb:hover {
+          background: var(--accent-primary);
+        }
+      }
+
+      /* Prevent horizontal scroll */
+      html, body {
+        overflow-x: hidden;
+        max-width: 100vw;
+      }
+
+      /* Safe area for notched phones */
+      @supports (padding: env(safe-area-inset-bottom)) {
+        .main-content {
+          padding-bottom: calc(20px + env(safe-area-inset-bottom));
+        }
       }
     </style>
     ${extraHead}
   </head>
   <body>
     <header class="site-header">
-      <a href="/" class="logo">ShopSavvy</a>
-      <nav class="nav">
+      <div class="header-top">
+        <a href="/" class="logo">ShopSavvy</a>
         <a href="/set-lang/${otherLang}" class="lang-switch">${langFlag} ${langLabel}</a>
+      </div>
+      <nav class="nav">
         ${isLoggedIn ? `
           <span class="user-email">${userEmail}</span>
           <a href="/profile">${t(lang, "profile")}</a>
@@ -284,16 +1219,24 @@ function createToken(user) {
 }
 
 function setAuthCookie(res, token) {
-  res.cookie("token", token, {
+  // For localhost with self-signed certs, use sameSite: "none" with secure
+  // or sameSite: "lax" without secure for better compatibility
+  const isLocalhost = true; // Adjust for production
+
+  const cookieOptions = {
     httpOnly: true,
-    sameSite: "lax",
-    secure: process.env.NODE_ENV === "production",
+    sameSite: isLocalhost ? "lax" : "lax",
+    secure: false, // Set to false for localhost development (even with HTTPS)
     maxAge: 1000 * 60 * 60 * 24 * 7,
-  });
+    path: "/",
+  };
+
+  console.log("[Cookie] Setting auth cookie with options:", JSON.stringify(cookieOptions));
+  res.cookie("token", token, cookieOptions);
 }
 
 function clearAuthCookie(res) {
-  res.clearCookie("token");
+  res.clearCookie("token", { path: "/" });
 }
 
 function getLang(req) {
@@ -430,14 +1373,19 @@ async function getMLAccessToken() {
 }
 
 function buildSearchParams(baseUrl, params) {
-  const url = new URL(baseUrl);
+  // Handle relative URLs by using a dummy base
+  const isRelative = baseUrl.startsWith("/");
+  const url = isRelative ? new URL(baseUrl, "http://localhost") : new URL(baseUrl);
+
   Object.entries(params).forEach(([key, value]) => {
     if (value === undefined || value === null || value === "") {
       return;
     }
     url.searchParams.set(key, String(value));
   });
-  return url.toString();
+
+  // Return just the path + search for relative URLs
+  return isRelative ? (url.pathname + url.search) : url.toString();
 }
 
 function parseNumber(value, fallback) {
@@ -736,13 +1684,376 @@ async function fetchMLCategories() {
   ];
 }
 
+// ============================================
+// AMAZON PRODUCT ADVERTISING API (PA-API 5.0)
+// ============================================
+
+/**
+ * Create AWS Signature Version 4 for Amazon PA-API
+ */
+function createAmazonSignature(method, uri, queryString, headers, payload, timestamp) {
+  const dateStamp = timestamp.substring(0, 8);
+  const amzDate = timestamp;
+  const service = "ProductAdvertisingAPI";
+  const region = AMAZON_REGION;
+
+  // Create canonical request
+  const sortedHeaders = Object.keys(headers).sort();
+  const signedHeaders = sortedHeaders.join(";");
+  const canonicalHeaders = sortedHeaders.map(h => `${h}:${headers[h]}\n`).join("");
+
+  const payloadHash = crypto.createHash("sha256").update(payload || "").digest("hex");
+  const canonicalRequest = `${method}\n${uri}\n${queryString}\n${canonicalHeaders}\n${signedHeaders}\n${payloadHash}`;
+
+  // Create string to sign
+  const algorithm = "AWS4-HMAC-SHA256";
+  const credentialScope = `${dateStamp}/${region}/${service}/aws4_request`;
+  const canonicalRequestHash = crypto.createHash("sha256").update(canonicalRequest).digest("hex");
+  const stringToSign = `${algorithm}\n${amzDate}\n${credentialScope}\n${canonicalRequestHash}`;
+
+  // Calculate signature
+  const kDate = crypto.createHmac("sha256", `AWS4${AMAZON_SECRET_KEY}`).update(dateStamp).digest();
+  const kRegion = crypto.createHmac("sha256", kDate).update(region).digest();
+  const kService = crypto.createHmac("sha256", kRegion).update(service).digest();
+  const kSigning = crypto.createHmac("sha256", kService).update("aws4_request").digest();
+  const signature = crypto.createHmac("sha256", kSigning).update(stringToSign).digest("hex");
+
+  return {
+    signature,
+    signedHeaders,
+    credentialScope,
+    algorithm,
+  };
+}
+
+/**
+ * Search products on Amazon using PA-API 5.0
+ */
+async function fetchAmazonProducts({ query, minPrice, maxPrice, sort, page, pageSize }) {
+  if (!HAS_AMAZON_API) {
+    console.log("[Amazon] PA-API not configured, skipping");
+    return { products: [], total: 0, totalPages: 0, error: "", source: "amazon" };
+  }
+
+  try {
+    const timestamp = new Date().toISOString().replace(/[:-]|\.\d{3}/g, "");
+    const uri = "/paapi5/searchitems";
+
+    // Build request payload
+    const payload = JSON.stringify({
+      PartnerTag: AMAZON_PARTNER_TAG,
+      PartnerType: "Associates",
+      Keywords: query,
+      SearchIndex: "All",
+      ItemCount: Math.min(pageSize, 10), // PA-API max is 10
+      ItemPage: page,
+      Resources: [
+        "Images.Primary.Large",
+        "ItemInfo.Title",
+        "Offers.Listings.Price",
+        "Offers.Listings.Condition",
+        "Offers.Listings.Availability.Message",
+        "Offers.Listings.MerchantInfo"
+      ],
+      ...(minPrice > 0 && { MinPrice: minPrice * 100 }), // Amazon uses cents
+      ...(maxPrice < 50000 && { MaxPrice: maxPrice * 100 }),
+      SortBy: sort === "price_asc" ? "Price:LowToHigh" : sort === "price_desc" ? "Price:HighToLow" : "Relevance"
+    });
+
+    const headers = {
+      "content-encoding": "amz-1.0",
+      "content-type": "application/json; charset=utf-8",
+      "host": AMAZON_HOST,
+      "x-amz-date": timestamp,
+      "x-amz-target": "com.amazon.paapi5.v1.ProductAdvertisingAPIv1.SearchItems"
+    };
+
+    const { signature, signedHeaders, credentialScope, algorithm } = createAmazonSignature(
+      "POST", uri, "", headers, payload, timestamp
+    );
+
+    const authHeader = `${algorithm} Credential=${AMAZON_ACCESS_KEY}/${credentialScope}, SignedHeaders=${signedHeaders}, Signature=${signature}`;
+
+    const response = await fetch(`https://${AMAZON_HOST}${uri}`, {
+      method: "POST",
+      headers: {
+        ...headers,
+        "Authorization": authHeader
+      },
+      body: payload
+    });
+
+    if (response.ok) {
+      const data = await response.json();
+      const items = data.SearchResult?.Items || [];
+
+      // Transform Amazon items to match our product format
+      const products = items.map(item => ({
+        id: `AMZN-${item.ASIN}`,
+        asin: item.ASIN,
+        title: item.ItemInfo?.Title?.DisplayValue || "Amazon Product",
+        price: item.Offers?.Listings?.[0]?.Price?.Amount || 0,
+        currency_id: item.Offers?.Listings?.[0]?.Price?.Currency || "USD",
+        thumbnail: item.Images?.Primary?.Large?.URL || "",
+        condition: item.Offers?.Listings?.[0]?.Condition?.Value || "New",
+        available_quantity: item.Offers?.Listings?.[0]?.Availability?.Message ? 1 : 0,
+        permalink: `https://www.amazon.com/dp/${item.ASIN}?tag=${AMAZON_PARTNER_TAG}`,
+        seller: {
+          nickname: item.Offers?.Listings?.[0]?.MerchantInfo?.Name || "Amazon"
+        },
+        source: "amazon"
+      }));
+
+      return {
+        products,
+        total: data.SearchResult?.TotalResultCount || products.length,
+        totalPages: Math.ceil((data.SearchResult?.TotalResultCount || products.length) / pageSize),
+        error: "",
+        source: "amazon"
+      };
+    } else {
+      const errorText = await response.text();
+      console.error("[Amazon] PA-API error:", response.status, errorText);
+      return { products: [], total: 0, totalPages: 0, error: `Amazon API error: ${response.status}`, source: "amazon" };
+    }
+  } catch (error) {
+    console.error("[Amazon] PA-API exception:", error.message);
+    return { products: [], total: 0, totalPages: 0, error: error.message, source: "amazon" };
+  }
+}
+
+/**
+ * Get Amazon product details by ASIN
+ */
+async function fetchAmazonProductById(asin) {
+  if (!HAS_AMAZON_API) {
+    return { product: null, error: "Amazon PA-API not configured", source: "amazon" };
+  }
+
+  // Remove AMZN- prefix if present
+  const cleanAsin = asin.replace(/^AMZN-/, "");
+
+  try {
+    const timestamp = new Date().toISOString().replace(/[:-]|\.\d{3}/g, "");
+    const uri = "/paapi5/getitems";
+
+    const payload = JSON.stringify({
+      PartnerTag: AMAZON_PARTNER_TAG,
+      PartnerType: "Associates",
+      ItemIds: [cleanAsin],
+      Resources: [
+        "Images.Primary.Large",
+        "Images.Variants.Large",
+        "ItemInfo.Title",
+        "ItemInfo.Features",
+        "ItemInfo.ProductInfo",
+        "ItemInfo.ByLineInfo",
+        "Offers.Listings.Price",
+        "Offers.Listings.Condition",
+        "Offers.Listings.Availability.Message",
+        "Offers.Listings.MerchantInfo",
+        "Offers.Summaries.LowestPrice"
+      ]
+    });
+
+    const headers = {
+      "content-encoding": "amz-1.0",
+      "content-type": "application/json; charset=utf-8",
+      "host": AMAZON_HOST,
+      "x-amz-date": timestamp,
+      "x-amz-target": "com.amazon.paapi5.v1.ProductAdvertisingAPIv1.GetItems"
+    };
+
+    const { signature, signedHeaders, credentialScope, algorithm } = createAmazonSignature(
+      "POST", uri, "", headers, payload, timestamp
+    );
+
+    const authHeader = `${algorithm} Credential=${AMAZON_ACCESS_KEY}/${credentialScope}, SignedHeaders=${signedHeaders}, Signature=${signature}`;
+
+    const response = await fetch(`https://${AMAZON_HOST}${uri}`, {
+      method: "POST",
+      headers: {
+        ...headers,
+        "Authorization": authHeader
+      },
+      body: payload
+    });
+
+    if (response.ok) {
+      const data = await response.json();
+      const item = data.ItemsResult?.Items?.[0];
+
+      if (!item) {
+        return { product: null, error: "Product not found", source: "amazon" };
+      }
+
+      const product = {
+        id: `AMZN-${item.ASIN}`,
+        asin: item.ASIN,
+        title: item.ItemInfo?.Title?.DisplayValue || "Amazon Product",
+        price: item.Offers?.Listings?.[0]?.Price?.Amount || item.Offers?.Summaries?.[0]?.LowestPrice?.Amount || 0,
+        currency_id: item.Offers?.Listings?.[0]?.Price?.Currency || "USD",
+        thumbnail: item.Images?.Primary?.Large?.URL || "",
+        pictures: item.Images?.Variants?.map(v => ({ url: v.Large?.URL })) || [],
+        condition: item.Offers?.Listings?.[0]?.Condition?.Value || "New",
+        available_quantity: item.Offers?.Listings?.[0]?.Availability?.Message ? 1 : 0,
+        permalink: `https://www.amazon.com/dp/${item.ASIN}?tag=${AMAZON_PARTNER_TAG}`,
+        description: item.ItemInfo?.Features?.DisplayValues?.join("\n") || "",
+        seller: {
+          nickname: item.Offers?.Listings?.[0]?.MerchantInfo?.Name || "Amazon"
+        },
+        brand: item.ItemInfo?.ByLineInfo?.Brand?.DisplayValue || "",
+        source: "amazon"
+      };
+
+      return { product, error: "", source: "amazon" };
+    } else {
+      const errorText = await response.text();
+      console.error("[Amazon] GetItems error:", response.status, errorText);
+      return { product: null, error: `Amazon API error: ${response.status}`, source: "amazon" };
+    }
+  } catch (error) {
+    console.error("[Amazon] GetItems exception:", error.message);
+    return { product: null, error: error.message, source: "amazon" };
+  }
+}
+
+/**
+ * Combined search from multiple sources (Mercado Libre + Amazon)
+ */
+async function fetchAllProducts({ query, minPrice, maxPrice, sort, page, pageSize, source = "all" }) {
+  const results = { products: [], total: 0, totalPages: 0, error: "", notices: [] };
+
+  // Determine which sources to query
+  const queryML = source === "all" || source === "mercadolibre";
+  const queryAmazon = source === "all" || source === "amazon";
+
+  // Fetch from sources in parallel
+  const promises = [];
+
+  if (queryML) {
+    promises.push(
+      fetchMLProducts({ query, minPrice, maxPrice, sort, page, pageSize })
+        .then(r => ({ ...r, source: "mercadolibre" }))
+        .catch(e => ({ products: [], total: 0, totalPages: 0, error: e.message, source: "mercadolibre" }))
+    );
+  }
+
+  if (queryAmazon && HAS_AMAZON_API) {
+    promises.push(
+      fetchAmazonProducts({ query, minPrice, maxPrice, sort, page, pageSize })
+        .catch(e => ({ products: [], total: 0, totalPages: 0, error: e.message, source: "amazon" }))
+    );
+  }
+
+  const responses = await Promise.all(promises);
+
+  // Combine results
+  for (const res of responses) {
+    // Add source to each product if not already set
+    const productsWithSource = res.products.map(p => ({
+      ...p,
+      source: p.source || res.source
+    }));
+
+    results.products.push(...productsWithSource);
+    results.total += res.total || 0;
+
+    if (res.error) {
+      results.notices.push(`${res.source}: ${res.error}`);
+    }
+    if (res.notice) {
+      results.notices.push(res.notice);
+    }
+  }
+
+  // Sort combined results
+  if (sort === "price_asc") {
+    results.products.sort((a, b) => (a.price || 0) - (b.price || 0));
+  } else if (sort === "price_desc") {
+    results.products.sort((a, b) => (b.price || 0) - (a.price || 0));
+  }
+
+  // Calculate total pages based on combined results
+  results.totalPages = Math.ceil(results.total / pageSize) || 1;
+
+  // Limit to pageSize
+  results.products = results.products.slice(0, pageSize);
+
+  return results;
+}
+
+/**
+ * Get product by ID from the appropriate source
+ */
+async function fetchProductById(id) {
+  // Check if it's an Amazon product (AMZN- prefix or ASIN format)
+  if (id.startsWith("AMZN-") || /^[A-Z0-9]{10}$/.test(id)) {
+    return fetchAmazonProductById(id);
+  }
+
+  // Otherwise treat as Mercado Libre product
+  return fetchMLProductById(id);
+}
+
 async function start() {
-  const db = await initDb();
+  // Initialize local SQLite database (always available as fallback)
+  const localDb = await initDb();
+
+  // Track which database is actually being used
+  let useSupabaseDb = USE_SUPABASE;
+
+  // Initialize Supabase if configured
+  if (USE_SUPABASE) {
+    supabaseDb.initSupabase();
+
+    // Verify required tables exist
+    const tableCheck = await supabaseDb.verifyTables();
+    if (!tableCheck.ok) {
+      console.error("\n" + "=".repeat(60));
+      console.error("⚠️  SUPABASE TABLES NOT FOUND - FALLING BACK TO SQLITE");
+      console.error("=".repeat(60));
+      console.error("To use Supabase, run this SQL in your Supabase SQL Editor:");
+      console.error("File: supabase/migrations/001_create_tables.sql");
+      console.error("=".repeat(60) + "\n");
+      useSupabaseDb = false;
+    } else {
+      // Create demo accounts in Supabase
+      await supabaseDb.createDemoAccounts().catch(err => {
+        console.log("[Supabase] Demo accounts may already exist:", err.message);
+      });
+    }
+  }
+
+  // Use Supabase or SQLite based on configuration AND table availability
+  const db = useSupabaseDb ? supabaseDb.createDbInterface() : localDb;
+  console.log("[Database] Using:", useSupabaseDb ? "Supabase (cloud)" : "SQLite (local)");
+
+  // Helper functions that work with both databases
+  const recordLoginAttempt = useSupabaseDb
+    ? supabaseDb.recordLoginAttempt
+    : require("./db").recordLoginAttempt.bind(null, localDb);
+
+  const getLoginHistory = useSupabaseDb
+    ? supabaseDb.getLoginHistory
+    : require("./db").getLoginHistory.bind(null, localDb);
+
   const app = express();
 
   app.use(express.urlencoded({ extended: false }));
   app.use(express.json());
   app.use(cookieParser());
+
+  // Prevent caching of dynamic pages to ensure auth state updates in UI
+  app.use((req, res, next) => {
+    // Don't cache HTML pages (allow caching of static assets)
+    if (!req.path.match(/\.(js|css|png|jpg|jpeg|gif|ico|svg|woff|woff2|ttf|eot)$/)) {
+      res.set('Cache-Control', 'no-store, no-cache, must-revalidate, private');
+      res.set('Pragma', 'no-cache');
+      res.set('Expires', '0');
+    }
+    next();
+  });
 
   // Serve static files from public folder
   app.use(express.static(path.join(__dirname, "..", "public")));
@@ -758,36 +2069,52 @@ async function start() {
   app.get("/", async (req, res) => {
     const lang = getLang(req);
     const hasToken = Boolean(req.cookies.token);
+    console.log(`[Home] Request - hasToken: ${hasToken}`);
     let userEmail = "";
     if (hasToken) {
       try {
         const payload = jwt.verify(req.cookies.token, JWT_SECRET);
+        console.log(`[Home] Token valid for user ID: ${payload.id}`);
         const user = await db.get("SELECT email FROM users WHERE id = ?", payload.id);
         userEmail = user?.email || "";
-      } catch (e) { /* invalid token */ }
+        console.log(`[Home] User found: ${userEmail || "NO"}`);
+      } catch (e) {
+        console.log(`[Home] Token invalid: ${e.message}`);
+      }
     }
     const query = String(req.query.q || "").trim();
     const minPrice = parseNumber(req.query.minPrice, 0);
     const maxPrice = parseNumber(req.query.maxPrice, 50000);
     const sort = String(req.query.sort || "price_asc");
+    const source = String(req.query.source || "all");
     const page = Math.max(parseNumber(req.query.page, 1), 1);
     const pageSize = 20;
 
-    let results = { products: [], total: 0, totalPages: 0, error: "", notice: "" };
+    let results = { products: [], total: 0, totalPages: 0, error: "", notices: [] };
     if (query) {
-      results = await fetchMLProducts({
+      results = await fetchAllProducts({
         query,
         minPrice,
         maxPrice,
         sort,
         page,
         pageSize,
+        source,
       });
     }
 
+    // Helper to get source badge HTML
+    const getSourceBadge = (item) => {
+      const src = item.source || "mercadolibre";
+      if (src === "amazon") {
+        return `<span class="source-badge amazon">Amazon</span>`;
+      }
+      return `<span class="source-badge ml">Mercado Libre</span>`;
+    };
+
     const resultsHtml = query ? `
       <div class="results">
-        ${results.notice ? `<div class="notice">${results.notice}</div>` : ""}
+        ${results.notices?.length ? results.notices.map(n => `<div class="notice">${n}</div>`).join("") : ""}
         ${results.error ? `<div class="notice">${results.error}</div>` : ""}
         ${!results.error && results.products.length === 0 ? `<p class="muted">${t(lang, "noResults")}</p>` : ""}
         ${results.products.length ? `
@@ -796,16 +2123,19 @@ async function start() {
               <div class="card">
                 <img src="${item.thumbnail || ""}" alt="${item.title || t(lang, "product")}" />
                 <div class="card-title">${item.title || t(lang, "product")}</div>
-                <div class="card-meta">${formatPrice(item.price, item.currency_id || "MXN")} · Mercado Libre</div>
+                <div class="card-meta">
+                  ${formatPrice(item.price, item.currency_id || "MXN")}
+                  ${getSourceBadge(item)}
+                </div>
                 <div class="card-seller">${item.seller?.nickname ? `${t(lang, "soldBy")}: ${item.seller.nickname}` : ""}</div>
-                <a href="${buildSearchParams(`/product/${encodeURIComponent(item.id)}`, { q: query, minPrice, maxPrice, sort, page })}">${t(lang, "viewDetails")}</a>
+                <a href="${buildSearchParams(`/product/${encodeURIComponent(item.id)}`, { q: query, minPrice, maxPrice, sort, source, page })}">${t(lang, "viewDetails")}</a>
               </div>
             `).join("")}
           </div>
           <div class="pagination">
-            ${page > 1 ? `<a href="${buildSearchParams("/", { q: query, minPrice, maxPrice, sort, page: page - 1 })}">${t(lang, "previous")}</a>` : ""}
+            ${page > 1 ? `<a href="${buildSearchParams("/", { q: query, minPrice, maxPrice, sort, source, page: page - 1 })}">${t(lang, "previous")}</a>` : ""}
             <span>${t(lang, "page")} ${page} ${t(lang, "of")} ${results.totalPages || 1}</span>
-            ${page < results.totalPages ? `<a href="${buildSearchParams("/", { q: query, minPrice, maxPrice, sort, page: page + 1 })}">${t(lang, "next")}</a>` : ""}
+            ${page < results.totalPages ? `<a href="${buildSearchParams("/", { q: query, minPrice, maxPrice, sort, source, page: page + 1 })}">${t(lang, "next")}</a>` : ""}
           </div>
         ` : ""}
       </div>
@@ -830,6 +2160,14 @@ async function start() {
             <select name="sort">
               <option value="price_asc" ${sort === "price_asc" ? "selected" : ""}>${t(lang, "priceLowHigh")}</option>
               <option value="price_desc" ${sort === "price_desc" ? "selected" : ""}>${t(lang, "priceHighLow")}</option>
+            </select>
+          </div>
+          <div class="range-row">
+            <label>${t(lang, "source")}</label>
+            <select name="source">
+              <option value="all" ${source === "all" ? "selected" : ""}>${t(lang, "sourceAll")}</option>
+              <option value="mercadolibre" ${source === "mercadolibre" ? "selected" : ""}>${t(lang, "sourceMercadoLibre")}</option>
+              <option value="amazon" ${source === "amazon" ? "selected" : ""}>${t(lang, "sourceAmazon")}${HAS_AMAZON_API ? "" : " (Not configured)"}</option>
             </select>
           </div>
         </div>
@@ -1021,11 +2359,18 @@ async function start() {
       <script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2"></script>
       <script>
         document.addEventListener('DOMContentLoaded', function() {
+          console.log('=== GOOGLE AUTH DEBUG ===');
+
           const SUPABASE_URL = '${process.env.SUPABASE_URL || ''}';
           const SUPABASE_ANON_KEY = '${process.env.SUPABASE_ANON_KEY || ''}';
+          const REDIRECT_URL = '${APP_BASE_URL}/auth/supabase-callback';
+
+          console.log('1. SUPABASE_URL:', SUPABASE_URL ? SUPABASE_URL : 'NOT SET');
+          console.log('2. SUPABASE_ANON_KEY:', SUPABASE_ANON_KEY ? SUPABASE_ANON_KEY.substring(0, 20) + '...' : 'NOT SET');
+          console.log('3. REDIRECT_URL:', REDIRECT_URL);
 
           if (!SUPABASE_URL || !SUPABASE_ANON_KEY) {
-            console.error('Supabase credentials not configured');
+            console.error('❌ Supabase credentials not configured');
             const btn = document.getElementById('google-login-btn');
             if (btn) {
               btn.disabled = true;
@@ -1034,74 +2379,164 @@ async function start() {
             return;
           }
 
+          console.log('4. ✓ Supabase credentials found, initializing client...');
+
           const { createClient } = supabase;
           const supabaseClient = createClient(SUPABASE_URL, SUPABASE_ANON_KEY);
 
+          console.log('5. ✓ Supabase client created');
+
           const btn = document.getElementById('google-login-btn');
           if (!btn) {
-            console.error('Google login button not found');
+            console.error('❌ Google login button not found in DOM');
             return;
           }
 
+          console.log('6. ✓ Google button found');
+
           btn.addEventListener('click', async () => {
+            console.log('7. Button clicked, starting OAuth flow...');
             btn.disabled = true;
             btn.innerHTML = '<span>Redirecting to Google...</span>';
 
             try {
+              console.log('8. Calling supabaseClient.auth.signInWithOAuth...');
+              console.log('   Provider: google');
+              console.log('   RedirectTo:', REDIRECT_URL);
+
               const { data, error } = await supabaseClient.auth.signInWithOAuth({
                 provider: 'google',
                 options: {
-                  redirectTo: '${APP_BASE_URL}/auth/supabase-callback'
+                  redirectTo: REDIRECT_URL
                 }
               });
 
+              console.log('9. OAuth response received');
+              console.log('   Data:', JSON.stringify(data, null, 2));
+              console.log('   Error:', error);
+
               if (error) {
-                console.error('OAuth error:', error);
+                console.error('❌ OAuth error:', error);
+                console.error('   Error message:', error.message);
+                console.error('   Error status:', error.status);
                 btn.disabled = false;
                 btn.innerHTML = '<span>Continue with Google</span>';
                 alert('Failed to sign in with Google: ' + error.message);
+              } else {
+                console.log('10. ✓ OAuth initiated successfully, browser should redirect...');
+                if (data && data.url) {
+                  console.log('    Redirect URL:', data.url);
+                }
               }
             } catch (err) {
-              console.error('Error:', err);
+              console.error('❌ Exception caught:', err);
+              console.error('   Error name:', err.name);
+              console.error('   Error message:', err.message);
+              console.error('   Error stack:', err.stack);
               btn.disabled = false;
               btn.innerHTML = '<span>Continue with Google</span>';
-              alert('An error occurred. Please try again.');
+              alert('An error occurred: ' + err.message);
             }
           });
+
+          console.log('=== GOOGLE AUTH SETUP COMPLETE ===');
         });
       </script>
     `, false, "", lang));
   });
 
   app.post("/login", async (req, res) => {
+    const lang = getLang(req);
     const email = String(req.body.email || "").trim().toLowerCase();
     const password = String(req.body.password || "");
+    const ipAddress = req.ip || req.connection.remoteAddress;
+    const userAgent = req.get("User-Agent") || "";
 
     const user = await db.get("SELECT * FROM users WHERE email = ?", email);
     if (!user) {
-      return res.send(renderPage("Login", `<p class="error">Invalid email or password.</p>`));
+      // Record failed login attempt
+      await recordLoginAttempt({
+        userId: null,
+        email,
+        success: false,
+        ipAddress,
+        userAgent,
+        authMethod: "local"
+      });
+      return res.send(renderPage(t(lang, "login"), `
+        <h1>${t(lang, "login")}</h1>
+        <p class="error">${t(lang, "invalidCredentials")}</p>
+        <form method="post" action="/login">
+          <label>${t(lang, "email")}</label>
+          <input name="email" type="email" value="${email}" required />
+          <label>${t(lang, "password")}</label>
+          <input name="password" type="password" required />
+          <button type="submit">${t(lang, "login")}</button>
+        </form>
+        <p class="muted">${t(lang, "newHere")} <a href="/register">${t(lang, "register")}</a></p>
+      `, "", false, "", lang));
     }
 
     const isValid = await bcrypt.compare(password, user.password_hash);
     if (!isValid) {
-      return res.send(renderPage("Login", `<p class="error">Invalid email or password.</p>`));
+      // Record failed login attempt
+      await recordLoginAttempt({
+        userId: user.id,
+        email,
+        success: false,
+        ipAddress,
+        userAgent,
+        authMethod: "local"
+      });
+      return res.send(renderPage(t(lang, "login"), `
+        <h1>${t(lang, "login")}</h1>
+        <p class="error">${t(lang, "invalidCredentials")}</p>
+        <form method="post" action="/login">
+          <label>${t(lang, "email")}</label>
+          <input name="email" type="email" value="${email}" required />
+          <label>${t(lang, "password")}</label>
+          <input name="password" type="password" required />
+          <button type="submit">${t(lang, "login")}</button>
+        </form>
+        <p class="muted">${t(lang, "newHere")} <a href="/register">${t(lang, "register")}</a></p>
+      `, "", false, "", lang));
     }
 
     if (!user.verified) {
-      return res.send(renderPage("Login", `
+      return res.send(renderPage(t(lang, "login"), `
+        <h1>${t(lang, "login")}</h1>
         <p class="error">Please verify your email before logging in.</p>
         <p class="muted">Check your email for the verification link.</p>
-      `));
+        <form method="post" action="/login">
+          <label>${t(lang, "email")}</label>
+          <input name="email" type="email" value="${email}" required />
+          <label>${t(lang, "password")}</label>
+          <input name="password" type="password" required />
+          <button type="submit">${t(lang, "login")}</button>
+        </form>
+      `, "", false, "", lang));
     }
+
+    // Record successful login
+    await recordLoginAttempt({
+      userId: user.id,
+      email,
+      success: true,
+      ipAddress,
+      userAgent,
+      authMethod: "local"
+    });
+
+    console.log(`[Login] User logged in: ${email} (ID: ${user.id})`);
 
     const token = createToken(user);
     setAuthCookie(res, token);
-    return res.redirect("/profile");
+    return res.redirect("/");  // Redirect to home after login
   });
 
   app.post("/logout", (req, res) => {
     clearAuthCookie(res);
-    res.redirect("/login");
+    res.redirect("/");  // Redirect to home after logout
   });
 
   // Diagnostic endpoint to check Supabase configuration
@@ -1229,35 +2664,87 @@ State: ${state || 'none'}</pre>
   app.get("/auth/supabase-callback", async (req, res) => {
     try {
       // Get the hash fragment (Supabase sends data in URL hash)
-      res.send(renderPage("Login Success", `
-        <h1>Processing Google Login...</h1>
-        <p class="muted">Please wait while we complete your login.</p>
-      `, `
-        <script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2"></script>
-        <script>
+      res.send(`
+        <!DOCTYPE html>
+        <html>
+        <head>
+          <meta charset="utf-8">
+          <meta name="viewport" content="width=device-width, initial-scale=1">
+          <title>Processing Login | ShopSavvy</title>
+          <style>
+            body { font-family: -apple-system, BlinkMacSystemFont, sans-serif; padding: 40px; max-width: 600px; margin: 0 auto; }
+            h1 { color: #333; }
+            .muted { color: #666; }
+            .error { color: #c00; background: #fee; padding: 10px; border-radius: 4px; }
+            #debug-output { margin-top: 20px; padding: 15px; background: #f5f5f5; border-radius: 8px; font-family: monospace; font-size: 12px; white-space: pre-wrap; max-height: 400px; overflow-y: auto; }
+            a { color: #7c6a5d; }
+          </style>
+        </head>
+        <body>
+          <h1>Processing Google Login...</h1>
+          <p class="muted">Please wait while we complete your login.</p>
+          <div id="debug-output"></div>
+
+          <script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2"></script>
+          <script>
+            const debugEl = document.getElementById('debug-output');
+            function log(msg) {
+              console.log(msg);
+              if (debugEl) debugEl.textContent += msg + '\\n';
+            }
+
+            log('=== CALLBACK PAGE DEBUG ===');
+          log('1. Page loaded');
+          log('2. Current URL: ' + window.location.href);
+          log('3. URL Hash: ' + (window.location.hash || '(none)'));
+          log('4. URL Search: ' + (window.location.search || '(none)'));
+
           const SUPABASE_URL = '${process.env.SUPABASE_URL || ''}';
           const SUPABASE_ANON_KEY = '${process.env.SUPABASE_ANON_KEY || ''}';
-          
+
+          log('5. SUPABASE_URL: ' + (SUPABASE_URL ? 'Set' : 'NOT SET'));
+          log('6. SUPABASE_ANON_KEY: ' + (SUPABASE_ANON_KEY ? 'Set' : 'NOT SET'));
+
           if (!SUPABASE_URL || !SUPABASE_ANON_KEY) {
+            log('❌ Supabase not configured');
             document.body.innerHTML = '<h1>Configuration Error</h1><p class="error">Supabase not configured. Please contact support.</p>';
           } else {
+            log('7. Creating Supabase client...');
             const { createClient } = supabase;
             const supabaseClient = createClient(SUPABASE_URL, SUPABASE_ANON_KEY);
-            
+            log('8. ✓ Supabase client created');
+
             // Get the session from URL hash
+            log('9. Calling getSession()...');
             supabaseClient.auth.getSession().then(async ({ data: { session }, error }) => {
+              log('10. getSession() completed');
+              log('    Session: ' + (session ? 'Found' : 'NULL'));
+              log('    Error: ' + (error ? error.message : 'None'));
+
               if (error) {
+                log('❌ Session error: ' + error.message);
                 document.body.innerHTML = '<h1>Login Failed</h1><p class="error">Error: ' + error.message + '</p><p><a href="/login">Back to login</a></p>';
                 return;
               }
-              
+
               if (!session) {
-                document.body.innerHTML = '<h1>No Session</h1><p class="error">Could not retrieve session.</p><p><a href="/login">Back to login</a></p>';
+                log('❌ No session found');
+                log('   This usually means:');
+                log('   - The OAuth flow did not complete');
+                log('   - The redirect URL is wrong in Supabase');
+                log('   - The URL hash was not preserved');
+                document.body.innerHTML = '<h1>No Session</h1><p class="error">Could not retrieve session. Check browser console for details.</p><p><a href="/login">Back to login</a></p><pre style="margin-top:20px;padding:10px;background:#f5f5f5;font-size:11px;">' + debugEl.textContent + '</pre>';
                 return;
               }
-              
+
+              log('11. ✓ Session found!');
+              log('    User email: ' + (session.user?.email || 'unknown'));
+              log('    User ID: ' + (session.user?.id || 'unknown'));
+              log('    Provider: ' + (session.user?.app_metadata?.provider || 'unknown'));
+
               // Send session info to backend to create/login user
               try {
+                log('12. Sending to /auth/supabase-verify...');
                 const response = await fetch('/auth/supabase-verify', {
                   method: 'POST',
                   headers: {
@@ -1270,21 +2757,30 @@ State: ${state || 'none'}</pre>
                   })
                 });
 
+                log('13. Response status: ' + response.status);
                 const result = await response.json();
+                log('14. Response body: ' + JSON.stringify(result));
 
                 if (result.success) {
+                  log('15. ✓ Login successful! Redirecting to home...');
                   // Cookie is set by server (httpOnly), redirect to home page
                   window.location.href = '/';
                 } else {
+                  log('❌ Verify failed: ' + (result.error || 'Unknown error'));
                   document.body.innerHTML = '<h1>Login Failed</h1><p class="error">' + (result.error || 'Unknown error') + '</p><p><a href="/login">Back to login</a></p>';
                 }
               } catch (err) {
+                log('❌ Fetch error: ' + err.message);
                 document.body.innerHTML = '<h1>Error</h1><p class="error">Failed to verify login: ' + err.message + '</p><p><a href="/login">Back to login</a></p>';
               }
+            }).catch(err => {
+              log('❌ getSession() exception: ' + err.message);
             });
           }
-        </script>
-      `));
+          </script>
+        </body>
+        </html>
+      `);
     } catch (error) {
       console.error("Supabase callback error:", error);
       res.send(renderPage("Error", `
@@ -1299,54 +2795,98 @@ State: ${state || 'none'}</pre>
    * Verify Supabase user and create/login in our system
    */
   app.post("/auth/supabase-verify", express.json(), async (req, res) => {
+    console.log("\n=== /auth/supabase-verify ===");
+    console.log("Request body:", JSON.stringify(req.body, null, 2));
+
     try {
       const { user, access_token } = req.body;
-      
+
+      console.log("User object:", user ? "Present" : "MISSING");
+      console.log("Access token:", access_token ? "Present" : "MISSING");
+
       if (!user || !user.email) {
+        console.log("❌ Invalid user data - no email");
         return res.json({ success: false, error: 'Invalid user data' });
       }
+
+      console.log("User email:", user.email);
+      console.log("User ID (Supabase):", user.id);
       
       const email = user.email.toLowerCase();
       const name = user.user_metadata?.full_name || user.user_metadata?.name || email.split('@')[0];
       
       // Check if user exists
-      let dbUser = await db.get("SELECT * FROM users WHERE email = ?", email);
+      let dbUser = await db.get("SELECT * FROM users WHERE email = ?", [email]);
       
       if (!dbUser) {
         // Create new user (no password needed for OAuth users)
         const randomPassword = crypto.randomBytes(32).toString('hex');
         const passwordHash = await bcrypt.hash(randomPassword, 10);
-        
+
         await db.run(
-          "INSERT INTO users (email, password_hash, verified) VALUES (?, ?, ?)",
-          email,
-          passwordHash,
-          1 // Auto-verify OAuth users
+          "INSERT INTO users (email, password_hash, verified, created_at, auth_provider) VALUES (?, ?, ?, ?, ?)",
+          [email, passwordHash, 1, new Date().toISOString(), "google"]
         );
-        
-        dbUser = await db.get("SELECT * FROM users WHERE email = ?", email);
+
+        dbUser = await db.get("SELECT * FROM users WHERE email = ?", [email]);
         console.log("[OAuth] New user created: " + email);
       } else if (!dbUser.verified) {
         // Auto-verify existing user who logged in with OAuth
-        await db.run("UPDATE users SET verified = 1 WHERE id = ?", dbUser.id);
+        await db.run("UPDATE users SET verified = 1, auth_provider = 'google' WHERE id = ?", [dbUser.id]);
         dbUser.verified = 1;
         console.log("[OAuth] User auto-verified: " + email);
       }
       
+      // Record successful OAuth login
+      await recordLoginAttempt({
+        userId: dbUser.id,
+        email,
+        success: true,
+        ipAddress: req.ip || req.connection.remoteAddress,
+        userAgent: req.get("User-Agent") || "",
+        authMethod: "google"
+      });
+
+      console.log(`[OAuth] User logged in via Google: ${email} (ID: ${dbUser.id})`);
+
       // Create JWT token for our app
       const token = createToken(dbUser);
+      console.log("[OAuth] JWT token created");
 
       // Set httpOnly cookie server-side (more secure than client-side)
       setAuthCookie(res, token);
+      console.log("[OAuth] Auth cookie set");
 
       res.json({
         success: true,
         user: { id: dbUser.id, email: dbUser.email }
       });
-      
+      console.log("[OAuth] ✓ Response sent successfully");
+
     } catch (error) {
       console.error("Supabase verify error:", error);
-      res.json({ success: false, error: error.message });
+
+      // Provide helpful error messages for common issues
+      let errorMessage = error.message;
+      let errorHint = null;
+
+      if (error.message.includes("schema cache") || error.message.includes("relation") || error.message.includes("does not exist")) {
+        errorMessage = "Database tables not configured";
+        errorHint = "Run the migration SQL in Supabase SQL Editor: supabase/migrations/001_create_tables.sql";
+      } else if (error.message.includes("JWT") || error.message.includes("token")) {
+        errorMessage = "Authentication token error";
+        errorHint = "Check your SUPABASE_ANON_KEY in .env file";
+      } else if (error.message.includes("network") || error.message.includes("fetch")) {
+        errorMessage = "Cannot connect to database";
+        errorHint = "Check your SUPABASE_URL and internet connection";
+      }
+
+      console.error("[OAuth Error]", errorMessage, errorHint ? `- ${errorHint}` : "");
+      res.json({
+        success: false,
+        error: errorMessage,
+        hint: errorHint
+      });
     }
   });
 
@@ -1509,21 +3049,61 @@ State: ${state || 'none'}</pre>
 
   app.get("/profile", authRequired, async (req, res) => {
     const lang = getLang(req);
-    const user = await db.get("SELECT email FROM users WHERE id = ?", req.user.id);
+    const user = await db.get("SELECT * FROM users WHERE id = ?", req.user.id);
     if (!user) {
       clearAuthCookie(res);
       return res.redirect("/login");
     }
+
+    // Get login history for this user
+    const loginHistory = await getLoginHistory(req.user.id, 5);
+
+    const loginHistoryHtml = loginHistory.length ? `
+      <h2 style="margin-top: 24px;">${lang === "es" ? "Historial de Inicios de Sesión" : "Login History"}</h2>
+      <div class="login-history">
+        ${loginHistory.map(log => `
+          <div class="login-entry ${log.success ? "success" : "failed"}">
+            <span class="login-date">${new Date(log.created_at).toLocaleString(lang === "es" ? "es-MX" : "en-US")}</span>
+            <span class="login-method">${log.auth_method === "google" ? "Google" : "Email/Password"}</span>
+            <span class="login-status">${log.success ? "✓" : "✗"}</span>
+          </div>
+        `).join("")}
+      </div>
+    ` : "";
 
     res.send(renderPage(t(lang, "profile"), `
       <h1>${t(lang, "myProfile")}</h1>
       <div class="profile-card">
         <p><strong>${t(lang, "email")}:</strong> ${user.email}</p>
         <p><strong>${t(lang, "accountStatus")}:</strong> ${t(lang, "verified")}</p>
+        <p><strong>${lang === "es" ? "Método de autenticación" : "Auth method"}:</strong> ${user.auth_provider === "google" ? "Google" : "Email/Password"}</p>
+        <p><strong>${lang === "es" ? "Inicios de sesión" : "Login count"}:</strong> ${user.login_count || 0}</p>
+        ${user.last_login ? `<p><strong>${lang === "es" ? "Último inicio de sesión" : "Last login"}:</strong> ${new Date(user.last_login).toLocaleString(lang === "es" ? "es-MX" : "en-US")}</p>` : ""}
+        <p><strong>${lang === "es" ? "Cuenta creada" : "Account created"}:</strong> ${new Date(user.created_at).toLocaleString(lang === "es" ? "es-MX" : "en-US")}</p>
       </div>
+      ${loginHistoryHtml}
     `, `
       <style>
-        .profile-card { background: #f9f9f9; padding: 20px; border-radius: 8px; }
+        .profile-card { background: var(--bg-secondary); padding: 20px; border-radius: var(--radius-lg); box-shadow: var(--shadow-soft); }
+        .profile-card p { margin: 10px 0; }
+        .login-history { margin-top: 12px; }
+        .login-entry {
+          display: flex;
+          justify-content: space-between;
+          align-items: center;
+          padding: 12px 16px;
+          background: var(--bg-secondary);
+          border-radius: var(--radius-md);
+          margin-bottom: 8px;
+          border-left: 3px solid var(--accent-primary);
+        }
+        .login-entry.failed { border-left-color: #c94a4a; }
+        .login-entry.success { border-left-color: #3d7a5a; }
+        .login-date { font-size: 13px; color: var(--text-secondary); }
+        .login-method { font-size: 12px; color: var(--text-muted); background: var(--bg-accent); padding: 4px 8px; border-radius: var(--radius-full); }
+        .login-status { font-weight: 600; }
+        .login-entry.success .login-status { color: #3d7a5a; }
+        .login-entry.failed .login-status { color: #c94a4a; }
       </style>
     `, true, user.email, lang));
   });
@@ -1536,9 +3116,11 @@ State: ${state || 'none'}</pre>
     const minPrice = parseNumber(req.query.minPrice, 0);
     const maxPrice = parseNumber(req.query.maxPrice, 50000);
     const sort = String(req.query.sort || "price_asc");
+    const source = String(req.query.source || "all");
     const page = Math.max(parseNumber(req.query.page, 1), 1);
 
-    const result = await fetchMLProductById(id);
+    // Use combined product fetcher that handles both ML and Amazon
+    const result = await fetchProductById(id);
     const product = result.product;
 
     if (!product) {
@@ -1546,7 +3128,7 @@ State: ${state || 'none'}</pre>
         <div class="breadcrumb">
           <a href="/">${t(lang, "home")}</a>
           <span> / </span>
-          <a href="${buildSearchParams("/", { q: query, minPrice, maxPrice, sort, page })}">${t(lang, "searchResults")}</a>
+          <a href="${buildSearchParams("/", { q: query, minPrice, maxPrice, sort, source, page })}">${t(lang, "searchResults")}</a>
           <span> / ${t(lang, "product")}</span>
         </div>
         <h1>${t(lang, "productNotFound")}</h1>
@@ -1556,14 +3138,22 @@ State: ${state || 'none'}</pre>
     }
 
     const description = product.description || "";
-    const condition = product.condition === "new" ? t(lang, "new") : product.condition === "used" ? t(lang, "used") : product.condition;
+    const condition = product.condition === "new" || product.condition === "New" ? t(lang, "new") : product.condition === "used" || product.condition === "Used" ? t(lang, "used") : product.condition;
     const available = product.available_quantity || 0;
+    const isAmazon = product.source === "amazon" || id.startsWith("AMZN-");
+
+    // Get appropriate retailer badge and button text
+    const retailerBadge = isAmazon
+      ? `<div class="retailer-badge amazon-badge"><img src="https://upload.wikimedia.org/wikipedia/commons/a/a9/Amazon_logo.svg" alt="Amazon" style="height: 20px;" /></div>`
+      : `<div class="retailer-badge ml-badge"><img src="https://http2.mlstatic.com/frontend-assets/ml-web-navigation/ui-navigation/5.21.22/mercadolibre/logo__large_plus.png" alt="Mercado Libre" style="height: 24px;" /></div>`;
+
+    const viewButtonText = isAmazon ? "View on Amazon" : t(lang, "viewOnML");
 
     res.send(renderPage(product.title || t(lang, "product"), `
       <div class="breadcrumb">
         <a href="/">${t(lang, "home")}</a>
         <span> / </span>
-        <a href="${buildSearchParams("/", { q: query, minPrice, maxPrice, sort, page })}">${t(lang, "searchResults")}</a>
+        <a href="${buildSearchParams("/", { q: query, minPrice, maxPrice, sort, source, page })}">${t(lang, "searchResults")}</a>
         <span> / ${t(lang, "product")}</span>
       </div>
       ${result.notice ? `<div class="notice">${result.notice}</div>` : ""}
@@ -1571,18 +3161,19 @@ State: ${state || 'none'}</pre>
         <img class="product-image" src="${product.thumbnail || ""}" alt="${product.title || t(lang, "product")}" />
         <div>
           <h1>${product.title || t(lang, "product")}</h1>
-          <div class="retailer-badge">
-            <img src="https://http2.mlstatic.com/frontend-assets/ml-web-navigation/ui-navigation/5.21.22/mercadolibre/logo__large_plus.png" alt="Mercado Libre" style="height: 24px;" />
-          </div>
-          <div class="product-price">${formatPrice(product.price, product.currency_id || "MXN")}</div>
+          ${retailerBadge}
+          <div class="product-price">${formatPrice(product.price, product.currency_id || (isAmazon ? "USD" : "MXN"))}</div>
           <div class="product-meta">
             <span class="condition">${condition}</span>
             ${available > 0 ? `<span class="stock">· ${available} ${t(lang, "available")}</span>` : `<span class="stock out">· ${t(lang, "outOfStock")}</span>`}
           </div>
+          ${product.brand ? `<div class="seller-info"><strong>${product.brand}</strong></div>` : ""}
           ${product.seller?.nickname ? `<div class="seller-info">${t(lang, "soldBy")}: <strong>${product.seller.nickname}</strong></div>` : ""}
           <p>${description}</p>
-          ${product.permalink ? `<a class="action-button" href="${product.permalink}" target="_blank" rel="noreferrer">${t(lang, "viewOnML")}</a>` : ""}
-          <button class="action-button secondary" onclick="alert('${t(lang, "trackPriceAlert")}')">📊 ${t(lang, "trackPrice")}</button>
+          <div class="product-actions">
+            ${product.permalink ? `<a class="action-button ${isAmazon ? "amazon-btn" : ""}" href="${product.permalink}" target="_blank" rel="noreferrer">${viewButtonText}</a>` : ""}
+            <button class="action-button secondary" onclick="alert('${t(lang, "trackPriceAlert")}')">📊 ${t(lang, "trackPrice")}</button>
+          </div>
         </div>
       </div>
     `, `
@@ -1592,8 +3183,10 @@ State: ${state || 'none'}</pre>
         .stock { margin-left: 8px; }
         .stock.out { color: #c62828; }
         .seller-info { margin: 12px 0; font-size: 14px; color: #555; }
-        .action-button.secondary { background: #fff; color: #333; border: 1px solid #ddd; margin-left: 8px; }
-        .action-button.secondary:hover { background: #f5f5f5; }
+        .retailer-badge.amazon-badge { background: #232f3e; }
+        .retailer-badge.ml-badge { background: #ffe600; }
+        .action-button.amazon-btn { background: #ff9900; color: #111; }
+        .action-button.amazon-btn:hover { background: #e88b00; }
       </style>
     `, true, userEmail, lang));
   });
