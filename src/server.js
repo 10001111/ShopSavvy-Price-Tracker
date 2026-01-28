@@ -2817,7 +2817,8 @@ State: ${state || 'none'}</pre>
       
       // Check if user exists
       let dbUser = await db.get("SELECT * FROM users WHERE email = ?", [email]);
-      
+      console.log("[OAuth] User lookup result:", dbUser ? `Found (ID: ${dbUser.id})` : "Not found");
+
       if (!dbUser) {
         // Create new user (no password needed for OAuth users)
         const randomPassword = crypto.randomBytes(32).toString('hex');
@@ -2829,7 +2830,7 @@ State: ${state || 'none'}</pre>
         );
 
         dbUser = await db.get("SELECT * FROM users WHERE email = ?", [email]);
-        console.log("[OAuth] New user created: " + email);
+        console.log("[OAuth] New user created:", email, "- DB User:", dbUser ? `ID ${dbUser.id}` : "NULL");
       } else if (!dbUser.verified) {
         // Auto-verify existing user who logged in with OAuth
         await db.run("UPDATE users SET verified = 1, auth_provider = 'google' WHERE id = ?", [dbUser.id]);
@@ -2837,6 +2838,12 @@ State: ${state || 'none'}</pre>
         console.log("[OAuth] User auto-verified: " + email);
       }
       
+      // Verify we have a valid user
+      if (!dbUser || !dbUser.id) {
+        console.error("[OAuth] ❌ Failed to get/create user in database");
+        return res.json({ success: false, error: "Failed to create user account" });
+      }
+
       // Record successful OAuth login
       await recordLoginAttempt({
         userId: dbUser.id,
