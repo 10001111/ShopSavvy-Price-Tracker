@@ -1219,19 +1219,19 @@ function createToken(user) {
 }
 
 function setAuthCookie(res, token) {
-  // For localhost with self-signed certs, use sameSite: "none" with secure
-  // or sameSite: "lax" without secure for better compatibility
-  const isLocalhost = true; // Adjust for production
+  // Detect if running in production (Render sets NODE_ENV)
+  const isProduction = process.env.NODE_ENV === "production";
+  const isLocalhost = !isProduction && (process.env.APP_BASE_URL || "").includes("localhost");
 
   const cookieOptions = {
     httpOnly: true,
-    sameSite: isLocalhost ? "lax" : "lax",
-    secure: false, // Set to false for localhost development (even with HTTPS)
+    sameSite: "lax",
+    secure: isProduction, // true in production, false for localhost
     maxAge: 1000 * 60 * 60 * 24 * 7,
     path: "/",
   };
 
-  console.log("[Cookie] Setting auth cookie with options:", JSON.stringify(cookieOptions));
+  console.log("[Cookie] Setting auth cookie (secure:", cookieOptions.secure, ")");
   res.cookie("token", token, cookieOptions);
 }
 
