@@ -71,6 +71,13 @@ if (HAS_TLS) {
 const APP_BASE_URL = process.env.APP_BASE_URL
   || `${HAS_TLS ? "https" : "http"}://localhost:${PORT}`;
 
+// Log APP_BASE_URL - this is critical for OAuth to work correctly
+console.log("[Config] APP_BASE_URL:", APP_BASE_URL);
+if (APP_BASE_URL.includes("localhost") && process.env.NODE_ENV === "production") {
+  console.warn("[Config] ⚠️  WARNING: APP_BASE_URL is localhost but NODE_ENV is production!");
+  console.warn("[Config] ⚠️  Google OAuth will NOT work! Set APP_BASE_URL in environment variables.");
+}
+
 // Translations for bilingual support (English/Spanish)
 const translations = {
   en: {
