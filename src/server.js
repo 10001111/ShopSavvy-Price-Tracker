@@ -71,13 +71,6 @@ if (HAS_TLS) {
 const APP_BASE_URL = process.env.APP_BASE_URL
   || `${HAS_TLS ? "https" : "http"}://localhost:${PORT}`;
 
-// Log APP_BASE_URL - this is critical for OAuth to work correctly
-console.log("[Config] APP_BASE_URL:", APP_BASE_URL);
-if (APP_BASE_URL.includes("localhost") && process.env.NODE_ENV === "production") {
-  console.warn("[Config] ⚠️  WARNING: APP_BASE_URL is localhost but NODE_ENV is production!");
-  console.warn("[Config] ⚠️  Google OAuth will NOT work! Set APP_BASE_URL in environment variables.");
-}
-
 // Translations for bilingual support (English/Spanish)
 const translations = {
   en: {
@@ -2076,7 +2069,6 @@ async function start() {
   app.get("/", async (req, res) => {
     const lang = getLang(req);
     const hasToken = Boolean(req.cookies.token);
-    console.log(`[Home] Request - hasToken: ${hasToken}`);
     let userEmail = "";
     if (hasToken) {
       try {
@@ -2366,51 +2358,30 @@ async function start() {
       <script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2"></script>
       <script>
         document.addEventListener('DOMContentLoaded', function() {
-          console.log('=== GOOGLE AUTH DEBUG ===');
-
           const SUPABASE_URL = '${process.env.SUPABASE_URL || ''}';
           const SUPABASE_ANON_KEY = '${process.env.SUPABASE_ANON_KEY || ''}';
           const REDIRECT_URL = '${APP_BASE_URL}/auth/supabase-callback';
 
-          console.log('1. SUPABASE_URL:', SUPABASE_URL ? SUPABASE_URL : 'NOT SET');
-          console.log('2. SUPABASE_ANON_KEY:', SUPABASE_ANON_KEY ? SUPABASE_ANON_KEY.substring(0, 20) + '...' : 'NOT SET');
-          console.log('3. REDIRECT_URL:', REDIRECT_URL);
-
           if (!SUPABASE_URL || !SUPABASE_ANON_KEY) {
-            console.error('❌ Supabase credentials not configured');
             const btn = document.getElementById('google-login-btn');
             if (btn) {
               btn.disabled = true;
-              btn.innerHTML = '<span style="color: #666;">Google Login Not Configured</span>';
+              btn.innerHTML = '<span style="color: #666;">Google Login Not Available</span>';
             }
             return;
           }
 
-          console.log('4. ✓ Supabase credentials found, initializing client...');
-
           const { createClient } = supabase;
           const supabaseClient = createClient(SUPABASE_URL, SUPABASE_ANON_KEY);
 
-          console.log('5. ✓ Supabase client created');
-
           const btn = document.getElementById('google-login-btn');
-          if (!btn) {
-            console.error('❌ Google login button not found in DOM');
-            return;
-          }
-
-          console.log('6. ✓ Google button found');
+          if (!btn) return;
 
           btn.addEventListener('click', async () => {
-            console.log('7. Button clicked, starting OAuth flow...');
             btn.disabled = true;
             btn.innerHTML = '<span>Redirecting to Google...</span>';
 
             try {
-              console.log('8. Calling supabaseClient.auth.signInWithOAuth...');
-              console.log('   Provider: google');
-              console.log('   RedirectTo:', REDIRECT_URL);
-
               const { data, error } = await supabaseClient.auth.signInWithOAuth({
                 provider: 'google',
                 options: {
@@ -2418,35 +2389,17 @@ async function start() {
                 }
               });
 
-              console.log('9. OAuth response received');
-              console.log('   Data:', JSON.stringify(data, null, 2));
-              console.log('   Error:', error);
-
               if (error) {
-                console.error('❌ OAuth error:', error);
-                console.error('   Error message:', error.message);
-                console.error('   Error status:', error.status);
                 btn.disabled = false;
                 btn.innerHTML = '<span>Continue with Google</span>';
                 alert('Failed to sign in with Google: ' + error.message);
-              } else {
-                console.log('10. ✓ OAuth initiated successfully, browser should redirect...');
-                if (data && data.url) {
-                  console.log('    Redirect URL:', data.url);
-                }
               }
             } catch (err) {
-              console.error('❌ Exception caught:', err);
-              console.error('   Error name:', err.name);
-              console.error('   Error message:', err.message);
-              console.error('   Error stack:', err.stack);
               btn.disabled = false;
               btn.innerHTML = '<span>Continue with Google</span>';
               alert('An error occurred: ' + err.message);
             }
           });
-
-          console.log('=== GOOGLE AUTH SETUP COMPLETE ===');
         });
       </script>
     `, false, "", lang));
@@ -2679,84 +2632,46 @@ State: ${state || 'none'}</pre>
           <meta name="viewport" content="width=device-width, initial-scale=1">
           <title>Processing Login | ShopSavvy</title>
           <style>
-            body { font-family: -apple-system, BlinkMacSystemFont, sans-serif; padding: 40px; max-width: 600px; margin: 0 auto; }
+            body { font-family: -apple-system, BlinkMacSystemFont, sans-serif; padding: 40px; max-width: 600px; margin: 0 auto; text-align: center; }
             h1 { color: #333; }
             .muted { color: #666; }
-            .error { color: #c00; background: #fee; padding: 10px; border-radius: 4px; }
-            #debug-output { margin-top: 20px; padding: 15px; background: #f5f5f5; border-radius: 8px; font-family: monospace; font-size: 12px; white-space: pre-wrap; max-height: 400px; overflow-y: auto; }
+            .error { color: #c00; background: #fee; padding: 10px; border-radius: 4px; text-align: left; }
+            .spinner { width: 40px; height: 40px; margin: 20px auto; border: 4px solid #f3f3f3; border-top: 4px solid #7c6a5d; border-radius: 50%; animation: spin 1s linear infinite; }
+            @keyframes spin { 0% { transform: rotate(0deg); } 100% { transform: rotate(360deg); } }
             a { color: #7c6a5d; }
           </style>
         </head>
         <body>
-          <h1>Processing Google Login...</h1>
+          <div class="spinner"></div>
+          <h1>Signing you in...</h1>
           <p class="muted">Please wait while we complete your login.</p>
-          <div id="debug-output"></div>
 
           <script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2"></script>
           <script>
-            const debugEl = document.getElementById('debug-output');
-            function log(msg) {
-              console.log(msg);
-              if (debugEl) debugEl.textContent += msg + '\\n';
-            }
-
-            log('=== CALLBACK PAGE DEBUG ===');
-          log('1. Page loaded');
-          log('2. Current URL: ' + window.location.href);
-          log('3. URL Hash: ' + (window.location.hash || '(none)'));
-          log('4. URL Search: ' + (window.location.search || '(none)'));
-
           const SUPABASE_URL = '${process.env.SUPABASE_URL || ''}';
           const SUPABASE_ANON_KEY = '${process.env.SUPABASE_ANON_KEY || ''}';
 
-          log('5. SUPABASE_URL: ' + (SUPABASE_URL ? 'Set' : 'NOT SET'));
-          log('6. SUPABASE_ANON_KEY: ' + (SUPABASE_ANON_KEY ? 'Set' : 'NOT SET'));
-
           if (!SUPABASE_URL || !SUPABASE_ANON_KEY) {
-            log('❌ Supabase not configured');
-            document.body.innerHTML = '<h1>Configuration Error</h1><p class="error">Supabase not configured. Please contact support.</p>';
+            document.body.innerHTML = '<h1>Configuration Error</h1><p class="error">Authentication not configured. Please contact support.</p>';
           } else {
-            log('7. Creating Supabase client...');
             const { createClient } = supabase;
             const supabaseClient = createClient(SUPABASE_URL, SUPABASE_ANON_KEY);
-            log('8. ✓ Supabase client created');
 
-            // Get the session from URL hash
-            log('9. Calling getSession()...');
             supabaseClient.auth.getSession().then(async ({ data: { session }, error }) => {
-              log('10. getSession() completed');
-              log('    Session: ' + (session ? 'Found' : 'NULL'));
-              log('    Error: ' + (error ? error.message : 'None'));
-
               if (error) {
-                log('❌ Session error: ' + error.message);
                 document.body.innerHTML = '<h1>Login Failed</h1><p class="error">Error: ' + error.message + '</p><p><a href="/login">Back to login</a></p>';
                 return;
               }
 
               if (!session) {
-                log('❌ No session found');
-                log('   This usually means:');
-                log('   - The OAuth flow did not complete');
-                log('   - The redirect URL is wrong in Supabase');
-                log('   - The URL hash was not preserved');
-                document.body.innerHTML = '<h1>No Session</h1><p class="error">Could not retrieve session. Check browser console for details.</p><p><a href="/login">Back to login</a></p><pre style="margin-top:20px;padding:10px;background:#f5f5f5;font-size:11px;">' + debugEl.textContent + '</pre>';
+                document.body.innerHTML = '<h1>Session Expired</h1><p class="error">Could not complete login. Please try again.</p><p><a href="/login">Back to login</a></p>';
                 return;
               }
 
-              log('11. ✓ Session found!');
-              log('    User email: ' + (session.user?.email || 'unknown'));
-              log('    User ID: ' + (session.user?.id || 'unknown'));
-              log('    Provider: ' + (session.user?.app_metadata?.provider || 'unknown'));
-
-              // Send session info to backend to create/login user
               try {
-                log('12. Sending to /auth/supabase-verify...');
                 const response = await fetch('/auth/supabase-verify', {
                   method: 'POST',
-                  headers: {
-                    'Content-Type': 'application/json'
-                  },
+                  headers: { 'Content-Type': 'application/json' },
                   credentials: 'include',
                   body: JSON.stringify({
                     user: session.user,
@@ -2764,24 +2679,18 @@ State: ${state || 'none'}</pre>
                   })
                 });
 
-                log('13. Response status: ' + response.status);
                 const result = await response.json();
-                log('14. Response body: ' + JSON.stringify(result));
 
                 if (result.success) {
-                  log('15. ✓ Login successful! Redirecting to home...');
-                  // Cookie is set by server (httpOnly), redirect to home page
                   window.location.href = '/';
                 } else {
-                  log('❌ Verify failed: ' + (result.error || 'Unknown error'));
                   document.body.innerHTML = '<h1>Login Failed</h1><p class="error">' + (result.error || 'Unknown error') + '</p><p><a href="/login">Back to login</a></p>';
                 }
               } catch (err) {
-                log('❌ Fetch error: ' + err.message);
-                document.body.innerHTML = '<h1>Error</h1><p class="error">Failed to verify login: ' + err.message + '</p><p><a href="/login">Back to login</a></p>';
+                document.body.innerHTML = '<h1>Error</h1><p class="error">Failed to complete login. Please try again.</p><p><a href="/login">Back to login</a></p>';
               }
             }).catch(err => {
-              log('❌ getSession() exception: ' + err.message);
+              document.body.innerHTML = '<h1>Error</h1><p class="error">Authentication error. Please try again.</p><p><a href="/login">Back to login</a></p>';
             });
           }
           </script>
@@ -2802,29 +2711,17 @@ State: ${state || 'none'}</pre>
    * Verify Supabase user and create/login in our system
    */
   app.post("/auth/supabase-verify", express.json(), async (req, res) => {
-    console.log("\n=== /auth/supabase-verify ===");
-    console.log("Request body:", JSON.stringify(req.body, null, 2));
-
     try {
       const { user, access_token } = req.body;
 
-      console.log("User object:", user ? "Present" : "MISSING");
-      console.log("Access token:", access_token ? "Present" : "MISSING");
-
       if (!user || !user.email) {
-        console.log("❌ Invalid user data - no email");
         return res.json({ success: false, error: 'Invalid user data' });
       }
 
-      console.log("User email:", user.email);
-      console.log("User ID (Supabase):", user.id);
-      
       const email = user.email.toLowerCase();
-      const name = user.user_metadata?.full_name || user.user_metadata?.name || email.split('@')[0];
-      
+
       // Check if user exists
       let dbUser = await db.get("SELECT * FROM users WHERE email = ?", [email]);
-      console.log("[OAuth] User lookup result:", dbUser ? `Found (ID: ${dbUser.id})` : "Not found");
 
       if (!dbUser) {
         // Create new user (no password needed for OAuth users)
@@ -2837,17 +2734,16 @@ State: ${state || 'none'}</pre>
         );
 
         dbUser = await db.get("SELECT * FROM users WHERE email = ?", [email]);
-        console.log("[OAuth] New user created:", email, "- DB User:", dbUser ? `ID ${dbUser.id}` : "NULL");
+        console.log(`[OAuth] New user created: ${email}`);
       } else if (!dbUser.verified) {
         // Auto-verify existing user who logged in with OAuth
         await db.run("UPDATE users SET verified = 1, auth_provider = 'google' WHERE id = ?", [dbUser.id]);
         dbUser.verified = 1;
-        console.log("[OAuth] User auto-verified: " + email);
       }
-      
+
       // Verify we have a valid user
       if (!dbUser || !dbUser.id) {
-        console.error("[OAuth] ❌ Failed to get/create user in database");
+        console.error("[OAuth] Failed to get/create user in database");
         return res.json({ success: false, error: "Failed to create user account" });
       }
 
@@ -2861,21 +2757,18 @@ State: ${state || 'none'}</pre>
         authMethod: "google"
       });
 
-      console.log(`[OAuth] User logged in via Google: ${email} (ID: ${dbUser.id})`);
+      console.log(`[OAuth] ${email} logged in`);
 
       // Create JWT token for our app
       const token = createToken(dbUser);
-      console.log("[OAuth] JWT token created");
 
       // Set httpOnly cookie server-side (more secure than client-side)
       setAuthCookie(res, token);
-      console.log("[OAuth] Auth cookie set");
 
       res.json({
         success: true,
         user: { id: dbUser.id, email: dbUser.email }
       });
-      console.log("[OAuth] ✓ Response sent successfully");
 
     } catch (error) {
       console.error("Supabase verify error:", error);
