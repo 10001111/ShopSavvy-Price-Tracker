@@ -13,6 +13,15 @@ dotenv.config({ path: path.join(__dirname, "..", ".env") });
 
 const { initDb } = require("./db");
 const supabaseDb = require("./supabase-db");
+const { isRedisConfigured } = require("./config/redis");
+const {
+  initQueue,
+  initWorker,
+  setupRecurringJobs,
+  triggerPriceUpdate,
+  getQueueStatus,
+  getRecentJobs,
+} = require("./queue");
 
 // Use Supabase for cloud storage, SQLite as fallback
 const USE_SUPABASE = Boolean(process.env.SUPABASE_URL && process.env.SUPABASE_ANON_KEY);
@@ -24,6 +33,7 @@ console.log("[Config] SUPABASE_ANON_KEY:", process.env.SUPABASE_ANON_KEY ? "✓ 
 console.log("[Config] AMAZON_ACCESS_KEY:", process.env.AMAZON_ACCESS_KEY ? "✓ Set" : "✗ Not set");
 console.log("[Config] AMAZON_SECRET_KEY:", process.env.AMAZON_SECRET_KEY ? "✓ Set" : "✗ Not set");
 console.log("[Config] AMAZON_PARTNER_TAG:", process.env.AMAZON_PARTNER_TAG ? "✓ Set" : "✗ Not set");
+console.log("[Config] REDIS_URL:", process.env.REDIS_URL ? "✓ Set" : "✗ Not set");
 
 const PORT = process.env.PORT || 3000;
 const JWT_SECRET = process.env.JWT_SECRET || "dev-secret";
@@ -2038,6 +2048,28 @@ async function start() {
     ? supabaseDb.getLoginHistory
     : require("./db").getLoginHistory.bind(null, localDb);
 
+  // Initialize Bull queue for background price updates (if Redis configured)
+  if (isRedisConfigured()) {
+    const queue = initQueue();
+    if (queue) {
+      // Initialize worker with dependencies
+      // Note: fetchMLProductById and fetchAmazonProductById are defined later in this file
+      // We pass them via a deferred initialization after they're defined
+      initWorker({
+        db: supabaseDb,
+        fetchMLProductById: async (id) => fetchMLProductById(id),
+        fetchAmazonProductById: async (asin) => fetchAmazonProductById(asin),
+      });
+
+      // Setup recurring jobs
+      setupRecurringJobs().catch((err) => {
+        console.error("[Queue] Failed to setup recurring jobs:", err.message);
+      });
+    }
+  } else {
+    console.log("[Queue] Redis not configured - background price updates disabled");
+  }
+
   const app = express();
 
   app.use(express.urlencoded({ extended: false }));
@@ -3079,7 +3111,7 @@ State: ${state || 'none'}</pre>
           <p>${description}</p>
           <div class="product-actions">
             ${product.permalink ? `<a class="action-button ${isAmazon ? "amazon-btn" : ""}" href="${product.permalink}" target="_blank" rel="noreferrer">${viewButtonText}</a>` : ""}
-            <button class="action-button secondary" onclick="alert('${t(lang, "trackPriceAlert")}')">📊 ${t(lang, "trackPrice")}</button>
+            <button class="action-button secondary" onclick="trackProduct('${product.id}', '${(product.title || "").replace(/'/g, "\\'")}', '${product.permalink || ""}', '${product.source || "mercadolibre"}', ${product.price || 0})">📊 ${t(lang, "trackPrice")}</button>
           </div>
         </div>
       </div>
@@ -3095,6 +3127,32 @@ State: ${state || 'none'}</pre>
         .action-button.amazon-btn { background: #ff9900; color: #111; }
         .action-button.amazon-btn:hover { background: #e88b00; }
       </style>
+      <script>
+        async function trackProduct(productId, title, url, source, price) {
+          try {
+            const res = await fetch('/api/track', {
+              method: 'POST',
+              headers: { 'Content-Type': 'application/json' },
+              credentials: 'include',
+              body: JSON.stringify({
+                productId: productId,
+                productTitle: title,
+                productUrl: url,
+                source: source,
+                currentPrice: price
+              })
+            });
+            const data = await res.json();
+            if (data.success) {
+              alert('Product added to price tracking!');
+            } else {
+              alert('Error: ' + (data.error || 'Could not track product'));
+            }
+          } catch (err) {
+            alert('Error: ' + err.message);
+          }
+        }
+      </script>
     `, true, userEmail, lang));
   });
 
@@ -3104,6 +3162,71 @@ State: ${state || 'none'}</pre>
       return res.status(401).json({ error: "Unauthorized" });
     }
     res.json({ email: user.email });
+  });
+
+  // ============================================
+  // PRICE TRACKING ENDPOINTS
+  // ============================================
+
+  /**
+   * API: Track a product for price monitoring
+   * URL: POST /api/track
+   */
+  app.post("/api/track", authRequired, async (req, res) => {
+    try {
+      const { productId, productTitle, productUrl, source, currentPrice } = req.body;
+      const userId = req.user.id;
+
+      if (!productId || !source) {
+        return res.status(400).json({ success: false, error: "Missing required fields" });
+      }
+
+      const tracked = await supabaseDb.addTrackedProduct({
+        userId,
+        productId,
+        productTitle: productTitle || "Unknown Product",
+        productUrl: productUrl || "",
+        source,
+        targetPrice: null,
+        currentPrice: currentPrice || 0,
+      });
+
+      if (tracked) {
+        // Also record initial price in history
+        await supabaseDb.addPriceHistory(tracked.id, currentPrice || 0);
+      }
+
+      res.json({ success: true, tracked });
+    } catch (error) {
+      console.error("[Track] Error:", error);
+      res.status(500).json({ success: false, error: error.message });
+    }
+  });
+
+  /**
+   * API: Get user's tracked products
+   * URL: GET /api/track
+   */
+  app.get("/api/track", authRequired, async (req, res) => {
+    try {
+      const products = await supabaseDb.getTrackedProducts(req.user.id);
+      res.json({ success: true, products });
+    } catch (error) {
+      res.status(500).json({ success: false, error: error.message });
+    }
+  });
+
+  /**
+   * API: Remove tracked product
+   * URL: DELETE /api/track/:id
+   */
+  app.delete("/api/track/:id", authRequired, async (req, res) => {
+    try {
+      const success = await supabaseDb.removeTrackedProduct(req.params.id, req.user.id);
+      res.json({ success });
+    } catch (error) {
+      res.status(500).json({ success: false, error: error.message });
+    }
   });
 
   // ============================================
@@ -3289,6 +3412,96 @@ State: ${state || 'none'}</pre>
         baseUrl: APP_BASE_URL
       });
     });
+  });
+
+  // ============================================
+  // ADMIN ENDPOINTS - Queue Management
+  // ============================================
+
+  /**
+   * Admin middleware - requires authenticated user
+   * In production, add additional admin role check
+   */
+  function requireAdmin(req, res, next) {
+    const token = req.cookies.token;
+    if (!token) {
+      return res.status(401).json({ success: false, error: "Authentication required" });
+    }
+
+    try {
+      const payload = jwt.verify(token, JWT_SECRET);
+      req.user = payload;
+      // TODO: Add admin role check here when roles are implemented
+      return next();
+    } catch (error) {
+      return res.status(401).json({ success: false, error: "Invalid token" });
+    }
+  }
+
+  /**
+   * API: Trigger manual price update
+   * URL: POST /api/admin/trigger-price-update
+   */
+  app.post("/api/admin/trigger-price-update", requireAdmin, async function(req, res) {
+    try {
+      const job = await triggerPriceUpdate();
+      res.json({
+        success: true,
+        message: "Price update job queued",
+        jobId: job.id,
+      });
+    } catch (error) {
+      res.status(500).json({
+        success: false,
+        error: error.message,
+      });
+    }
+  });
+
+  /**
+   * API: Get queue status
+   * URL: GET /api/admin/queue-status
+   */
+  app.get("/api/admin/queue-status", requireAdmin, async function(req, res) {
+    try {
+      const status = await getQueueStatus();
+      const recentJobs = await getRecentJobs(10);
+
+      res.json({
+        success: true,
+        status,
+        recentJobs,
+      });
+    } catch (error) {
+      res.status(500).json({
+        success: false,
+        error: error.message,
+      });
+    }
+  });
+
+  /**
+   * API: Get price history for a tracked product
+   * URL: GET /api/tracked/:id/history
+   */
+  app.get("/api/tracked/:id/history", authRequired, async function(req, res) {
+    try {
+      const { id } = req.params;
+      const limit = parseInt(req.query.limit) || 30;
+
+      const history = await supabaseDb.getPriceHistory(id, limit);
+
+      res.json({
+        success: true,
+        trackedProductId: id,
+        history,
+      });
+    } catch (error) {
+      res.status(500).json({
+        success: false,
+        error: error.message,
+      });
+    }
   });
 
   if (HAS_TLS) {

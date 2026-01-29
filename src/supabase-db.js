@@ -346,6 +346,82 @@ async function removeTrackedProduct(id, userId) {
   return !error;
 }
 
+/**
+ * Get all tracked products (for background worker)
+ */
+async function getAllTrackedProducts() {
+  const { data, error } = await getSupabase()
+    .from("tracked_products")
+    .select("*")
+    .order("created_at", { ascending: true });
+
+  if (error) {
+    console.error("[Supabase] getAllTrackedProducts error:", error);
+  }
+  return data || [];
+}
+
+/**
+ * Update tracked product price and last_checked timestamp
+ */
+async function updateTrackedProductPrice(id, price) {
+  const { data, error } = await getSupabase()
+    .from("tracked_products")
+    .update({
+      current_price: price,
+      last_checked: new Date().toISOString(),
+    })
+    .eq("id", id)
+    .select()
+    .single();
+
+  if (error) {
+    console.error("[Supabase] updateTrackedProductPrice error:", error);
+  }
+  return data;
+}
+
+// ============================================
+// PRICE HISTORY OPERATIONS
+// ============================================
+
+/**
+ * Add price history entry for a tracked product
+ */
+async function addPriceHistory(trackedProductId, price) {
+  const { data, error } = await getSupabase()
+    .from("price_history")
+    .insert({
+      tracked_product_id: trackedProductId,
+      price,
+      recorded_at: new Date().toISOString(),
+    })
+    .select()
+    .single();
+
+  if (error) {
+    console.error("[Supabase] addPriceHistory error:", error);
+  }
+  return data;
+}
+
+/**
+ * Get price history for a tracked product
+ */
+async function getPriceHistory(trackedProductId, limit = 30) {
+  const { data, error } = await getSupabase()
+    .from("price_history")
+    .select("*")
+    .eq("tracked_product_id", trackedProductId)
+    .order("recorded_at", { ascending: false })
+    .limit(limit);
+
+  if (error) {
+    console.error("[Supabase] getPriceHistory error:", error);
+  }
+  return data || [];
+}
+
 // ============================================
 // DEMO DATA SETUP
 // ============================================
@@ -476,6 +552,11 @@ module.exports = {
   addTrackedProduct,
   getTrackedProducts,
   removeTrackedProduct,
+  getAllTrackedProducts,
+  updateTrackedProductPrice,
+  // Price history
+  addPriceHistory,
+  getPriceHistory,
   // Setup
   createDemoAccounts
 };
