@@ -132,6 +132,7 @@ const translations = {
     forgotPassword: "Forgot password?",
     orContinueWith: "Or continue with",
     continueWithGoogle: "Continue with Google",
+    signUpWithGoogle: "Sign up with Google",
 
     // Profile
     myProfile: "My Profile",
@@ -204,6 +205,7 @@ const translations = {
     forgotPassword: "¿Olvidaste tu contraseña?",
     orContinueWith: "O continuar con",
     continueWithGoogle: "Continuar con Google",
+    signUpWithGoogle: "Registrarse con Google",
 
     // Profile
     myProfile: "Mi Perfil",
@@ -233,989 +235,306 @@ function t(lang, key) {
   return translations[lang]?.[key] || translations.en[key] || key;
 }
 
-function renderPage(title, body, extraHead = "", isLoggedIn = false, userEmail = "", lang = "en") {
+function renderPage(title, body, extraHead = "", isLoggedIn = false, userEmail = "", lang = "en", userData = null) {
   const otherLang = lang === "en" ? "es" : "en";
-  const langLabel = lang === "en" ? "Español" : "English";
-  const langFlag = lang === "en" ? "🇪🇸" : "🇺🇸";
+  const currentFlag = lang === "en" ? "🇺🇸" : "🇲🇽";
+  const currentLangName = lang === "en" ? "EN" : "ES";
+
+  // User data for avatar display
+  const displayName = userData?.username || (userEmail ? userEmail.split("@")[0] : "");
+  const profilePic = userData?.profile_picture_url;
+  const userInitials = getInitials(userData?.username || userEmail);
 
   return `<!doctype html>
-<html lang="${lang}">
+<html lang="${lang}" data-theme="light">
   <head>
     <meta charset="utf-8" />
     <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no" />
-    <title>${title} | ShopSavvy</title>
+    <title>${title} | OfertaRadar</title>
     <link rel="preconnect" href="https://fonts.googleapis.com">
     <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
-    <link href="https://fonts.googleapis.com/css2?family=Inter:wght@300;400;500;600;700&display=swap" rel="stylesheet">
-    <style>
-      /* ==========================================
-         LAYOUT LOUNGE - Mobile-First Design
-         ========================================== */
-
-      :root {
-        --bg-primary: #faf9f7;
-        --bg-secondary: #ffffff;
-        --bg-accent: #f5f3f0;
-        --text-primary: #2d2a26;
-        --text-secondary: #6b6560;
-        --text-muted: #9a958f;
-        --accent-primary: #7c6a5d;
-        --accent-hover: #5d4e43;
-        --accent-light: #d4ccc4;
-        --border-color: #e8e4df;
-        --shadow-soft: 0 2px 8px rgba(45, 42, 38, 0.06);
-        --shadow-medium: 0 4px 20px rgba(45, 42, 38, 0.08);
-        --shadow-hover: 0 8px 30px rgba(45, 42, 38, 0.12);
-        --radius-sm: 8px;
-        --radius-md: 12px;
-        --radius-lg: 16px;
-        --radius-full: 9999px;
-        --mobile-padding: 16px;
-      }
-
-      * {
-        box-sizing: border-box;
-        margin: 0;
-        padding: 0;
-      }
-
-      html {
-        font-size: 16px;
-        -webkit-text-size-adjust: 100%;
-      }
-
-      body {
-        font-family: 'Inter', -apple-system, BlinkMacSystemFont, sans-serif;
-        background: var(--bg-primary);
-        color: var(--text-primary);
-        line-height: 1.6;
-        min-height: 100vh;
-        min-height: -webkit-fill-available;
-        display: flex;
-        flex-direction: column;
-        overflow-x: hidden;
-      }
-
-      /* ==========================================
-         HEADER - Mobile First
-         ========================================== */
-      .site-header {
-        background: rgba(255, 255, 255, 0.95);
-        padding: 12px var(--mobile-padding);
-        display: flex;
-        flex-direction: column;
-        align-items: stretch;
-        gap: 10px;
-        border-bottom: 1px solid var(--border-color);
-        position: sticky;
-        top: 0;
-        z-index: 100;
-        backdrop-filter: blur(10px);
-        -webkit-backdrop-filter: blur(10px);
-      }
-
-      .header-top {
-        display: flex;
-        justify-content: space-between;
-        align-items: center;
-        width: 100%;
-      }
-
-      .site-header .logo {
-        font-size: 18px;
-        font-weight: 700;
-        color: var(--text-primary);
-        text-decoration: none;
-        letter-spacing: -0.5px;
-        flex-shrink: 0;
-      }
-
-      .lang-switch {
-        display: inline-flex;
-        align-items: center;
-        gap: 4px;
-        background: var(--bg-accent);
-        border: 1px solid var(--border-color);
-        padding: 6px 10px;
-        border-radius: var(--radius-full);
-        font-size: 11px;
-        font-weight: 500;
-        color: var(--text-secondary);
-        text-decoration: none;
-        white-space: nowrap;
-        flex-shrink: 0;
-      }
-
-      .site-header .nav {
-        display: flex;
-        flex-direction: row;
-        flex-wrap: nowrap;
-        justify-content: stretch;
-        gap: 6px;
-        width: 100%;
-        overflow-x: auto;
-        -webkit-overflow-scrolling: touch;
-        scrollbar-width: none;
-        -ms-overflow-style: none;
-      }
-
-      .site-header .nav::-webkit-scrollbar {
-        display: none;
-      }
-
-      .site-header .nav a,
-      .site-header .nav span {
-        flex: 1;
-        min-width: 0;
-        color: var(--text-secondary);
-        text-decoration: none;
-        padding: 10px 12px;
-        border-radius: var(--radius-md);
-        font-weight: 500;
-        font-size: 13px;
-        background: var(--bg-accent);
-        text-align: center;
-        white-space: nowrap;
-        overflow: hidden;
-        text-overflow: ellipsis;
-      }
-
-      .site-header .nav a:hover {
-        background: var(--accent-primary);
-        color: white;
-      }
-
-      .site-header .user-email {
-        font-size: 11px;
-        color: var(--text-muted);
-        padding: 10px 12px;
-        background: var(--bg-accent);
-        border-radius: var(--radius-md);
-        max-width: 120px;
-        overflow: hidden;
-        text-overflow: ellipsis;
-        white-space: nowrap;
-        flex-shrink: 1;
-      }
-
-      .site-header form {
-        display: contents;
-      }
-
-      .site-header button {
-        flex: 1;
-        background: var(--accent-primary);
-        border: none;
-        color: white;
-        padding: 10px 12px;
-        border-radius: var(--radius-md);
-        cursor: pointer;
-        font-size: 13px;
-        font-weight: 500;
-        min-height: 44px;
-      }
-
-      /* ==========================================
-         MAIN CONTENT - Mobile First
-         ========================================== */
-      .main-content {
-        flex: 1;
-        padding: 20px var(--mobile-padding);
-        width: 100%;
-        max-width: 100%;
-        overflow-x: hidden;
-      }
-
-      /* ==========================================
-         TYPOGRAPHY - Mobile First
-         ========================================== */
-      h1 {
-        font-size: 22px;
-        font-weight: 700;
-        color: var(--text-primary);
-        letter-spacing: -0.5px;
-        margin-bottom: 8px;
-        line-height: 1.3;
-        word-wrap: break-word;
-      }
-
-      h2 {
-        font-size: 18px;
-        font-weight: 600;
-        color: var(--text-primary);
-      }
-
-      p {
-        color: var(--text-secondary);
-        font-size: 14px;
-        word-wrap: break-word;
-      }
-
-      .muted {
-        color: var(--text-muted);
-        font-size: 13px;
-      }
-
-      .error {
-        color: #c94a4a;
-        background: #fef2f2;
-        padding: 12px 14px;
-        border-radius: var(--radius-md);
-        font-size: 14px;
-        word-wrap: break-word;
-      }
-
-      .success {
-        color: #3d7a5a;
-        background: #f0fdf4;
-        padding: 12px 14px;
-        border-radius: var(--radius-md);
-        font-size: 14px;
-      }
-
-      /* ==========================================
-         FORMS - Mobile First
-         ========================================== */
-      form {
-        display: flex;
-        flex-direction: column;
-        gap: 14px;
-        width: 100%;
-        max-width: 100%;
-      }
-
-      label {
-        font-size: 13px;
-        font-weight: 500;
-        color: var(--text-secondary);
-        margin-bottom: 4px;
-        display: block;
-      }
-
-      input, select {
-        width: 100%;
-        padding: 12px 14px;
-        font-size: 16px;
-        border: 1px solid var(--border-color);
-        border-radius: var(--radius-md);
-        background: var(--bg-secondary);
-        color: var(--text-primary);
-        font-family: inherit;
-        -webkit-appearance: none;
-        appearance: none;
-      }
-
-      input:focus, select:focus {
-        outline: none;
-        border-color: var(--accent-primary);
-        box-shadow: 0 0 0 3px rgba(124, 106, 93, 0.1);
-      }
-
-      input[type="range"] {
-        padding: 0;
-        height: 6px;
-        border-radius: var(--radius-full);
-        background: var(--accent-light);
-        border: none;
-      }
-
-      input[type="range"]::-webkit-slider-thumb {
-        -webkit-appearance: none;
-        width: 22px;
-        height: 22px;
-        border-radius: 50%;
-        background: var(--accent-primary);
-        cursor: pointer;
-        box-shadow: var(--shadow-soft);
-      }
-
-      button, .action-button {
-        display: flex;
-        justify-content: center;
-        align-items: center;
-        width: 100%;
-        padding: 14px 20px;
-        background: var(--accent-primary);
-        color: white;
-        border: none;
-        border-radius: var(--radius-md);
-        font-size: 15px;
-        font-weight: 500;
-        cursor: pointer;
-        text-decoration: none;
-        text-align: center;
-        min-height: 48px;
-        -webkit-tap-highlight-color: transparent;
-      }
-
-      button:hover, .action-button:hover {
-        background: var(--accent-hover);
-      }
-
-      button:active, .action-button:active {
-        transform: scale(0.98);
-      }
-
-      .action-button.secondary {
-        background: var(--bg-secondary);
-        color: var(--text-primary);
-        border: 1px solid var(--border-color);
-      }
-
-      .action-button.secondary:hover {
-        background: var(--bg-accent);
-      }
-
-      /* ==========================================
-         SEARCH SECTION - Mobile First
-         ========================================== */
-      .search-wrapper {
-        width: 100%;
-      }
-
-      .tagline {
-        font-size: 14px;
-        color: var(--text-muted);
-        margin-bottom: 16px;
-        font-weight: 400;
-      }
-
-      .search-form {
-        background: var(--bg-secondary);
-        padding: 16px;
-        border-radius: var(--radius-lg);
-        box-shadow: var(--shadow-soft);
-        display: flex;
-        flex-direction: column;
-        gap: 14px;
-        max-width: 100%;
-      }
-
-      .search-form .full {
-        width: 100%;
-      }
-
-      .filters {
-        display: flex;
-        flex-direction: column;
-        gap: 14px;
-      }
-
-      .filters.full {
-        width: 100%;
-      }
-
-      .range-row {
-        display: flex;
-        flex-direction: column;
-        gap: 8px;
-        width: 100%;
-      }
-
-      .range-row label {
-        font-size: 12px;
-      }
-
-      /* ==========================================
-         PRODUCT GRID - Mobile First (Single Column)
-         ========================================== */
-      .results {
-        margin-top: 20px;
-      }
-
-      .grid {
-        display: flex;
-        flex-direction: column;
-        gap: 14px;
-      }
-
-      .card {
-        background: var(--bg-secondary);
-        padding: 14px;
-        border-radius: var(--radius-lg);
-        box-shadow: var(--shadow-soft);
-        display: flex;
-        flex-direction: column;
-        gap: 10px;
-        border: 1px solid transparent;
-      }
-
-      .card:active {
-        transform: scale(0.99);
-      }
-
-      .card img {
-        width: 100%;
-        height: 160px;
-        object-fit: contain;
-        background: var(--bg-accent);
-        border-radius: var(--radius-md);
-      }
-
-      .card-title {
-        font-weight: 600;
-        font-size: 14px;
-        color: var(--text-primary);
-        line-height: 1.4;
-        display: -webkit-box;
-        -webkit-line-clamp: 2;
-        -webkit-box-orient: vertical;
-        overflow: hidden;
-      }
-
-      .card-meta {
-        font-size: 16px;
-        font-weight: 600;
-        color: var(--accent-primary);
-      }
-
-      .card-seller {
-        font-size: 11px;
-        color: var(--text-muted);
-      }
-
-      /* Source badges */
-      .source-badge {
-        display: inline-block;
-        padding: 2px 8px;
-        border-radius: var(--radius-full);
-        font-size: 10px;
-        font-weight: 600;
-        text-transform: uppercase;
-        letter-spacing: 0.5px;
-        margin-left: 6px;
-        vertical-align: middle;
-      }
-
-      .source-badge.ml {
-        background: #ffe600;
-        color: #333;
-      }
-
-      .source-badge.amazon {
-        background: #ff9900;
-        color: #111;
-      }
-
-      .card a {
-        display: flex;
-        justify-content: center;
-        align-items: center;
-        padding: 12px 16px;
-        background: var(--bg-accent);
-        color: var(--text-primary);
-        text-decoration: none;
-        border-radius: var(--radius-md);
-        font-size: 14px;
-        font-weight: 500;
-        min-height: 44px;
-      }
-
-      .card a:active {
-        background: var(--accent-primary);
-        color: white;
-      }
-
-      /* ==========================================
-         PAGINATION - Mobile First (Stacked)
-         ========================================== */
-      .pagination {
-        display: flex;
-        flex-direction: column;
-        gap: 10px;
-        align-items: center;
-        margin-top: 20px;
-        padding: 16px 0;
-      }
-
-      .pagination a {
-        padding: 12px 20px;
-        background: var(--bg-secondary);
-        border: 1px solid var(--border-color);
-        border-radius: var(--radius-md);
-        text-decoration: none;
-        color: var(--text-primary);
-        font-weight: 500;
-        font-size: 14px;
-        min-height: 44px;
-        display: flex;
-        align-items: center;
-        justify-content: center;
-        width: 100%;
-      }
-
-      .pagination a:active {
-        background: var(--accent-primary);
-        color: white;
-      }
-
-      .pagination span {
-        color: var(--text-muted);
-        font-size: 13px;
-        order: -1;
-        padding: 8px 0;
-      }
-
-      /* ==========================================
-         NOTICES & ALERTS
-         ========================================== */
-      .notice {
-        background: linear-gradient(135deg, #fef7ed, #fdf4e7);
-        border: 1px solid #f5e6d3;
-        padding: 14px;
-        border-radius: var(--radius-md);
-        margin-bottom: 16px;
-        color: #8b6914;
-        font-size: 14px;
-        word-wrap: break-word;
-      }
-
-      .notice a {
-        color: var(--accent-primary);
-        font-weight: 500;
-      }
-
-      /* ==========================================
-         BREADCRUMB
-         ========================================== */
-      .breadcrumb {
-        font-size: 12px;
-        color: var(--text-muted);
-        margin-bottom: 14px;
-        display: flex;
-        flex-wrap: wrap;
-        align-items: center;
-        gap: 4px;
-      }
-
-      .breadcrumb a {
-        color: var(--accent-primary);
-        text-decoration: none;
-      }
-
-      /* ==========================================
-         PRODUCT DETAIL - Mobile First (Stacked)
-         ========================================== */
-      .product-detail {
-        display: flex;
-        flex-direction: column;
-        gap: 20px;
-      }
-
-      .product-image {
-        width: 100%;
-        max-width: 100%;
-        height: auto;
-        border-radius: var(--radius-lg);
-        background: var(--bg-secondary);
-        box-shadow: var(--shadow-soft);
-      }
-
-      .product-price {
-        font-size: 24px;
-        font-weight: 700;
-        color: var(--accent-primary);
-        margin: 10px 0;
-      }
-
-      .product-meta {
-        display: flex;
-        flex-wrap: wrap;
-        gap: 8px;
-        margin: 10px 0;
-      }
-
-      .condition {
-        background: #e8f5e9;
-        color: #2e7d32;
-        padding: 5px 10px;
-        border-radius: var(--radius-full);
-        font-size: 11px;
-        font-weight: 500;
-      }
-
-      .stock {
-        color: var(--text-muted);
-        font-size: 12px;
-        display: flex;
-        align-items: center;
-      }
-
-      .stock.out { color: #c94a4a; }
-
-      .seller-info {
-        margin: 10px 0;
-        font-size: 13px;
-        color: var(--text-secondary);
-        padding: 12px;
-        background: var(--bg-accent);
-        border-radius: var(--radius-md);
-        word-wrap: break-word;
-      }
-
-      .retailer-badge {
-        display: inline-flex;
-        align-items: center;
-        gap: 6px;
-        padding: 6px 12px;
-        border-radius: var(--radius-full);
-        background: var(--bg-accent);
-        font-size: 11px;
-        color: var(--text-secondary);
-      }
-
-      .retailer-badge img {
-        height: 16px;
-        width: auto;
-      }
-
-      .product-actions {
-        display: flex;
-        flex-direction: column;
-        gap: 10px;
-        margin-top: 14px;
-      }
-
-      /* ==========================================
-         PROFILE CARD
-         ========================================== */
-      .profile-card {
-        background: var(--bg-secondary);
-        padding: 20px;
-        border-radius: var(--radius-lg);
-        box-shadow: var(--shadow-soft);
-      }
-
-      .profile-card p {
-        margin: 8px 0;
-        font-size: 14px;
-        word-wrap: break-word;
-      }
-
-      /* ==========================================
-         GOOGLE LOGIN BUTTON
-         ========================================== */
-      #google-login-btn {
-        background: var(--bg-secondary) !important;
-        border: 1px solid var(--border-color) !important;
-        color: var(--text-primary) !important;
-        border-radius: var(--radius-md) !important;
-        padding: 14px 16px !important;
-        font-weight: 500 !important;
-        min-height: 48px !important;
-        width: 100% !important;
-        justify-content: center !important;
-      }
-
-      #google-login-btn:active {
-        background: var(--bg-accent) !important;
-      }
-
-      /* ==========================================
-         AUTH PAGES STYLING
-         ========================================== */
-      .auth-divider {
-        margin: 20px 0;
-        padding: 20px 0 0;
-        border-top: 1px solid var(--border-color);
-        text-align: center;
-      }
-
-      .auth-divider p {
-        color: var(--text-muted);
-        margin-bottom: 14px;
-        font-size: 13px;
-      }
-
-      /* ==========================================
-         SMALL PHONES (max-width: 374px)
-         ========================================== */
-      @media (max-width: 374px) {
-        :root {
-          --mobile-padding: 12px;
-        }
-
-        .site-header .logo {
-          font-size: 16px;
-        }
-
-        .lang-switch {
-          padding: 5px 8px;
-          font-size: 10px;
-        }
-
-        .site-header .nav a,
-        .site-header .nav span,
-        .site-header button {
-          padding: 8px 10px;
-          font-size: 12px;
-        }
-
-        h1 {
-          font-size: 20px;
-        }
-
-        .card-meta {
-          font-size: 15px;
-        }
-
-        .product-price {
-          font-size: 22px;
-        }
-      }
-
-      /* ==========================================
-         TABLET BREAKPOINT (min-width: 600px)
-         ========================================== */
-      @media (min-width: 600px) {
-        :root {
-          --mobile-padding: 24px;
-        }
-
-        .site-header {
-          flex-direction: row;
-          justify-content: space-between;
-          align-items: center;
-          padding: 14px 24px;
-        }
-
-        .header-top {
-          width: auto;
-        }
-
-        .site-header .nav {
-          width: auto;
-          flex-wrap: nowrap;
-          gap: 8px;
-        }
-
-        .site-header .nav a,
-        .site-header .nav span {
-          flex: none;
-          padding: 10px 16px;
-        }
-
-        .site-header .user-email {
-          max-width: 160px;
-        }
-
-        .site-header button {
-          flex: none;
-          width: auto;
-          padding: 10px 18px;
-        }
-
-        .main-content {
-          padding: 28px 24px;
-        }
-
-        h1 {
-          font-size: 26px;
-        }
-
-        .search-form {
-          padding: 24px;
-        }
-
-        .filters {
-          flex-direction: row;
-          flex-wrap: wrap;
-        }
-
-        .filters > .range-row {
-          flex: 1;
-          min-width: 160px;
-        }
-
-        .grid {
-          display: grid;
-          grid-template-columns: repeat(2, 1fr);
-          gap: 16px;
-        }
-
-        .card img {
-          height: 180px;
-        }
-
-        .pagination {
-          flex-direction: row;
-          justify-content: center;
-        }
-
-        .pagination span {
-          order: 0;
-        }
-
-        .pagination a {
-          width: auto;
-          min-width: 140px;
-        }
-      }
-
-      /* ==========================================
-         DESKTOP BREAKPOINT (min-width: 900px)
-         ========================================== */
-      @media (min-width: 900px) {
-        .site-header {
-          padding: 16px 40px;
-        }
-
-        .site-header .logo {
-          font-size: 22px;
-        }
-
-        .site-header .nav a {
-          padding: 10px 20px;
-          font-size: 14px;
-        }
-
-        .lang-switch {
-          padding: 8px 14px;
-          font-size: 12px;
-        }
-
-        .main-content {
-          padding: 40px;
-          max-width: 1100px;
-          margin: 0 auto;
-        }
-
-        h1 {
-          font-size: 30px;
-        }
-
-        .search-form {
-          padding: 28px;
-        }
-
-        .grid {
-          grid-template-columns: repeat(3, 1fr);
-          gap: 20px;
-        }
-
-        .card {
-          padding: 18px;
-        }
-
-        .card:hover {
-          box-shadow: var(--shadow-hover);
-          transform: translateY(-2px);
-        }
-
-        .card img {
-          height: 200px;
-        }
-
-        .card a:hover {
-          background: var(--accent-primary);
-          color: white;
-        }
-
-        .product-detail {
-          flex-direction: row;
-          gap: 36px;
-        }
-
-        .product-detail > *:first-child {
-          flex: 1;
-          max-width: 400px;
-        }
-
-        .product-detail > *:last-child {
-          flex: 1.2;
-        }
-
-        .product-price {
-          font-size: 32px;
-        }
-
-        .product-actions {
-          flex-direction: row;
-        }
-
-        .product-actions .action-button {
-          width: auto;
-          flex: 1;
-        }
-
-        button, .action-button {
-          width: auto;
-        }
-
-        form {
-          max-width: 420px;
-        }
-      }
-
-      /* ==========================================
-         LARGE DESKTOP (min-width: 1200px)
-         ========================================== */
-      @media (min-width: 1200px) {
-        .grid {
-          grid-template-columns: repeat(4, 1fr);
-        }
-      }
-
-      /* ==========================================
-         UTILITIES
-         ========================================== */
-      a, button {
-        -webkit-tap-highlight-color: transparent;
-      }
-
-      /* Smooth scrolling */
-      html {
-        scroll-behavior: smooth;
-      }
-
-      /* Custom Scrollbar - Desktop only */
-      @media (min-width: 900px) {
-        ::-webkit-scrollbar { width: 6px; }
-        ::-webkit-scrollbar-track { background: var(--bg-primary); }
-        ::-webkit-scrollbar-thumb {
-          background: var(--accent-light);
-          border-radius: var(--radius-full);
-        }
-        ::-webkit-scrollbar-thumb:hover {
-          background: var(--accent-primary);
-        }
-      }
-
-      /* Prevent horizontal scroll */
-      html, body {
-        overflow-x: hidden;
-        max-width: 100vw;
-      }
-
-      /* Safe area for notched phones */
-      @supports (padding: env(safe-area-inset-bottom)) {
-        .main-content {
-          padding-bottom: calc(20px + env(safe-area-inset-bottom));
-        }
-      }
-    </style>
+    <link href="https://fonts.googleapis.com/css2?family=Inter:wght@300;400;500;600;700;800&display=swap" rel="stylesheet">
+    <link rel="stylesheet" href="/styles.css">
+    <script>
+      // Theme initialization - runs before page render to prevent flash
+      (function() {
+        const savedTheme = localStorage.getItem('theme');
+        const prefersDark = window.matchMedia('(prefers-color-scheme: dark)').matches;
+        const theme = savedTheme || (prefersDark ? 'dark' : 'light');
+        document.documentElement.setAttribute('data-theme', theme);
+      })();
+    </script>
+    <style>/* Page-specific overrides */</style>
     ${extraHead}
   </head>
   <body>
     <header class="site-header">
-      <div class="header-top">
-        <a href="/" class="logo">ShopSavvy</a>
-        <a href="/set-lang/${otherLang}" class="lang-switch">${langFlag} ${langLabel}</a>
-      </div>
+      <a href="/" class="logo">OfertaRadar</a>
       <nav class="nav">
         ${isLoggedIn ? `
-          <span class="user-email">${userEmail}</span>
-          <a href="/profile">${t(lang, "profile")}</a>
-          <form method="post" action="/logout"><button type="submit">${t(lang, "logout")}</button></form>
+          <div class="user-dropdown" id="userDropdown">
+            <button class="user-dropdown-toggle" type="button" id="dropdownToggle">
+              <div class="user-avatar-small">
+                ${profilePic
+                  ? `<img src="${profilePic}" alt="${displayName}" />`
+                  : `<span class="avatar-initials-small">${userInitials}</span>`
+                }
+              </div>
+              <svg class="chevron" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+                <path d="M6 9l6 6 6-6"/>
+              </svg>
+            </button>
+            <div class="user-dropdown-menu" id="dropdownMenu">
+              <div class="dropdown-header">
+                <div class="dropdown-avatar">
+                  ${profilePic
+                    ? `<img src="${profilePic}" alt="${displayName}" />`
+                    : `<span class="avatar-initials">${userInitials}</span>`
+                  }
+                </div>
+                <div class="dropdown-user-info">
+                  <span class="dropdown-name">${displayName}</span>
+                  <span class="dropdown-email">${userEmail}</span>
+                </div>
+              </div>
+              <div class="dropdown-divider"></div>
+              <a href="/profile">
+                <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+                  <path d="M20 21v-2a4 4 0 0 0-4-4H8a4 4 0 0 0-4 4v2"></path>
+                  <circle cx="12" cy="7" r="4"></circle>
+                </svg>
+                ${t(lang, "profile")}
+              </a>
+              <a href="/profile/settings">
+                <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+                  <circle cx="12" cy="12" r="3"></circle>
+                  <path d="M19.4 15a1.65 1.65 0 0 0 .33 1.82l.06.06a2 2 0 0 1 0 2.83 2 2 0 0 1-2.83 0l-.06-.06a1.65 1.65 0 0 0-1.82-.33 1.65 1.65 0 0 0-1 1.51V21a2 2 0 0 1-2 2 2 2 0 0 1-2-2v-.09A1.65 1.65 0 0 0 9 19.4a1.65 1.65 0 0 0-1.82.33l-.06.06a2 2 0 0 1-2.83 0 2 2 0 0 1 0-2.83l.06-.06a1.65 1.65 0 0 0 .33-1.82 1.65 1.65 0 0 0-1.51-1H3a2 2 0 0 1-2-2 2 2 0 0 1 2-2h.09A1.65 1.65 0 0 0 4.6 9a1.65 1.65 0 0 0-.33-1.82l-.06-.06a2 2 0 0 1 0-2.83 2 2 0 0 1 2.83 0l.06.06a1.65 1.65 0 0 0 1.82.33H9a1.65 1.65 0 0 0 1-1.51V3a2 2 0 0 1 2-2 2 2 0 0 1 2 2v.09a1.65 1.65 0 0 0 1 1.51 1.65 1.65 0 0 0 1.82-.33l.06-.06a2 2 0 0 1 2.83 0 2 2 0 0 1 0 2.83l-.06.06a1.65 1.65 0 0 0-.33 1.82V9a1.65 1.65 0 0 0 1.51 1H21a2 2 0 0 1 2 2 2 2 0 0 1-2 2h-.09a1.65 1.65 0 0 0-1.51 1z"></path>
+                </svg>
+                ${lang === "es" ? "Configuración" : "Settings"}
+              </a>
+              <div class="dropdown-divider"></div>
+              <form method="post" action="/logout" class="dropdown-logout-form">
+                <button type="submit" class="dropdown-logout">
+                  <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+                    <path d="M9 21H5a2 2 0 0 1-2-2V5a2 2 0 0 1 2-2h4"></path>
+                    <polyline points="16 17 21 12 16 7"></polyline>
+                    <line x1="21" y1="12" x2="9" y2="12"></line>
+                  </svg>
+                  ${t(lang, "logout")}
+                </button>
+              </form>
+            </div>
+          </div>
         ` : `
-          <a href="/login">${t(lang, "login")}</a>
-          <a href="/register">${t(lang, "register")}</a>
+          <a href="/login" class="nav-link">${t(lang, "login")}</a>
+          <a href="/register" class="nav-btn-primary">${t(lang, "register")}</a>
         `}
+
+        <!-- Theme Toggle -->
+        <button class="theme-toggle" id="themeToggle" title="${lang === "es" ? "Cambiar tema" : "Toggle theme"}">
+          <svg class="sun-icon" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+            <circle cx="12" cy="12" r="5"></circle>
+            <line x1="12" y1="1" x2="12" y2="3"></line>
+            <line x1="12" y1="21" x2="12" y2="23"></line>
+            <line x1="4.22" y1="4.22" x2="5.64" y2="5.64"></line>
+            <line x1="18.36" y1="18.36" x2="19.78" y2="19.78"></line>
+            <line x1="1" y1="12" x2="3" y2="12"></line>
+            <line x1="21" y1="12" x2="23" y2="12"></line>
+            <line x1="4.22" y1="19.78" x2="5.64" y2="18.36"></line>
+            <line x1="18.36" y1="5.64" x2="19.78" y2="4.22"></line>
+          </svg>
+          <svg class="moon-icon" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+            <path d="M21 12.79A9 9 0 1 1 11.21 3 7 7 0 0 0 21 12.79z"></path>
+          </svg>
+        </button>
+
+        <!-- Language Dropdown -->
+        <div class="lang-dropdown" id="langDropdown">
+          <button class="lang-dropdown-toggle" type="button">
+            <span class="flag">${currentFlag}</span>
+            <span>${currentLangName}</span>
+            <svg class="chevron" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+              <path d="M6 9l6 6 6-6"/>
+            </svg>
+          </button>
+          <div class="lang-dropdown-menu">
+            <a href="/set-lang/en" class="${lang === "en" ? "active" : ""}">
+              <span class="flag">🇺🇸</span>
+              English
+            </a>
+            <a href="/set-lang/es" class="${lang === "es" ? "active" : ""}">
+              <span class="flag">🇲🇽</span>
+              Español
+            </a>
+          </div>
+        </div>
       </nav>
     </header>
+    <nav class="category-nav">
+      <div class="category-tabs">
+        <a href="/?q=${lang === "es" ? "Electrónica" : "Electronics"}" class="category-tab">${lang === "es" ? "Electrónica" : "Electronics"}</a>
+        <a href="/?q=${lang === "es" ? "Celulares" : "Phones"}" class="category-tab">${lang === "es" ? "Celulares" : "Phones"}</a>
+        <a href="/?q=${lang === "es" ? "Computadoras" : "Computers"}" class="category-tab">${lang === "es" ? "Computadoras" : "Computers"}</a>
+        <a href="/?q=${lang === "es" ? "Ropa" : "Clothing"}" class="category-tab">${lang === "es" ? "Ropa" : "Clothing"}</a>
+        <a href="/?q=${lang === "es" ? "Hogar" : "Home"}" class="category-tab">${lang === "es" ? "Hogar" : "Home"}</a>
+        <a href="/?q=${lang === "es" ? "Deportes" : "Sports"}" class="category-tab">${lang === "es" ? "Deportes" : "Sports"}</a>
+        <a href="/?q=${lang === "es" ? "Juguetes" : "Toys"}" class="category-tab">${lang === "es" ? "Juguetes" : "Toys"}</a>
+        <a href="/?q=${lang === "es" ? "Belleza" : "Beauty"}" class="category-tab">${lang === "es" ? "Belleza" : "Beauty"}</a>
+      </div>
+    </nav>
     <main class="main-content">
     ${body}
     </main>
+    ${isLoggedIn ? `
+    <script>
+      (function() {
+        const dropdown = document.querySelector('.user-dropdown');
+        const toggle = document.querySelector('.user-dropdown-toggle');
+        const menu = document.querySelector('.user-dropdown-menu');
+
+        if (toggle && dropdown && menu) {
+          toggle.addEventListener('click', function(e) {
+            e.preventDefault();
+            e.stopPropagation();
+            dropdown.classList.toggle('open');
+          });
+
+          menu.querySelectorAll('a').forEach(function(link) {
+            link.addEventListener('click', function() {
+              dropdown.classList.remove('open');
+            });
+          });
+
+          document.addEventListener('click', function(e) {
+            if (!dropdown.contains(e.target)) {
+              dropdown.classList.remove('open');
+            }
+          });
+
+          document.addEventListener('keydown', function(e) {
+            if (e.key === 'Escape') {
+              dropdown.classList.remove('open');
+            }
+          });
+        }
+      })();
+    </script>
+    ` : ''}
+    <script>
+      // Header scroll effect
+      (function() {
+        const header = document.querySelector('.site-header');
+        if (!header) return;
+
+        let ticking = false;
+
+        function updateHeader() {
+          if (window.scrollY > 50) {
+            header.classList.add('scrolled');
+          } else {
+            header.classList.remove('scrolled');
+          }
+          ticking = false;
+        }
+
+        window.addEventListener('scroll', function() {
+          if (!ticking) {
+            window.requestAnimationFrame(updateHeader);
+            ticking = true;
+          }
+        }, { passive: true });
+
+        updateHeader();
+      })();
+
+      // Theme Toggle
+      (function() {
+        const themeToggle = document.getElementById('themeToggle');
+        if (!themeToggle) return;
+
+        function setTheme(theme) {
+          document.documentElement.setAttribute('data-theme', theme);
+          localStorage.setItem('theme', theme);
+        }
+
+        function toggleTheme() {
+          const currentTheme = document.documentElement.getAttribute('data-theme');
+          const newTheme = currentTheme === 'dark' ? 'light' : 'dark';
+          setTheme(newTheme);
+        }
+
+        themeToggle.addEventListener('click', toggleTheme);
+
+        // Listen for system theme changes
+        window.matchMedia('(prefers-color-scheme: dark)').addEventListener('change', (e) => {
+          if (!localStorage.getItem('theme')) {
+            setTheme(e.matches ? 'dark' : 'light');
+          }
+        });
+      })();
+
+      // Language Dropdown
+      (function() {
+        const langDropdown = document.getElementById('langDropdown');
+        if (!langDropdown) return;
+
+        const toggle = langDropdown.querySelector('.lang-dropdown-toggle');
+
+        toggle.addEventListener('click', function(e) {
+          e.preventDefault();
+          e.stopPropagation();
+          langDropdown.classList.toggle('open');
+        });
+
+        // Close on outside click
+        document.addEventListener('click', function(e) {
+          if (!langDropdown.contains(e.target)) {
+            langDropdown.classList.remove('open');
+          }
+        });
+
+        // Close on escape
+        document.addEventListener('keydown', function(e) {
+          if (e.key === 'Escape') {
+            langDropdown.classList.remove('open');
+          }
+        });
+      })();
+
+      // Scroll Reveal Animations (Intersection Observer)
+      (function() {
+        // Only run if IntersectionObserver is supported
+        if (!('IntersectionObserver' in window)) return;
+
+        // Mark body as ready for reveal animations
+        document.body.classList.add('reveal-ready');
+
+        // Get all elements with data-reveal attribute
+        const revealElements = document.querySelectorAll('[data-reveal]');
+        if (!revealElements.length) return;
+
+        // Create the observer
+        const observer = new IntersectionObserver(function(entries) {
+          entries.forEach(function(entry) {
+            // When element enters viewport
+            if (entry.isIntersecting) {
+              entry.target.classList.add('revealed');
+              // Stop observing once revealed (animate only once)
+              observer.unobserve(entry.target);
+            }
+          });
+        }, {
+          root: null, // viewport
+          rootMargin: '0px 0px -50px 0px', // trigger slightly before fully visible
+          threshold: 0.1 // trigger when 10% visible
+        });
+
+        // Observe all reveal elements
+        revealElements.forEach(function(el) {
+          observer.observe(el);
+        });
+      })();
+    </script>
   </body>
 </html>`;
 }
@@ -1260,6 +579,48 @@ function setLangCookie(res, lang) {
     sameSite: "lax",
     maxAge: 1000 * 60 * 60 * 24 * 365, // 1 year
   });
+}
+
+// Dribbble-style split-screen auth page renderer
+function renderAuthPage(title, formContent, extraScript = "", lang = "en", illustrationText = {}) {
+  const otherLang = lang === "en" ? "es" : "en";
+
+  return `<!doctype html>
+<html lang="${lang}">
+  <head>
+    <meta charset="utf-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no" />
+    <title>${title} | OfertaRadar</title>
+    <link rel="preconnect" href="https://fonts.googleapis.com">
+    <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+    <link href="https://fonts.googleapis.com/css2?family=Inter:wght@300;400;500;600;700&display=swap" rel="stylesheet">
+    <link rel="stylesheet" href="/styles.css">
+  </head>
+  <body>
+    <div class="auth-page">
+      <div class="auth-illustration">
+        <div class="auth-illustration-content">
+          <h2>${illustrationText.title || (lang === "es" ? "Bienvenido a OfertaRadar" : "Welcome to OfertaRadar")}</h2>
+          <p>${illustrationText.subtitle || (lang === "es" ? "Rastrea precios, encuentra ofertas y ahorra en tus compras" : "Track prices, find deals, and save on your purchases")}</p>
+        </div>
+      </div>
+      <div class="auth-form-container">
+        <div class="auth-form-inner">
+          <a href="/" class="auth-logo">
+            <span class="auth-logo-text">OfertaRadar</span>
+          </a>
+          ${formContent}
+          <div style="margin-top: 24px; text-align: center;">
+            <a href="/set-lang/${otherLang}" style="font-size: 13px; color: var(--text-muted); text-decoration: none;">
+              ${lang === "en" ? "🇲🇽 Español" : "🇺🇸 English"}
+            </a>
+          </div>
+        </div>
+      </div>
+    </div>
+    ${extraScript}
+  </body>
+</html>`;
 }
 
 function authRequired(req, res, next) {
@@ -1380,6 +741,15 @@ async function getMLAccessToken() {
     console.error("ML token error:", error);
     return null;
   }
+}
+
+// Get user initials for avatar placeholder
+function getInitials(str) {
+  if (!str) return "?";
+  // If it's an email, use the part before @
+  const name = str.includes("@") ? str.split("@")[0] : str;
+  // Get first two characters
+  return name.substring(0, 2).toUpperCase();
 }
 
 function buildSearchParams(baseUrl, params) {
@@ -2102,12 +1472,14 @@ async function start() {
     const lang = getLang(req);
     const hasToken = Boolean(req.cookies.token);
     let userEmail = "";
+    let userData = null;
     if (hasToken) {
       try {
         const payload = jwt.verify(req.cookies.token, JWT_SECRET);
         console.log(`[Home] Token valid for user ID: ${payload.id}`);
-        const user = await db.get("SELECT email FROM users WHERE id = ?", payload.id);
+        const user = await db.get("SELECT * FROM users WHERE id = ?", payload.id);
         userEmail = user?.email || "";
+        userData = user;
         console.log(`[Home] User found: ${userEmail || "NO"}`);
       } catch (e) {
         console.log(`[Home] Token invalid: ${e.message}`);
@@ -2122,6 +1494,8 @@ async function start() {
     const pageSize = 20;
 
     let results = { products: [], total: 0, totalPages: 0, error: "", notices: [] };
+    let isFeatured = false;
+
     if (query) {
       results = await fetchAllProducts({
         query,
@@ -2132,6 +1506,22 @@ async function start() {
         pageSize,
         source,
       });
+    } else {
+      // Fetch featured/trending products when no search query (for all users)
+      isFeatured = true;
+      try {
+        results = await fetchAllProducts({
+          query: "ofertas", // Popular search term for deals/offers
+          minPrice: 0,
+          maxPrice: 50000,
+          sort: "price_asc",
+          page: 1,
+          pageSize: 12,
+          source: "mercadolibre",
+        });
+      } catch (e) {
+        console.log("[Home] Error fetching featured products:", e.message);
+      }
     }
 
     // Helper to get source badge HTML
@@ -2143,36 +1533,45 @@ async function start() {
       return `<span class="source-badge ml">Mercado Libre</span>`;
     };
 
-    const resultsHtml = query ? `
-      <div class="results">
+    // Product card HTML generator
+    const renderProductCard = (item) => `
+      <div class="product-card">
+        <a href="${buildSearchParams(`/product/${encodeURIComponent(item.id)}`, { q: query, minPrice, maxPrice, sort, source, page })}" class="product-card-link">
+          <div class="product-card-image">
+            <img src="${item.thumbnail || ""}" alt="${item.title || t(lang, "product")}" loading="lazy" />
+            ${getSourceBadge(item)}
+          </div>
+          <div class="product-card-content">
+            <h3 class="product-card-title">${item.title || t(lang, "product")}</h3>
+            <div class="product-card-price">${formatPrice(item.price, item.currency_id || "MXN")}</div>
+            ${item.seller?.nickname ? `<div class="product-card-seller">${item.seller.nickname}</div>` : ""}
+          </div>
+        </a>
+      </div>
+    `;
+
+    const resultsHtml = (query || isFeatured) && results.products.length ? `
+      <div class="results-section">
+        ${isFeatured ? `<h2 class="section-title">${lang === "es" ? "Ofertas Destacadas" : "Featured Deals"}</h2>` : ""}
         ${results.notices?.length ? results.notices.map(n => `<div class="notice">${n}</div>`).join("") : ""}
         ${results.error ? `<div class="notice">${results.error}</div>` : ""}
         ${!results.error && results.products.length === 0 ? `<p class="muted">${t(lang, "noResults")}</p>` : ""}
         ${results.products.length ? `
-          <div class="grid">
-            ${results.products.map((item) => `
-              <div class="card">
-                <img src="${item.thumbnail || ""}" alt="${item.title || t(lang, "product")}" />
-                <div class="card-title">${item.title || t(lang, "product")}</div>
-                <div class="card-meta">
-                  ${formatPrice(item.price, item.currency_id || "MXN")}
-                  ${getSourceBadge(item)}
-                </div>
-                <div class="card-seller">${item.seller?.nickname ? `${t(lang, "soldBy")}: ${item.seller.nickname}` : ""}</div>
-                <a href="${buildSearchParams(`/product/${encodeURIComponent(item.id)}`, { q: query, minPrice, maxPrice, sort, source, page })}">${t(lang, "viewDetails")}</a>
-              </div>
-            `).join("")}
+          <div class="product-grid">
+            ${results.products.map(renderProductCard).join("")}
           </div>
-          <div class="pagination">
-            ${page > 1 ? `<a href="${buildSearchParams("/", { q: query, minPrice, maxPrice, sort, source, page: page - 1 })}">${t(lang, "previous")}</a>` : ""}
-            <span>${t(lang, "page")} ${page} ${t(lang, "of")} ${results.totalPages || 1}</span>
-            ${page < results.totalPages ? `<a href="${buildSearchParams("/", { q: query, minPrice, maxPrice, sort, source, page: page + 1 })}">${t(lang, "next")}</a>` : ""}
-          </div>
+          ${query ? `
+            <div class="pagination">
+              ${page > 1 ? `<a href="${buildSearchParams("/", { q: query, minPrice, maxPrice, sort, source, page: page - 1 })}">${t(lang, "previous")}</a>` : ""}
+              <span>${t(lang, "page")} ${page} ${t(lang, "of")} ${results.totalPages || 1}</span>
+              ${page < results.totalPages ? `<a href="${buildSearchParams("/", { q: query, minPrice, maxPrice, sort, source, page: page + 1 })}">${t(lang, "next")}</a>` : ""}
+            </div>
+          ` : ""}
         ` : ""}
       </div>
     ` : "";
 
-    const searchSection = hasToken ? `
+    const searchSection = `
       <form class="search-form" method="get" action="/">
         <div class="full">
           <input name="q" type="text" placeholder="${t(lang, "searchPlaceholder")}" value="${query}" />
@@ -2207,25 +1606,210 @@ async function start() {
         </div>
       </form>
       ${resultsHtml}
-    ` : `
-      <div class="notice">
-        ${t(lang, "pleaseLogin")}
+    `;
+
+    // Landing page for guests (Modern & Dynamic)
+    const landingPage = `
+      <!-- Hero Section -->
+      <section class="hero-section" data-reveal="fade-up">
+        <div class="hero-content">
+          <div class="hero-badge" data-reveal="fade-up" data-reveal-delay="100">
+            <span class="hero-badge-icon">🇲🇽</span>
+            ${lang === "es" ? "La herramienta #1 de ahorro en México" : "#1 Price Tracking Tool in Mexico"}
+          </div>
+          <h1 class="hero-title" data-reveal="fade-up" data-reveal-delay="200">${lang === "es" ? "Nunca Pagues de Más" : "Never Overpay Again"}</h1>
+          <p class="hero-subtitle" data-reveal="fade-up" data-reveal-delay="300">${lang === "es"
+            ? "Rastrea precios de Mercado Libre, recibe alertas instantáneas cuando bajen y ahorra hasta un 40% en tus compras. Completamente gratis."
+            : "Track prices from Mercado Libre, get instant alerts when they drop, and save up to 40% on your purchases. Completely free."}</p>
+          <div class="hero-cta" data-reveal="fade-up" data-reveal-delay="400">
+            <a href="/register" class="btn-primary">
+              <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+                <path d="M16 21v-2a4 4 0 0 0-4-4H6a4 4 0 0 0-4 4v2"></path>
+                <circle cx="9" cy="7" r="4"></circle>
+                <line x1="19" y1="8" x2="19" y2="14"></line>
+                <line x1="22" y1="11" x2="16" y2="11"></line>
+              </svg>
+              ${lang === "es" ? "Crear Cuenta Gratis" : "Create Free Account"}
+            </a>
+            <a href="/login" class="btn-secondary">
+              ${lang === "es" ? "Ya tengo cuenta" : "I have an account"}
+              <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+                <line x1="5" y1="12" x2="19" y2="12"></line>
+                <polyline points="12 5 19 12 12 19"></polyline>
+              </svg>
+            </a>
+          </div>
+          <div class="hero-trust" data-reveal="fade-up" data-reveal-delay="500">
+            <div class="trust-item">
+              <span class="trust-icon">✓</span>
+              ${lang === "es" ? "Sin tarjeta de crédito" : "No credit card required"}
+            </div>
+            <div class="trust-item">
+              <span class="trust-icon">⚡</span>
+              ${lang === "es" ? "Configuración en 30 segundos" : "30-second setup"}
+            </div>
+            <div class="trust-item">
+              <span class="trust-icon">🔒</span>
+              ${lang === "es" ? "100% Seguro" : "100% Secure"}
+            </div>
+          </div>
+        </div>
+      </section>
+
+      <!-- How It Works -->
+      <section class="features-section" data-reveal="fade-up">
+        <div class="section-header" data-reveal="fade-up">
+          <span class="section-label">${lang === "es" ? "Cómo Funciona" : "How It Works"}</span>
+          <h2 class="section-title">${lang === "es" ? "Ahorra Dinero en 4 Simples Pasos" : "Save Money in 4 Simple Steps"}</h2>
+          <p class="section-subtitle">${lang === "es"
+            ? "No más verificar precios manualmente. Nosotros hacemos el trabajo por ti."
+            : "No more manually checking prices. We do the work for you."}</p>
+        </div>
+        <div class="features-grid" data-reveal-stagger>
+          <div class="feature-card" data-reveal="fade-up">
+            <div class="feature-icon">🔍</div>
+            <h3>${lang === "es" ? "Busca Productos" : "Search Products"}</h3>
+            <p>${lang === "es"
+              ? "Encuentra cualquier producto de Mercado Libre usando nuestra búsqueda inteligente."
+              : "Find any product from Mercado Libre using our smart search."}</p>
+          </div>
+          <div class="feature-card" data-reveal="fade-up">
+            <div class="feature-icon">📊</div>
+            <h3>${lang === "es" ? "Rastrea Precios" : "Track Prices"}</h3>
+            <p>${lang === "es"
+              ? "Ve el historial completo de precios y tendencias de cada producto."
+              : "See complete price history and trends for each product."}</p>
+          </div>
+          <div class="feature-card" data-reveal="fade-up">
+            <div class="feature-icon">🔔</div>
+            <h3>${lang === "es" ? "Recibe Alertas" : "Get Alerts"}</h3>
+            <p>${lang === "es"
+              ? "Te notificamos al instante por email cuando el precio baje."
+              : "We notify you instantly by email when the price drops."}</p>
+          </div>
+          <div class="feature-card" data-reveal="fade-up">
+            <div class="feature-icon">💰</div>
+            <h3>${lang === "es" ? "Ahorra Dinero" : "Save Money"}</h3>
+            <p>${lang === "es"
+              ? "Compra siempre al mejor precio posible. Usuarios ahorran en promedio 25%."
+              : "Always buy at the best possible price. Users save 25% on average."}</p>
+          </div>
+        </div>
+      </section>
+
+      <!-- Featured Deals -->
+      ${results.products.length ? `
+        <section class="deals-section" data-reveal="fade-up">
+          <div class="section-header" data-reveal="fade-up">
+            <span class="section-label">🔥 ${lang === "es" ? "En Tendencia" : "Trending Now"}</span>
+            <h2 class="section-title">${lang === "es" ? "Ofertas Destacadas de Hoy" : "Today's Featured Deals"}</h2>
+            <p class="section-subtitle">${lang === "es"
+              ? "Productos populares con los mejores descuentos del momento."
+              : "Popular products with the best discounts right now."}</p>
+          </div>
+          <div class="product-grid" data-reveal-stagger>
+            ${results.products.slice(0, 8).map((product, index) => `<div data-reveal="fade-up">${renderProductCard(product)}</div>`).join("")}
+          </div>
+          <div class="section-cta" data-reveal="fade-up">
+            <a href="/register" class="btn-primary">
+              ${lang === "es" ? "Ver Todas las Ofertas" : "View All Deals"}
+              <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+                <line x1="5" y1="12" x2="19" y2="12"></line>
+                <polyline points="12 5 19 12 12 19"></polyline>
+              </svg>
+            </a>
+          </div>
+        </section>
+      ` : ""}
+
+      <!-- Stats Section -->
+      <section class="stats-section" data-reveal="fade-up">
+        <div class="stats-grid" data-reveal-stagger>
+          <div class="stat-card" data-reveal="fade-up">
+            <div class="stat-number">1M+</div>
+            <div class="stat-label">${lang === "es" ? "Productos Rastreados" : "Products Tracked"}</div>
+          </div>
+          <div class="stat-card" data-reveal="fade-up">
+            <div class="stat-number">$500K+</div>
+            <div class="stat-label">${lang === "es" ? "Ahorros de Usuarios" : "User Savings"}</div>
+          </div>
+          <div class="stat-card" data-reveal="fade-up">
+            <div class="stat-number">24/7</div>
+            <div class="stat-label">${lang === "es" ? "Monitoreo Continuo" : "Continuous Monitoring"}</div>
+          </div>
+          <div class="stat-card" data-reveal="fade-up">
+            <div class="stat-number">50K+</div>
+            <div class="stat-label">${lang === "es" ? "Usuarios Activos" : "Active Users"}</div>
+          </div>
+        </div>
+      </section>
+
+      <!-- CTA Section -->
+      <section class="cta-section" data-reveal="scale">
+        <div class="section-content" data-reveal="fade-up">
+          <h2>${lang === "es" ? "¿Listo para Empezar a Ahorrar?" : "Ready to Start Saving?"}</h2>
+          <p>${lang === "es"
+            ? "Únete a más de 50,000 usuarios mexicanos que ya están ahorrando dinero en sus compras en línea. Sin costos, sin compromisos."
+            : "Join over 50,000 Mexican users who are already saving money on their online purchases. No costs, no commitments."}</p>
+          <a href="/register" class="btn-primary btn-large">
+            ${lang === "es" ? "Comenzar Ahora — Es Gratis" : "Start Now — It's Free"}
+          </a>
+        </div>
+      </section>
+
+      <!-- Footer Info -->
+      <footer class="landing-footer" data-reveal="fade-up">
+        <div class="footer-grid" data-reveal-stagger>
+          <div class="footer-col" data-reveal="fade-up">
+            <h4>${lang === "es" ? "Sobre OfertaRadar" : "About OfertaRadar"}</h4>
+            <p>${lang === "es"
+              ? "Somos la plataforma líder de rastreo de precios en México. Nuestra misión es ayudarte a encontrar las mejores ofertas y nunca pagar de más."
+              : "We are the leading price tracking platform in Mexico. Our mission is to help you find the best deals and never overpay."}</p>
+          </div>
+          <div class="footer-col" data-reveal="fade-up">
+            <h4>${lang === "es" ? "Características" : "Features"}</h4>
+            <ul>
+              <li>📈 ${lang === "es" ? "Historial de precios" : "Price history"}</li>
+              <li>📧 ${lang === "es" ? "Alertas por email" : "Email alerts"}</li>
+              <li>📊 ${lang === "es" ? "Comparación de precios" : "Price comparison"}</li>
+              <li>✨ ${lang === "es" ? "100% gratis" : "100% free"}</li>
+            </ul>
+          </div>
+          <div class="footer-col" data-reveal="fade-up">
+            <h4>${lang === "es" ? "Tiendas Soportadas" : "Supported Stores"}</h4>
+            <ul>
+              <li>🛒 Mercado Libre México</li>
+              <li>📦 Amazon México <span style="opacity:0.6">(${lang === "es" ? "próximamente" : "coming soon"})</span></li>
+            </ul>
+          </div>
+        </div>
+        <div class="footer-bottom">
+          <p>© 2024 OfertaRadar México. ${lang === "es" ? "Todos los derechos reservados." : "All rights reserved."}</p>
+        </div>
+      </footer>
+    `;
+
+    // Search page for logged-in users
+    const searchPage = `
+      <div class="search-wrapper">
+        <p class="tagline">${t(lang, "siteTagline")}</p>
+        ${searchSection}
       </div>
     `;
 
+    // Show landing page for guests, search page for logged-in users
+    const pageContent = hasToken ? searchPage : landingPage;
+
     res.send(renderPage(
       t(lang, "priceTracker"),
-      `
-        <div class="search-wrapper">
-          <p class="tagline">${t(lang, "siteTagline")}</p>
-          ${searchSection}
-        </div>
-      `,
+      pageContent,
       `
         <style>
-          .tagline { color: #666; margin-bottom: 24px; }
+          .tagline { color: var(--text-muted); margin-bottom: 24px; font-size: 1.1rem; }
+          .search-wrapper { max-width: 900px; margin: 0 auto; }
         </style>
         <script>
+          // Price range sync for search
           const minInput = document.getElementById("minPrice");
           const maxInput = document.getElementById("maxPrice");
           const minValue = document.getElementById("minPriceValue");
@@ -2257,27 +1841,147 @@ async function start() {
           minInput?.addEventListener("input", () => syncRanges(minInput));
           maxInput?.addEventListener("input", () => syncRanges(maxInput));
           syncRanges();
+
+          // Scroll animations for landing page
+          (function() {
+            const animatedElements = document.querySelectorAll('.animate-on-scroll');
+
+            if (animatedElements.length === 0) return;
+
+            // Add class to enable animations only when JS is ready
+            document.body.classList.add('js-animations-ready');
+
+            const observerOptions = {
+              root: null,
+              rootMargin: '0px 0px -50px 0px',
+              threshold: 0.1
+            };
+
+            const observer = new IntersectionObserver((entries) => {
+              entries.forEach(entry => {
+                if (entry.isIntersecting) {
+                  entry.target.classList.add('visible');
+                  observer.unobserve(entry.target);
+                }
+              });
+            }, observerOptions);
+
+            animatedElements.forEach(el => observer.observe(el));
+
+            // Smooth scroll for anchor links
+            document.querySelectorAll('a[href^="#"]').forEach(anchor => {
+              anchor.addEventListener('click', function(e) {
+                e.preventDefault();
+                const target = document.querySelector(this.getAttribute('href'));
+                if (target) {
+                  target.scrollIntoView({
+                    behavior: 'smooth',
+                    block: 'start'
+                  });
+                }
+              });
+            });
+          })();
         </script>
       `,
       hasToken,
       userEmail,
-      lang
+      lang,
+      userData
     ));
   });
 
   app.get("/register", (req, res) => {
     const lang = getLang(req);
-    res.send(renderPage(t(lang, "register"), `
-      <h1>${t(lang, "createAccount")}</h1>
-      <form method="post" action="/register">
-        <label>${t(lang, "email")}</label>
-        <input name="email" type="email" autocomplete="email" required />
-        <label>${t(lang, "password")}</label>
-        <input name="password" type="password" autocomplete="new-password" minlength="8" required />
-        <button type="submit">${t(lang, "register")}</button>
+    const formContent = `
+      <h1 class="auth-title">${lang === "es" ? "Crear Cuenta" : "Create your account"}</h1>
+      <p class="auth-subtitle">${lang === "es" ? "Únete y comienza a ahorrar hoy" : "Join and start saving today"}</p>
+
+      <button id="google-signup-btn" type="button" class="google-btn">
+        <svg width="18" height="18" viewBox="0 0 18 18">
+          <path fill="#4285F4" d="M17.64 9.2c0-.637-.057-1.251-.164-1.84H9v3.481h4.844c-.209 1.125-.843 2.078-1.796 2.717v2.258h2.908c1.702-1.567 2.684-3.874 2.684-6.615z"/>
+          <path fill="#34A853" d="M9 18c2.43 0 4.467-.806 5.956-2.184l-2.908-2.258c-.806.54-1.837.86-3.048.86-2.344 0-4.328-1.584-5.036-3.711H.957v2.332C2.438 15.983 5.482 18 9 18z"/>
+          <path fill="#FBBC05" d="M3.964 10.707c-.18-.54-.282-1.117-.282-1.707 0-.593.102-1.17.282-1.709V4.958H.957C.347 6.173 0 7.548 0 9s.348 2.827.957 4.042l3.007-2.335z"/>
+          <path fill="#EA4335" d="M9 3.58c1.321 0 2.508.454 3.44 1.345l2.582-2.58C13.463.891 11.426 0 9 0 5.482 0 2.438 2.017.957 4.958L3.964 7.29C4.672 5.163 6.656 3.58 9 3.58z"/>
+        </svg>
+        <span>${t(lang, "signUpWithGoogle")}</span>
+      </button>
+
+      <div class="auth-divider">
+        <span>${lang === "es" ? "o regístrate con correo" : "or sign up with email"}</span>
+      </div>
+
+      <form method="post" action="/register" class="auth-form">
+        <div>
+          <label>${t(lang, "email")}</label>
+          <input name="email" type="email" autocomplete="email" placeholder="${lang === "es" ? "tu@email.com" : "you@example.com"}" required />
+        </div>
+        <div>
+          <label>${t(lang, "password")}</label>
+          <input name="password" type="password" autocomplete="new-password" placeholder="${lang === "es" ? "Mínimo 8 caracteres" : "Minimum 8 characters"}" minlength="8" required />
+        </div>
+        <button type="submit">${t(lang, "createAccount")}</button>
       </form>
-      <p class="muted">${t(lang, "alreadyHaveAccount")} <a href="/login">${t(lang, "login")}</a></p>
-    `, "", false, "", lang));
+
+      <div class="auth-links">
+        <p>${t(lang, "alreadyHaveAccount")} <a href="/login">${t(lang, "login")}</a></p>
+      </div>
+    `;
+
+    const extraScript = `
+      <script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2"></script>
+      <script>
+        document.addEventListener('DOMContentLoaded', function() {
+          const SUPABASE_URL = '${process.env.SUPABASE_URL || ''}';
+          const SUPABASE_ANON_KEY = '${process.env.SUPABASE_ANON_KEY || ''}';
+          const REDIRECT_URL = '${APP_BASE_URL}/auth/supabase-callback';
+
+          if (!SUPABASE_URL || !SUPABASE_ANON_KEY) {
+            const btn = document.getElementById('google-signup-btn');
+            if (btn) {
+              btn.disabled = true;
+              btn.innerHTML = '<span style="color: #666;">Google Sign Up Not Available</span>';
+            }
+            return;
+          }
+
+          const { createClient } = supabase;
+          const supabaseClient = createClient(SUPABASE_URL, SUPABASE_ANON_KEY);
+
+          const btn = document.getElementById('google-signup-btn');
+          if (!btn) return;
+
+          btn.addEventListener('click', async () => {
+            btn.disabled = true;
+            btn.innerHTML = '<span>Redirecting to Google...</span>';
+
+            try {
+              const { data, error } = await supabaseClient.auth.signInWithOAuth({
+                provider: 'google',
+                options: {
+                  redirectTo: REDIRECT_URL
+                }
+              });
+
+              if (error) {
+                btn.disabled = false;
+                btn.innerHTML = '<span>Sign up with Google</span>';
+                alert('Failed to sign up with Google: ' + error.message);
+              }
+            } catch (err) {
+              btn.disabled = false;
+              btn.innerHTML = '<span>Sign up with Google</span>';
+              alert('An error occurred: ' + err.message);
+            }
+          });
+        });
+      </script>
+    `;
+
+    res.send(renderAuthPage(t(lang, "register"), formContent, extraScript, lang, {
+      title: lang === "es" ? "Únete a OfertaRadar" : "Join OfertaRadar",
+      subtitle: lang === "es" ? "Miles de usuarios ya están ahorrando con nosotros" : "Thousands of users are already saving with us"
+    }));
   });
 
   app.post("/register", async (req, res) => {
@@ -2358,35 +2062,45 @@ async function start() {
 
   app.get("/login", (req, res) => {
     const lang = getLang(req);
-    res.send(renderPage(t(lang, "login"), `
-      <h1>${t(lang, "login")}</h1>
-      <form method="post" action="/login">
-        <label>${t(lang, "email")}</label>
-        <input name="email" type="email" autocomplete="email" required />
-        <label>${t(lang, "password")}</label>
-        <input name="password" type="password" autocomplete="current-password" required />
+    const formContent = `
+      <h1 class="auth-title">${lang === "es" ? "Iniciar Sesión" : "Sign in to OfertaRadar"}</h1>
+      <p class="auth-subtitle">${lang === "es" ? "Ingresa tus credenciales para continuar" : "Enter your credentials to continue"}</p>
+
+      <button id="google-login-btn" type="button" class="google-btn">
+        <svg width="18" height="18" viewBox="0 0 18 18">
+          <path fill="#4285F4" d="M17.64 9.2c0-.637-.057-1.251-.164-1.84H9v3.481h4.844c-.209 1.125-.843 2.078-1.796 2.717v2.258h2.908c1.702-1.567 2.684-3.874 2.684-6.615z"/>
+          <path fill="#34A853" d="M9 18c2.43 0 4.467-.806 5.956-2.184l-2.908-2.258c-.806.54-1.837.86-3.048.86-2.344 0-4.328-1.584-5.036-3.711H.957v2.332C2.438 15.983 5.482 18 9 18z"/>
+          <path fill="#FBBC05" d="M3.964 10.707c-.18-.54-.282-1.117-.282-1.707 0-.593.102-1.17.282-1.709V4.958H.957C.347 6.173 0 7.548 0 9s.348 2.827.957 4.042l3.007-2.335z"/>
+          <path fill="#EA4335" d="M9 3.58c1.321 0 2.508.454 3.44 1.345l2.582-2.58C13.463.891 11.426 0 9 0 5.482 0 2.438 2.017.957 4.958L3.964 7.29C4.672 5.163 6.656 3.58 9 3.58z"/>
+        </svg>
+        <span>${t(lang, "continueWithGoogle")}</span>
+      </button>
+
+      <div class="auth-divider">
+        <span>${lang === "es" ? "o" : "or"}</span>
+      </div>
+
+      <form method="post" action="/login" class="auth-form">
+        <div>
+          <label>${t(lang, "email")}</label>
+          <input name="email" type="email" autocomplete="email" placeholder="${lang === "es" ? "tu@email.com" : "you@example.com"}" required />
+        </div>
+        <div>
+          <label>${t(lang, "password")}</label>
+          <input name="password" type="password" autocomplete="current-password" placeholder="••••••••" required />
+        </div>
+        <div class="auth-forgot">
+          <a href="/forgot-password">${t(lang, "forgotPassword")}</a>
+        </div>
         <button type="submit">${t(lang, "login")}</button>
       </form>
-      <p class="muted"><a href="/forgot-password">${t(lang, "forgotPassword")}</a></p>
-      <p class="muted">${t(lang, "newHere")} <a href="/register">${t(lang, "createAccount")}</a></p>
 
-      <div style="margin-top: 24px; padding-top: 24px; border-top: 1px solid #ddd; max-width: 360px;">
-        <p style="text-align: center; color: #666; margin-bottom: 16px;">${t(lang, "orContinueWith")}</p>
-        <button
-          id="google-login-btn"
-          type="button"
-          style="width: 100%; padding: 10px; font-size: 14px; border: 1px solid #ddd; border-radius: 8px; background: white; cursor: pointer; display: flex; align-items: center; justify-content: center; gap: 12px;"
-        >
-          <svg width="18" height="18" viewBox="0 0 18 18">
-            <path fill="#4285F4" d="M17.64 9.2c0-.637-.057-1.251-.164-1.84H9v3.481h4.844c-.209 1.125-.843 2.078-1.796 2.717v2.258h2.908c1.702-1.567 2.684-3.874 2.684-6.615z"/>
-            <path fill="#34A853" d="M9 18c2.43 0 4.467-.806 5.956-2.184l-2.908-2.258c-.806.54-1.837.86-3.048.86-2.344 0-4.328-1.584-5.036-3.711H.957v2.332C2.438 15.983 5.482 18 9 18z"/>
-            <path fill="#FBBC05" d="M3.964 10.707c-.18-.54-.282-1.117-.282-1.707 0-.593.102-1.17.282-1.709V4.958H.957C.347 6.173 0 7.548 0 9s.348 2.827.957 4.042l3.007-2.335z"/>
-            <path fill="#EA4335" d="M9 3.58c1.321 0 2.508.454 3.44 1.345l2.582-2.58C13.463.891 11.426 0 9 0 5.482 0 2.438 2.017.957 4.958L3.964 7.29C4.672 5.163 6.656 3.58 9 3.58z"/>
-          </svg>
-          <span>${t(lang, "continueWithGoogle")}</span>
-        </button>
+      <div class="auth-links">
+        <p>${t(lang, "newHere")} <a href="/register">${t(lang, "createAccount")}</a></p>
       </div>
-    `, `
+    `;
+
+    const extraScript = `
       <script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2"></script>
       <script>
         document.addEventListener('DOMContentLoaded', function() {
@@ -2434,7 +2148,12 @@ async function start() {
           });
         });
       </script>
-    `, false, "", lang));
+    `;
+
+    res.send(renderAuthPage(t(lang, "login"), formContent, extraScript, lang, {
+      title: lang === "es" ? "Bienvenido de nuevo" : "Welcome back",
+      subtitle: lang === "es" ? "Rastrea precios y encuentra las mejores ofertas en México" : "Track prices and find the best deals in Mexico"
+    }));
   });
 
   app.post("/login", async (req, res) => {
@@ -2662,7 +2381,7 @@ State: ${state || 'none'}</pre>
         <head>
           <meta charset="utf-8">
           <meta name="viewport" content="width=device-width, initial-scale=1">
-          <title>Processing Login | ShopSavvy</title>
+          <title>Processing Login | OfertaRadar</title>
           <style>
             body { font-family: -apple-system, BlinkMacSystemFont, sans-serif; padding: 40px; max-width: 600px; margin: 0 auto; text-align: center; }
             h1 { color: #333; }
@@ -3011,9 +2730,26 @@ State: ${state || 'none'}</pre>
     ` : "";
 
     res.send(renderPage(t(lang, "profile"), `
-      <h1>${t(lang, "myProfile")}</h1>
+      <div class="profile-header">
+        <div class="profile-avatar">
+          ${user.profile_picture_url
+            ? `<img src="${user.profile_picture_url}" alt="Profile" />`
+            : `<span class="avatar-initials">${getInitials(user.username || user.email)}</span>`
+          }
+        </div>
+        <div class="profile-info">
+          <h1>${user.username || user.email.split("@")[0]}</h1>
+          <p class="muted">${user.email}</p>
+        </div>
+        <a href="/profile/settings" class="action-button secondary settings-btn">
+          <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+            <circle cx="12" cy="12" r="3"></circle>
+            <path d="M19.4 15a1.65 1.65 0 0 0 .33 1.82l.06.06a2 2 0 0 1 0 2.83 2 2 0 0 1-2.83 0l-.06-.06a1.65 1.65 0 0 0-1.82-.33 1.65 1.65 0 0 0-1 1.51V21a2 2 0 0 1-2 2 2 2 0 0 1-2-2v-.09A1.65 1.65 0 0 0 9 19.4a1.65 1.65 0 0 0-1.82.33l-.06.06a2 2 0 0 1-2.83 0 2 2 0 0 1 0-2.83l.06-.06a1.65 1.65 0 0 0 .33-1.82 1.65 1.65 0 0 0-1.51-1H3a2 2 0 0 1-2-2 2 2 0 0 1 2-2h.09A1.65 1.65 0 0 0 4.6 9a1.65 1.65 0 0 0-.33-1.82l-.06-.06a2 2 0 0 1 0-2.83 2 2 0 0 1 2.83 0l.06.06a1.65 1.65 0 0 0 1.82.33H9a1.65 1.65 0 0 0 1-1.51V3a2 2 0 0 1 2-2 2 2 0 0 1 2 2v.09a1.65 1.65 0 0 0 1 1.51 1.65 1.65 0 0 0 1.82-.33l.06-.06a2 2 0 0 1 2.83 0 2 2 0 0 1 0 2.83l-.06.06a1.65 1.65 0 0 0-.33 1.82V9a1.65 1.65 0 0 0 1.51 1H21a2 2 0 0 1 2 2 2 2 0 0 1-2 2h-.09a1.65 1.65 0 0 0-1.51 1z"></path>
+          </svg>
+          ${lang === "es" ? "Configuración" : "Settings"}
+        </a>
+      </div>
       <div class="profile-card">
-        <p><strong>${t(lang, "email")}:</strong> ${user.email}</p>
         <p><strong>${t(lang, "accountStatus")}:</strong> ${t(lang, "verified")}</p>
         <p><strong>${lang === "es" ? "Método de autenticación" : "Auth method"}:</strong> ${user.auth_provider === "google" ? "Google" : "Email/Password"}</p>
         <p><strong>${lang === "es" ? "Inicios de sesión" : "Login count"}:</strong> ${user.login_count || 0}</p>
@@ -3023,6 +2759,49 @@ State: ${state || 'none'}</pre>
       ${loginHistoryHtml}
     `, `
       <style>
+        .profile-header {
+          display: flex;
+          align-items: center;
+          gap: 20px;
+          margin-bottom: 24px;
+          flex-wrap: wrap;
+        }
+        .profile-avatar {
+          width: 80px;
+          height: 80px;
+          border-radius: 50%;
+          background: #3C91ED;
+          display: flex;
+          align-items: center;
+          justify-content: center;
+          overflow: hidden;
+          flex-shrink: 0;
+        }
+        .profile-avatar img {
+          width: 100%;
+          height: 100%;
+          object-fit: cover;
+        }
+        .avatar-initials {
+          color: #ffffff;
+          font-size: 28px;
+          font-weight: 600;
+          text-transform: uppercase;
+        }
+        .profile-info {
+          flex: 1;
+          min-width: 150px;
+        }
+        .profile-info h1 {
+          margin-bottom: 4px;
+        }
+        .settings-btn {
+          width: auto;
+          padding: 10px 16px;
+          font-size: 14px;
+          min-height: auto;
+          gap: 8px;
+        }
         .profile-card { background: var(--bg-secondary); padding: 20px; border-radius: var(--radius-lg); box-shadow: var(--shadow-soft); }
         .profile-card p { margin: 10px 0; }
         .login-history { margin-top: 12px; }
@@ -3044,12 +2823,347 @@ State: ${state || 'none'}</pre>
         .login-entry.success .login-status { color: #3d7a5a; }
         .login-entry.failed .login-status { color: #c94a4a; }
       </style>
-    `, true, user.email, lang));
+    `, true, user.email, lang, user));
+  });
+
+  // Profile settings page
+  app.get("/profile/settings", authRequired, async (req, res) => {
+    const lang = getLang(req);
+    const user = await db.get("SELECT * FROM users WHERE id = ?", req.user.id);
+    if (!user) {
+      clearAuthCookie(res);
+      return res.redirect("/login");
+    }
+
+    const success = req.query.success === "1";
+    const error = req.query.error;
+
+    // Debug logging
+    console.log("[Profile Settings GET] Loading page for user ID:", req.user.id);
+    console.log("[Profile Settings GET] User data from DB:", JSON.stringify(user, null, 2));
+
+    res.send(renderPage(lang === "es" ? "Configuración de Perfil" : "Profile Settings", `
+      <h1>${lang === "es" ? "Configuración de Perfil" : "Profile Settings"}</h1>
+
+      <!-- Debug Info (remove in production) -->
+      <div style="background: #ffe0e0; padding: 12px; border-radius: 8px; margin-bottom: 16px; font-size: 12px; font-family: monospace;">
+        <strong>DEBUG INFO:</strong><br>
+        User ID: ${user.id}<br>
+        Username in DB: "${user.username || '(null)'}"<br>
+        Profile Pic URL: "${user.profile_picture_url || '(null)'}"<br>
+        Email: ${user.email}
+      </div>
+
+      ${success ? `<div class="success">${lang === "es" ? "Perfil actualizado correctamente" : "Profile updated successfully"}</div>` : ""}
+      ${error ? `<div class="error">${decodeURIComponent(error)}</div>` : ""}
+
+      <div class="settings-section">
+        <h2>${lang === "es" ? "Foto de Perfil" : "Profile Picture"}</h2>
+        <div class="avatar-section">
+          <div class="avatar-preview" id="avatarPreview">
+            ${user.profile_picture_url
+              ? `<img src="${user.profile_picture_url}" alt="Profile" />`
+              : `<span class="avatar-initials">${getInitials(user.username || user.email)}</span>`
+            }
+          </div>
+          <div class="avatar-actions">
+            <input type="file" id="avatarInput" accept="image/*" style="display: none;" />
+            <button type="button" class="action-button secondary" onclick="document.getElementById('avatarInput').click()">
+              ${lang === "es" ? "Cambiar Foto" : "Change Photo"}
+            </button>
+            ${user.profile_picture_url ? `
+              <button type="button" class="action-button secondary" onclick="removeAvatar()">
+                ${lang === "es" ? "Eliminar" : "Remove"}
+              </button>
+            ` : ""}
+          </div>
+        </div>
+      </div>
+
+      <div class="settings-section">
+        <h2>${lang === "es" ? "Información de Perfil" : "Profile Information"}</h2>
+        <form method="post" action="/profile/settings/update">
+          <label>${lang === "es" ? "Nombre de Usuario" : "Username"}</label>
+          <input name="username" type="text" value="${user.username || ""}" placeholder="${lang === "es" ? "Ingresa un nombre de usuario" : "Enter a username"}" maxlength="50" />
+
+          <label>${lang === "es" ? "Correo Electrónico" : "Email"}</label>
+          <input type="email" value="${user.email}" disabled />
+          <p class="muted">${lang === "es" ? "El correo no se puede cambiar" : "Email cannot be changed"}</p>
+
+          <button type="submit">${lang === "es" ? "Guardar Cambios" : "Save Changes"}</button>
+        </form>
+      </div>
+
+      <div class="settings-section">
+        <a href="/profile" class="action-button secondary">${lang === "es" ? "Volver al Perfil" : "Back to Profile"}</a>
+      </div>
+    `, `
+      <style>
+        .settings-section {
+          background: var(--bg-secondary);
+          padding: 24px;
+          border-radius: var(--radius-lg);
+          box-shadow: var(--shadow-soft);
+          margin-bottom: 20px;
+        }
+        .settings-section h2 {
+          margin-bottom: 16px;
+          font-size: 18px;
+        }
+        .avatar-section {
+          display: flex;
+          align-items: center;
+          gap: 20px;
+          flex-wrap: wrap;
+        }
+        .avatar-preview {
+          width: 100px;
+          height: 100px;
+          border-radius: 50%;
+          background: #3C91ED;
+          display: flex;
+          align-items: center;
+          justify-content: center;
+          overflow: hidden;
+          flex-shrink: 0;
+        }
+        .avatar-preview img {
+          width: 100%;
+          height: 100%;
+          object-fit: cover;
+        }
+        .avatar-initials {
+          color: #ffffff;
+          font-size: 36px;
+          font-weight: 600;
+          text-transform: uppercase;
+        }
+        .avatar-actions {
+          display: flex;
+          gap: 10px;
+          flex-wrap: wrap;
+        }
+        .avatar-actions .action-button {
+          width: auto;
+          padding: 10px 16px;
+          font-size: 14px;
+          min-height: auto;
+        }
+        .success {
+          margin-bottom: 16px;
+        }
+        .error {
+          margin-bottom: 16px;
+        }
+      </style>
+      <script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2"></script>
+      <script>
+        const SUPABASE_URL = '${process.env.SUPABASE_URL || ""}';
+        const SUPABASE_ANON_KEY = '${process.env.SUPABASE_ANON_KEY || ""}';
+        const userId = '${req.user.id}';
+
+        const avatarInput = document.getElementById('avatarInput');
+        if (avatarInput) avatarInput.addEventListener('change', async function(e) {
+          const file = e.target.files[0];
+          console.log('[Avatar Upload] File selected:', file);
+          if (!file) return;
+
+          if (file.size > 2 * 1024 * 1024) {
+            alert('${lang === "es" ? "La imagen debe ser menor a 2MB" : "Image must be less than 2MB"}');
+            return;
+          }
+
+          const preview = document.getElementById('avatarPreview');
+          preview.innerHTML = '<span style="font-size: 14px; color: white;">${lang === "es" ? "Subiendo..." : "Uploading..."}</span>';
+
+          try {
+            console.log('[Avatar Upload] Supabase URL:', SUPABASE_URL);
+            console.log('[Avatar Upload] Supabase Key exists:', !!SUPABASE_ANON_KEY);
+
+            if (!SUPABASE_URL || !SUPABASE_ANON_KEY) {
+              throw new Error('Supabase not configured');
+            }
+
+            const { createClient } = supabase;
+            const supabaseClient = createClient(SUPABASE_URL, SUPABASE_ANON_KEY);
+            console.log('[Avatar Upload] Supabase client created');
+
+            const fileExt = file.name.split('.').pop();
+            const fileName = userId + '-' + Date.now() + '.' + fileExt;
+            console.log('[Avatar Upload] Uploading as:', fileName);
+
+            const { data, error } = await supabaseClient.storage
+              .from('avatars')
+              .upload(fileName, file, { upsert: true });
+
+            console.log('[Avatar Upload] Supabase upload result:', { data, error });
+
+            if (error) throw error;
+
+            const { data: urlData } = supabaseClient.storage
+              .from('avatars')
+              .getPublicUrl(fileName);
+
+            console.log('[Avatar Upload] Public URL:', urlData.publicUrl);
+
+            // Update the profile picture URL in the database
+            console.log('[Avatar Upload] Saving URL to server...');
+            const response = await fetch('/profile/settings/avatar', {
+              method: 'POST',
+              headers: { 'Content-Type': 'application/json' },
+              body: JSON.stringify({ url: urlData.publicUrl })
+            });
+
+            console.log('[Avatar Upload] Server response status:', response.status);
+            const responseData = await response.json();
+            console.log('[Avatar Upload] Server response:', responseData);
+
+            if (response.ok) {
+              preview.innerHTML = '<img src="' + urlData.publicUrl + '" alt="Profile" />';
+              console.log('[Avatar Upload] Success!');
+            } else {
+              throw new Error('Failed to save: ' + JSON.stringify(responseData));
+            }
+          } catch (err) {
+            console.error('[Avatar Upload] Error:', err);
+            alert('${lang === "es" ? "Error al subir la imagen" : "Error uploading image"}: ' + err.message);
+            location.reload();
+          }
+        });
+
+        async function removeAvatar() {
+          if (!confirm('${lang === "es" ? "¿Eliminar foto de perfil?" : "Remove profile picture?"}')) return;
+
+          try {
+            console.log('[Avatar Remove] Sending delete request...');
+            const response = await fetch('/profile/settings/avatar', {
+              method: 'DELETE'
+            });
+
+            console.log('[Avatar Remove] Response status:', response.status);
+
+            if (response.ok) {
+              console.log('[Avatar Remove] Success, reloading...');
+              location.reload();
+            }
+          } catch (err) {
+            console.error('[Avatar Remove] Error:', err);
+          }
+        }
+
+        function getInitials(str) {
+          return str.split('@')[0].substring(0, 2).toUpperCase();
+        }
+
+        // Debug: Log form submission
+        const profileForm = document.querySelector('form[action="/profile/settings/update"]');
+        if (profileForm) {
+          profileForm.addEventListener('submit', function(e) {
+            const username = this.querySelector('input[name="username"]').value;
+            console.log('[Profile Update] Form submitting with username:', username);
+          });
+        }
+
+        // Debug: Log page load state
+        console.log('[Profile Settings] Page loaded');
+        console.log('[Profile Settings] User ID:', userId);
+        console.log('[Profile Settings] Current username input value:', document.querySelector('input[name="username"]')?.value);
+        console.log('[Profile Settings] Form found:', !!profileForm);
+      </script>
+    `, true, user.email, lang, user));
+  });
+
+  // Handle profile update
+  app.post("/profile/settings/update", authRequired, async (req, res) => {
+    const timestamp = new Date().toISOString();
+    console.log(`\n========== PROFILE UPDATE ${timestamp} ==========`);
+    console.log("[Profile Update] Raw request body:", req.body);
+    console.log("[Profile Update] Body type:", typeof req.body);
+    console.log("[Profile Update] Body keys:", Object.keys(req.body || {}));
+    console.log("[Profile Update] User from JWT:", req.user);
+
+    const username = String(req.body.username || "").trim().substring(0, 50);
+    console.log("[Profile Update] Parsed username:", `"${username}"`);
+    console.log("[Profile Update] Username length:", username.length);
+
+    // Get current user data before update
+    const beforeUser = await db.get("SELECT * FROM users WHERE id = ?", req.user.id);
+    console.log("[Profile Update] BEFORE update:", JSON.stringify(beforeUser, null, 2));
+
+    try {
+      const result = await db.run("UPDATE users SET username = ? WHERE id = ?", [username || null, req.user.id]);
+      console.log("[Profile Update] DB UPDATE result:", result);
+      console.log("[Profile Update] Changes:", result?.changes);
+
+      // Verify the update
+      const afterUser = await db.get("SELECT * FROM users WHERE id = ?", req.user.id);
+      console.log("[Profile Update] AFTER update:", JSON.stringify(afterUser, null, 2));
+      console.log("[Profile Update] Username changed?", beforeUser?.username !== afterUser?.username);
+      console.log("========== END PROFILE UPDATE ==========\n");
+
+      res.redirect("/profile/settings?success=1");
+    } catch (error) {
+      console.error("[Profile Update] ERROR:", error);
+      console.error("[Profile Update] Error stack:", error.stack);
+      console.log("========== END PROFILE UPDATE (ERROR) ==========\n");
+      res.redirect("/profile/settings?error=" + encodeURIComponent("Failed to update profile: " + error.message));
+    }
+  });
+
+  // Handle avatar URL update
+  app.post("/profile/settings/avatar", authRequired, express.json(), async (req, res) => {
+    const timestamp = new Date().toISOString();
+    console.log(`\n========== AVATAR UPDATE ${timestamp} ==========`);
+    console.log("[Avatar Update] Request body:", req.body);
+    console.log("[Avatar Update] Content-Type:", req.get("Content-Type"));
+    console.log("[Avatar Update] User ID:", req.user.id);
+    const { url } = req.body;
+    console.log("[Avatar Update] URL to save:", url);
+    console.log("[Avatar Update] URL length:", url?.length);
+
+    // Get current user data before update
+    const beforeUser = await db.get("SELECT * FROM users WHERE id = ?", req.user.id);
+    console.log("[Avatar Update] BEFORE update:", JSON.stringify(beforeUser, null, 2));
+
+    try {
+      const result = await db.run("UPDATE users SET profile_picture_url = ? WHERE id = ?", [url, req.user.id]);
+      console.log("[Avatar Update] DB UPDATE result:", result);
+      console.log("[Avatar Update] Changes:", result?.changes);
+
+      // Verify the update
+      const afterUser = await db.get("SELECT * FROM users WHERE id = ?", req.user.id);
+      console.log("[Avatar Update] AFTER update:", JSON.stringify(afterUser, null, 2));
+      console.log("[Avatar Update] Avatar changed?", beforeUser?.profile_picture_url !== afterUser?.profile_picture_url);
+      console.log("========== END AVATAR UPDATE ==========\n");
+
+      res.json({ success: true, newUrl: afterUser?.profile_picture_url });
+    } catch (error) {
+      console.error("[Avatar Update] ERROR:", error);
+      console.error("[Avatar Update] Error stack:", error.stack);
+      console.log("========== END AVATAR UPDATE (ERROR) ==========\n");
+      res.status(500).json({ error: "Failed to update avatar: " + error.message });
+    }
+  });
+
+  // Handle avatar removal
+  app.delete("/profile/settings/avatar", authRequired, async (req, res) => {
+    console.log("[Avatar Remove] User ID:", req.user.id);
+
+    try {
+      const result = await db.run("UPDATE users SET profile_picture_url = NULL WHERE id = ?", [req.user.id]);
+      console.log("[Avatar Remove] DB result:", result);
+
+      res.json({ success: true });
+    } catch (error) {
+      console.error("[Avatar Remove] Error:", error);
+      res.status(500).json({ error: "Failed to remove avatar" });
+    }
   });
 
   app.get("/product/:id", authRequired, async (req, res) => {
     const lang = getLang(req);
     const userEmail = req.user?.email || "";
+    const userData = await db.get("SELECT * FROM users WHERE id = ?", req.user.id);
     const id = String(req.params.id || "");
     const query = String(req.query.q || "").trim();
     const minPrice = parseNumber(req.query.minPrice, 0);
@@ -3073,7 +3187,7 @@ State: ${state || 'none'}</pre>
         <h1>${t(lang, "productNotFound")}</h1>
         ${result.error ? `<p class="error">${result.error}</p>` : ""}
         <p class="muted">${t(lang, "tryGoingBack")}</p>
-      `, "", true, userEmail, lang));
+      `, "", true, userEmail, lang, userData));
     }
 
     const description = product.description || "";
@@ -3153,7 +3267,7 @@ State: ${state || 'none'}</pre>
           }
         }
       </script>
-    `, true, userEmail, lang));
+    `, true, userEmail, lang, userData));
   });
 
   app.get("/api/me", authRequired, async (req, res) => {

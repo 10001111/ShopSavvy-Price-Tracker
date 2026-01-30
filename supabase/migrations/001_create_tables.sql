@@ -1,5 +1,5 @@
 -- =============================================
--- ShopSavvy Price Tracker - Supabase Tables
+-- OfertaRadar - Supabase Tables
 -- Run this in Supabase SQL Editor
 -- =============================================
 
@@ -99,9 +99,9 @@ CREATE POLICY "Service role has full access to price_history" ON public.price_hi
 
 INSERT INTO public.users (email, password_hash, verified, auth_provider)
 VALUES
-  ('demo@shopsavvy.com', '$2a$10$gDGM8tlLhj2xtc3uceRpJOWTolvtEVMNCD.9234RJ9ehkcoz6qvda', TRUE, 'local'),
+  ('demo@ofertaradar.com', '$2a$10$gDGM8tlLhj2xtc3uceRpJOWTolvtEVMNCD.9234RJ9ehkcoz6qvda', TRUE, 'local'),
   ('test@example.com', '$2a$10$oUevhSl0Cr8TMVcV5nU3MuazhR1DjW2EV255uDT35yZRtjnVro69u', TRUE, 'local'),
-  ('admin@shopsavvy.com', '$2a$10$SMQkSKPv.kRFi4LljXdE9e/gf7JuhMm8UsVuXnCtKDt.z4j7Xah.u', TRUE, 'local')
+  ('admin@ofertaradar.com', '$2a$10$SMQkSKPv.kRFi4LljXdE9e/gf7JuhMm8UsVuXnCtKDt.z4j7Xah.u', TRUE, 'local')
 ON CONFLICT (email) DO NOTHING;
 
 -- Verify tables were created

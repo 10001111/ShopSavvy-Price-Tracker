@@ -1,4 +1,4 @@
-# ShopSavvy Price Tracker
+# OfertaRadar - Price Tracker for Mexico
 
 ## Introduction
 

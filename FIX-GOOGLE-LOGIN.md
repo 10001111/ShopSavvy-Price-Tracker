@@ -134,7 +134,7 @@ taskkill /F /IM node.exe
 
 ### **3. Create/Update `.env` File**
 
-In your project root (`C:\Users\lll\Desktop\protfolio\ShopSavvy Price Tracker\`), create/edit `.env`:
+In your project root, create/edit `.env`:
 
 ```env
 PORT=3000
@@ -184,7 +184,7 @@ On `/login` page, button should:
 ### **Check 3: Click Test**
 - Click button
 - Should open Google login popup/redirect
-- After logging in, should come back to ShopSavvy
+- After logging in, should come back to OfertaRadar
 - Should see your profile page
 
 ---

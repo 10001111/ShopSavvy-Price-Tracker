@@ -1,6 +1,6 @@
 # 📚 Learning Resources
 
-This folder contains educational materials and demos to help understand how the ShopSavvy Price Tracker works.
+This folder contains educational materials and demos to help understand how the OfertaRadar Price Tracker works.
 
 ## What's Inside
 
@@ -24,7 +24,7 @@ These are **learning materials** - not part of the production application. They 
 - How callbacks work
 - Why APIs need callbacks
 - How HTTPS requests use callbacks
-- Real examples from the ShopSavvy project
+- Real examples from the OfertaRadar project
 
 The actual production code is in the main project folder (`/src`).
 
@@ -36,4 +36,4 @@ The actual production code is in the main project folder (`/src`).
 2. **Run the demo script** (if you moved it here): `node docs/callbacks-demo.js`
 3. **Open test-api.html** in a browser to interact with the APIs
 
-These materials are optional - your ShopSavvy app works perfectly without them!
+These materials are optional - your OfertaRadar app works perfectly without them!

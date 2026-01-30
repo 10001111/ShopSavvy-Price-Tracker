@@ -1,6 +1,6 @@
 # ⚡ Quick Start: Enable Google Login
 
-Your ShopSavvy app now has a **"Login with Google"** button! 🎉
+Your OfertaRadar app now has a **"Login with Google"** button!
 
 Just follow these 3 steps to make it work:
 
@@ -94,7 +94,7 @@ npm run dev
 
 ### **Check database (optional):**
 ```bash
-sqlite3 shopsavvy.db "SELECT id, email, verified FROM users WHERE email = 'your-google-email@gmail.com';"
+sqlite3 data/app.db "SELECT id, email, verified FROM users WHERE email = 'your-google-email@gmail.com';"
 ```
 
 ---

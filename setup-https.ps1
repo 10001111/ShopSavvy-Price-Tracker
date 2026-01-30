@@ -25,7 +25,7 @@ Write-Host "Generating self-signed certificate..." -ForegroundColor Yellow
 
 try {
     # Generate self-signed certificate using PowerShell
-    $cert = New-SelfSignedCertificate -DnsName "localhost", "127.0.0.1" -CertStoreLocation "Cert:\CurrentUser\My" -NotAfter (Get-Date).AddYears(1) -FriendlyName "ShopSavvy Development Certificate" -KeyUsage DigitalSignature, KeyEncipherment -TextExtension @("2.5.29.37={text}1.3.6.1.5.5.7.3.1")
+    $cert = New-SelfSignedCertificate -DnsName "localhost", "127.0.0.1" -CertStoreLocation "Cert:\CurrentUser\My" -NotAfter (Get-Date).AddYears(1) -FriendlyName "OfertaRadar Development Certificate" -KeyUsage DigitalSignature, KeyEncipherment -TextExtension @("2.5.29.37={text}1.3.6.1.5.5.7.3.1")
 
     # Export to PFX
     $password = ConvertTo-SecureString -String "dev" -Force -AsPlainText

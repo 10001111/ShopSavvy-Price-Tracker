@@ -16,7 +16,7 @@ When you create an API for your website, callbacks are EVERYWHERE. Here's why:
 
 ---
 
-## Real Example from Your ShopSavvy Project
+## Real Example from Your OfertaRadar Project
 
 ### Before: Without Understanding Callbacks
 
@@ -45,7 +45,7 @@ fetch('https://localhost:3000/api/products')
 
 ---
 
-## Your ShopSavvy Project: Where Callbacks Are Used
+## Your OfertaRadar Project: Where Callbacks Are Used
 
 ### 1. **Express Routes** (Server-Side Callbacks)
 
@@ -338,4 +338,4 @@ A: Promises are a newer way to handle callbacks. They're cleaner and easier to r
 
 ---
 
-Ready to add more APIs to your ShopSavvy project? Let me know! 🚀
+Ready to add more APIs to your OfertaRadar project? Let me know!

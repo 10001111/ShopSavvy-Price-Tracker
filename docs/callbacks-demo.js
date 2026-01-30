@@ -117,7 +117,7 @@ const evenNumbers = numbers.filter(function(number) {
 console.log("Even numbers:", evenNumbers);
 
 // ============================================
-// EXAMPLE 5: Real ShopSavvy Use Case
+// EXAMPLE 5: Real OfertaRadar Use Case
 // ============================================
 
 function searchProducts(query, onSuccess, onError) {

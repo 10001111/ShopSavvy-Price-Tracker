@@ -1,4 +1,4 @@
-// Mercado Libre Webhook Handler for ShopSavvy Price Tracker
+// Mercado Libre Webhook Handler for OfertaRadar
 // This function receives notifications from Mercado Libre API
 
 import "jsr:@supabase/functions-js/edge-runtime.d.ts"

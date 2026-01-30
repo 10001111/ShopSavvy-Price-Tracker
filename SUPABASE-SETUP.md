@@ -1,12 +1,12 @@
 # 🔐 Supabase Google Authentication Setup
 
-This guide shows you how to add "Login with Google" to your ShopSavvy app using Supabase.
+This guide shows you how to add "Login with Google" to your OfertaRadar app using Supabase.
 
 ---
 
 ## ✅ What's Already Done
 
-Your ShopSavvy app now has:
+Your OfertaRadar app now has:
 
 ✅ "Login with Google" button on the login page  
 ✅ Supabase client integration  
@@ -84,7 +84,7 @@ npm run dev
    - You'll be redirected to Google login
    - Sign in with your Google account
    - Supabase processes the OAuth
-   - You're redirected back to ShopSavvy
+   - You're redirected back to OfertaRadar
    - **Automatically logged in!** 🎉
 
 ---
@@ -142,7 +142,7 @@ npm run dev
 ### **Verify in Database:**
 ```bash
 # Check if user was created
-sqlite3 shopsavvy.db "SELECT id, email, verified FROM users;"
+sqlite3 data/app.db "SELECT id, email, verified FROM users;"
 ```
 
 ---
@@ -248,4 +248,4 @@ Now that you have Google authentication:
 
 ---
 
-Your ShopSavvy app now supports Google login! 🎉🔐
+Your OfertaRadar app now supports Google login!

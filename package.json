@@ -1,7 +1,7 @@
 {
-  "name": "shopsavvy-price-tracker",
+  "name": "ofertaradar",
   "version": "0.1.0",
-  "description": "ShopSavvy Price Tracker - Phase 1 foundation",
+  "description": "OfertaRadar - Price Tracker for Mexico",
   "main": "src/server.js",
   "engines": {
     "node": ">=18.0.0"

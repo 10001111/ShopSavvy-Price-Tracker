@@ -170,7 +170,7 @@ fs.readFile("data.txt", function(error, data) {
 
 ---
 
-## In Your ShopSavvy Project
+## In Your OfertaRadar Project
 
 ### Where We Use Callbacks:
 

@@ -101,6 +101,16 @@ async function initDb() {
     await db.exec(`ALTER TABLE users ADD COLUMN auth_provider TEXT DEFAULT 'local'`);
   } catch (e) { /* column already exists */ }
 
+  // Add username column for profile customization
+  try {
+    await db.exec(`ALTER TABLE users ADD COLUMN username TEXT`);
+  } catch (e) { /* column already exists */ }
+
+  // Add profile_picture_url column for avatar storage
+  try {
+    await db.exec(`ALTER TABLE users ADD COLUMN profile_picture_url TEXT`);
+  } catch (e) { /* column already exists */ }
+
   // Create demo accounts if they don't exist
   await createDemoAccounts(db);
 
@@ -110,9 +120,9 @@ async function initDb() {
 // Create demo accounts for testing
 async function createDemoAccounts(db) {
   const demoUsers = [
-    { email: "demo@shopsavvy.com", password: "demo1234", verified: 1 },
+    { email: "demo@ofertaradar.com", password: "demo1234", verified: 1 },
     { email: "test@example.com", password: "test1234", verified: 1 },
-    { email: "admin@shopsavvy.com", password: "admin1234", verified: 1 },
+    { email: "admin@ofertaradar.com", password: "admin1234", verified: 1 },
   ];
 
   for (const user of demoUsers) {

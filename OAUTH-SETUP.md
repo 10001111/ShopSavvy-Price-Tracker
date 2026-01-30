@@ -26,7 +26,7 @@ An **OAuth Callback URL** (also called Redirect URI) is where external services 
 
 ## 🎯 Your Callback URLs
 
-Your ShopSavvy app has TWO callback endpoints:
+Your OfertaRadar app has TWO callback endpoints:
 
 ### **Primary Callback:**
 ```
@@ -193,4 +193,4 @@ Check out the `/docs` folder for information about JavaScript callbacks (differe
 
 ---
 
-Your ShopSavvy app is now ready for OAuth integration! 🎉
+Your OfertaRadar app is now ready for OAuth integration!
