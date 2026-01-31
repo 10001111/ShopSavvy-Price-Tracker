@@ -387,6 +387,7 @@ async function updateTrackedProductPrice(id, price) {
 
 /**
  * Add price history entry for a tracked product
+ * Also invalidates the Redis cache for this product's price history
  */
 async function addPriceHistory(trackedProductId, price) {
   const { data, error } = await getSupabase()
@@ -402,24 +403,106 @@ async function addPriceHistory(trackedProductId, price) {
   if (error) {
     console.error("[Supabase] addPriceHistory error:", error);
   }
+
+  // Invalidate cache for all periods when new price is added
+  try {
+    const { deleteCachePattern } = require("./config/redis");
+    await deleteCachePattern(`price-history:${trackedProductId}:*`);
+  } catch (cacheError) {
+    // Don't fail if cache invalidation fails
+    console.error("[Supabase] Cache invalidation error:", cacheError.message);
+  }
+
   return data;
 }
 
 /**
  * Get price history for a tracked product
+ * @param {string} trackedProductId - The tracked product ID
+ * @param {Object} options - Query options
+ * @param {number} options.limit - Maximum number of records to return
+ * @param {string} options.period - Time period: '7d', '30d', or 'all'
  */
-async function getPriceHistory(trackedProductId, limit = 30) {
-  const { data, error } = await getSupabase()
+async function getPriceHistory(trackedProductId, options = {}) {
+  const { limit = 100, period = "all" } = options;
+
+  // Calculate date range based on period
+  let startDate = null;
+  if (period === "7d") {
+    startDate = new Date();
+    startDate.setDate(startDate.getDate() - 7);
+  } else if (period === "30d") {
+    startDate = new Date();
+    startDate.setDate(startDate.getDate() - 30);
+  }
+
+  let query = getSupabase()
     .from("price_history")
     .select("*")
     .eq("tracked_product_id", trackedProductId)
-    .order("recorded_at", { ascending: false })
-    .limit(limit);
+    .order("recorded_at", { ascending: false });
+
+  // Apply date filter if period is specified
+  if (startDate) {
+    query = query.gte("recorded_at", startDate.toISOString());
+  }
+
+  // Apply limit
+  query = query.limit(limit);
+
+  const { data, error } = await query;
 
   if (error) {
     console.error("[Supabase] getPriceHistory error:", error);
   }
   return data || [];
+}
+
+/**
+ * Get price statistics for a tracked product
+ * Calculates avg, min, max for the given period
+ * @param {string} trackedProductId - The tracked product ID
+ * @param {string} period - Time period: '7d', '30d', or 'all'
+ */
+async function getPriceStatistics(trackedProductId, period = "30d") {
+  // Get price history for the period
+  const history = await getPriceHistory(trackedProductId, { period, limit: 1000 });
+
+  if (!history || history.length === 0) {
+    return null;
+  }
+
+  const prices = history.map(h => parseFloat(h.price));
+  const currentPrice = prices[0]; // Most recent price (ordered desc)
+  const minPrice = Math.min(...prices);
+  const maxPrice = Math.max(...prices);
+  const avgPrice = prices.reduce((sum, p) => sum + p, 0) / prices.length;
+
+  // Calculate price change from oldest to newest in this period
+  const oldestPrice = prices[prices.length - 1];
+  const priceChange = currentPrice - oldestPrice;
+  const priceChangePercent = oldestPrice > 0 ? ((priceChange / oldestPrice) * 100) : 0;
+
+  // Good Deal logic: current price is at least 5% below average
+  const goodDealThreshold = avgPrice * 0.95;
+  const isGoodDeal = currentPrice < goodDealThreshold;
+  const savingsFromAvg = avgPrice - currentPrice;
+  const savingsPercent = avgPrice > 0 ? ((savingsFromAvg / avgPrice) * 100) : 0;
+
+  return {
+    currentPrice,
+    minPrice,
+    maxPrice,
+    avgPrice: Math.round(avgPrice * 100) / 100, // Round to 2 decimal places
+    priceChange: Math.round(priceChange * 100) / 100,
+    priceChangePercent: Math.round(priceChangePercent * 100) / 100,
+    isGoodDeal,
+    savingsFromAvg: isGoodDeal ? Math.round(savingsFromAvg * 100) / 100 : 0,
+    savingsPercent: isGoodDeal ? Math.round(savingsPercent * 100) / 100 : 0,
+    dataPoints: history.length,
+    periodStart: history.length > 0 ? history[history.length - 1].recorded_at : null,
+    periodEnd: history.length > 0 ? history[0].recorded_at : null,
+  };
 }
 
 // ============================================
@@ -557,6 +640,7 @@ module.exports = {
   // Price history
   addPriceHistory,
   getPriceHistory,
+  getPriceStatistics,
   // Setup
   createDemoAccounts
 };

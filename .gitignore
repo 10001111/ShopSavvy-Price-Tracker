@@ -2,3 +2,16 @@ node_modules/
 .env
 data/
 certs/
+
+# Windows reserved names
+nul
+NUL
+con
+CON
+aux
+AUX
+prn
+PRN
+
+# Test files
+test-price-history.js

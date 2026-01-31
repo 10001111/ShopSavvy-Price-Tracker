@@ -255,6 +255,9 @@ function renderPage(title, body, extraHead = "", isLoggedIn = false, userEmail =
     <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
     <link href="https://fonts.googleapis.com/css2?family=Inter:wght@300;400;500;600;700;800&display=swap" rel="stylesheet">
     <link rel="stylesheet" href="/styles.css">
+    <!-- Chart.js for price history charts -->
+    <script src="https://cdn.jsdelivr.net/npm/chart.js@4.4.1/dist/chart.umd.min.js"></script>
+    <script src="https://cdn.jsdelivr.net/npm/chartjs-adapter-date-fns@3.0.0/dist/chartjs-adapter-date-fns.bundle.min.js"></script>
     <script>
       // Theme initialization - runs before page render to prevent flash
       (function() {
@@ -304,6 +307,15 @@ function renderPage(title, body, extraHead = "", isLoggedIn = false, userEmail =
                   <circle cx="12" cy="7" r="4"></circle>
                 </svg>
                 ${t(lang, "profile")}
+              </a>
+              <a href="/dashboard">
+                <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+                  <path d="M3 3v18h18"></path>
+                  <path d="M18 17V9"></path>
+                  <path d="M13 17V5"></path>
+                  <path d="M8 17v-3"></path>
+                </svg>
+                ${lang === "es" ? "Mi Panel" : "Dashboard"}
               </a>
               <a href="/profile/settings">
                 <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
@@ -3160,6 +3172,822 @@ State: ${state || 'none'}</pre>
     }
   });
 
+  // ============================================
+  // DASHBOARD - TRACKED PRODUCTS WITH PRICE CHARTS
+  // ============================================
+  app.get("/dashboard", authRequired, async (req, res) => {
+    const lang = getLang(req);
+    const userEmail = req.user?.email || "";
+    const userData = await db.get("SELECT * FROM users WHERE id = ?", req.user.id);
+
+    // Get user's tracked products
+    const trackedProducts = await supabaseDb.getTrackedProducts(req.user.id);
+
+    const noProductsMessage = lang === "es"
+      ? "Aún no estás rastreando ningún producto. Busca productos y haz clic en 'Rastrear Precio' para comenzar."
+      : "You're not tracking any products yet. Search for products and click 'Track Price' to get started.";
+
+    const productsHtml = trackedProducts.length === 0
+      ? `<div class="empty-state">
+          <div class="empty-state-icon">📊</div>
+          <h3>${lang === "es" ? "Sin productos rastreados" : "No Tracked Products"}</h3>
+          <p>${noProductsMessage}</p>
+          <a href="/" class="btn-primary">${lang === "es" ? "Buscar Productos" : "Search Products"}</a>
+        </div>`
+      : trackedProducts.map((product, index) => `
+        <div class="tracked-product-card" data-product-id="${product.id}">
+          <div class="tracked-product-header">
+            <div class="tracked-product-info">
+              <h3 class="tracked-product-title">${product.product_title || product.product_id}</h3>
+              <div class="tracked-product-meta">
+                <span class="current-price">${formatPrice(product.current_price, "MXN")}</span>
+                <span class="tracked-since">${lang === "es" ? "Rastreando desde" : "Tracking since"}: ${new Date(product.created_at).toLocaleDateString(lang === "es" ? "es-MX" : "en-US")}</span>
+              </div>
+            </div>
+            <div class="tracked-product-actions">
+              ${product.product_url ? `<a href="${product.product_url}" target="_blank" rel="noopener" class="btn-small btn-secondary">
+                ${lang === "es" ? "Ver Producto" : "View Product"}
+              </a>` : ''}
+              <button class="btn-small btn-danger" onclick="removeTrackedProduct('${product.id}')">
+                ${lang === "es" ? "Eliminar" : "Remove"}
+              </button>
+            </div>
+          </div>
+
+          <!-- Price Statistics -->
+          <div class="price-stats" id="stats-${product.id}">
+            <div class="stat-loading">${lang === "es" ? "Cargando estadísticas..." : "Loading statistics..."}</div>
+          </div>
+
+          <!-- Price Chart -->
+          <div class="chart-container">
+            <div class="chart-header">
+              <h4>${lang === "es" ? "Historial de Precios" : "Price History"}</h4>
+              <div class="chart-period-toggle" data-product-id="${product.id}">
+                <button class="period-btn active" data-period="7d">7 ${lang === "es" ? "días" : "days"}</button>
+                <button class="period-btn" data-period="30d">30 ${lang === "es" ? "días" : "days"}</button>
+              </div>
+            </div>
+            <div class="chart-wrapper" id="chart-wrapper-${product.id}">
+              <canvas id="chart-${product.id}"></canvas>
+            </div>
+            <div class="chart-empty" id="chart-empty-${product.id}" style="display: none;">
+              <p>${lang === "es" ? "No hay suficientes datos de historial aún. Los precios se actualizan cada 12 horas." : "Not enough history data yet. Prices update every 12 hours."}</p>
+            </div>
+          </div>
+        </div>
+      `).join("");
+
+    res.send(renderPage(lang === "es" ? "Mi Panel" : "My Dashboard", `
+      <div class="dashboard-container">
+        <div class="dashboard-header">
+          <h1>${lang === "es" ? "Mi Panel de Rastreo" : "My Tracking Dashboard"}</h1>
+          <p class="dashboard-subtitle">${lang === "es"
+            ? `Rastreando ${trackedProducts.length} producto${trackedProducts.length !== 1 ? "s" : ""}`
+            : `Tracking ${trackedProducts.length} product${trackedProducts.length !== 1 ? "s" : ""}`}</p>
+        </div>
+
+        <div class="tracked-products-list">
+          ${productsHtml}
+        </div>
+      </div>
+    `, `
+      <style>
+        .dashboard-container {
+          max-width: 1200px;
+          margin: 0 auto;
+          padding: 24px 20px;
+        }
+
+        .dashboard-header {
+          margin-bottom: 32px;
+        }
+
+        .dashboard-header h1 {
+          color: var(--text-primary);
+          margin-bottom: 8px;
+        }
+
+        .dashboard-subtitle {
+          color: var(--text-muted);
+          font-size: 1.1rem;
+        }
+
+        .empty-state {
+          text-align: center;
+          padding: 60px 20px;
+          background: var(--bg-card);
+          border-radius: var(--radius-xl);
+          border: 1px solid var(--border-color);
+        }
+
+        .empty-state-icon {
+          font-size: 48px;
+          margin-bottom: 16px;
+        }
+
+        .empty-state h3 {
+          color: var(--text-primary);
+          margin-bottom: 8px;
+        }
+
+        .empty-state p {
+          color: var(--text-muted);
+          margin-bottom: 24px;
+          max-width: 400px;
+          margin-left: auto;
+          margin-right: auto;
+        }
+
+        .tracked-products-list {
+          display: flex;
+          flex-direction: column;
+          gap: 24px;
+        }
+
+        .tracked-product-card {
+          background: var(--bg-card);
+          border-radius: var(--radius-xl);
+          border: 1px solid var(--border-color);
+          padding: 24px;
+          transition: box-shadow var(--transition-fast);
+        }
+
+        .tracked-product-card:hover {
+          box-shadow: 0 4px 20px rgba(0, 0, 0, 0.1);
+        }
+
+        .tracked-product-header {
+          display: flex;
+          justify-content: space-between;
+          align-items: flex-start;
+          gap: 16px;
+          margin-bottom: 20px;
+          flex-wrap: wrap;
+        }
+
+        .tracked-product-title {
+          color: var(--text-primary);
+          font-size: 1.1rem;
+          margin-bottom: 8px;
+          line-height: 1.4;
+        }
+
+        .tracked-product-meta {
+          display: flex;
+          gap: 16px;
+          align-items: center;
+          flex-wrap: wrap;
+        }
+
+        .current-price {
+          font-size: 1.25rem;
+          font-weight: 700;
+          color: var(--accent-primary);
+        }
+
+        .tracked-since {
+          color: var(--text-muted);
+          font-size: 0.85rem;
+        }
+
+        .tracked-product-actions {
+          display: flex;
+          gap: 8px;
+          flex-shrink: 0;
+        }
+
+        .btn-small {
+          padding: 8px 16px;
+          font-size: 0.85rem;
+          border-radius: var(--radius-md);
+          border: none;
+          cursor: pointer;
+          text-decoration: none;
+          display: inline-flex;
+          align-items: center;
+          transition: all var(--transition-fast);
+        }
+
+        .btn-secondary {
+          background: var(--bg-secondary);
+          color: var(--text-primary);
+          border: 1px solid var(--border-color);
+        }
+
+        .btn-secondary:hover {
+          background: var(--bg-tertiary);
+        }
+
+        .btn-danger {
+          background: #fee2e2;
+          color: #dc2626;
+        }
+
+        .btn-danger:hover {
+          background: #fecaca;
+        }
+
+        /* Price Statistics */
+        .price-stats {
+          display: grid;
+          grid-template-columns: repeat(auto-fit, minmax(140px, 1fr));
+          gap: 16px;
+          margin-bottom: 20px;
+          padding: 16px;
+          background: var(--bg-secondary);
+          border-radius: var(--radius-lg);
+        }
+
+        .stat-item {
+          text-align: center;
+        }
+
+        .stat-label {
+          font-size: 0.75rem;
+          color: var(--text-muted);
+          text-transform: uppercase;
+          letter-spacing: 0.5px;
+          margin-bottom: 4px;
+        }
+
+        .stat-value {
+          font-size: 1.1rem;
+          font-weight: 600;
+          color: var(--text-primary);
+        }
+
+        .stat-value.good-deal {
+          color: #16a34a;
+        }
+
+        .stat-value.price-up {
+          color: #dc2626;
+        }
+
+        .stat-value.price-down {
+          color: #16a34a;
+        }
+
+        .good-deal-badge {
+          display: inline-flex;
+          align-items: center;
+          gap: 4px;
+          background: #dcfce7;
+          color: #16a34a;
+          padding: 4px 12px;
+          border-radius: 20px;
+          font-size: 0.85rem;
+          font-weight: 600;
+        }
+
+        .stat-loading {
+          grid-column: 1 / -1;
+          text-align: center;
+          color: var(--text-muted);
+          padding: 8px;
+        }
+
+        /* Chart Container */
+        .chart-container {
+          margin-top: 16px;
+        }
+
+        .chart-header {
+          display: flex;
+          justify-content: space-between;
+          align-items: center;
+          margin-bottom: 16px;
+          flex-wrap: wrap;
+          gap: 12px;
+        }
+
+        .chart-header h4 {
+          color: var(--text-primary);
+          margin: 0;
+        }
+
+        .chart-period-toggle {
+          display: flex;
+          background: var(--bg-secondary);
+          border-radius: var(--radius-md);
+          padding: 4px;
+        }
+
+        .period-btn {
+          padding: 8px 16px;
+          border: none;
+          background: transparent;
+          color: var(--text-muted);
+          cursor: pointer;
+          border-radius: var(--radius-sm);
+          font-size: 0.85rem;
+          transition: all var(--transition-fast);
+        }
+
+        .period-btn:hover {
+          color: var(--text-primary);
+        }
+
+        .period-btn.active {
+          background: var(--accent-primary);
+          color: white;
+        }
+
+        .chart-wrapper {
+          position: relative;
+          height: 300px;
+          width: 100%;
+        }
+
+        .chart-wrapper canvas {
+          width: 100% !important;
+          height: 100% !important;
+        }
+
+        .chart-empty {
+          display: flex;
+          align-items: center;
+          justify-content: center;
+          height: 200px;
+          background: var(--bg-secondary);
+          border-radius: var(--radius-lg);
+          color: var(--text-muted);
+          text-align: center;
+          padding: 20px;
+        }
+
+        /* Responsive */
+        @media (max-width: 640px) {
+          .tracked-product-header {
+            flex-direction: column;
+          }
+
+          .tracked-product-actions {
+            width: 100%;
+          }
+
+          .btn-small {
+            flex: 1;
+            justify-content: center;
+          }
+
+          .chart-wrapper {
+            height: 250px;
+          }
+
+          .price-stats {
+            grid-template-columns: repeat(2, 1fr);
+          }
+        }
+
+        /* Confirmation Modal */
+        .confirm-modal-overlay {
+          position: fixed;
+          top: 0;
+          left: 0;
+          right: 0;
+          bottom: 0;
+          background: rgba(0, 0, 0, 0.5);
+          display: flex;
+          align-items: center;
+          justify-content: center;
+          z-index: 9999;
+          animation: fadeIn 0.2s ease;
+        }
+
+        @keyframes fadeIn {
+          from { opacity: 0; }
+          to { opacity: 1; }
+        }
+
+        .confirm-modal {
+          background: var(--bg-card);
+          border-radius: var(--radius-xl);
+          padding: 24px;
+          max-width: 400px;
+          width: 90%;
+          box-shadow: 0 20px 60px rgba(0, 0, 0, 0.3);
+          animation: slideUp 0.2s ease;
+        }
+
+        @keyframes slideUp {
+          from { transform: translateY(20px); opacity: 0; }
+          to { transform: translateY(0); opacity: 1; }
+        }
+
+        .confirm-modal h3 {
+          color: var(--text-primary);
+          margin: 0 0 12px 0;
+          font-size: 1.25rem;
+        }
+
+        .confirm-modal p {
+          color: var(--text-muted);
+          margin: 0 0 24px 0;
+          line-height: 1.5;
+        }
+
+        .confirm-modal-actions {
+          display: flex;
+          gap: 12px;
+          justify-content: flex-end;
+        }
+
+        .confirm-modal .btn-cancel {
+          padding: 10px 20px;
+          border: 1px solid var(--border-color);
+          background: var(--bg-secondary);
+          color: var(--text-primary);
+          border-radius: var(--radius-md);
+          cursor: pointer;
+          font-size: 0.9rem;
+          transition: all var(--transition-fast);
+        }
+
+        .confirm-modal .btn-cancel:hover {
+          background: var(--bg-tertiary);
+        }
+
+        .confirm-modal .btn-confirm {
+          padding: 10px 20px;
+          border: none;
+          background: #dc2626;
+          color: white;
+          border-radius: var(--radius-md);
+          cursor: pointer;
+          font-size: 0.9rem;
+          transition: all var(--transition-fast);
+        }
+
+        .confirm-modal .btn-confirm:hover {
+          background: #b91c1c;
+        }
+
+        /* Toast Notification */
+        .toast {
+          position: fixed;
+          bottom: 24px;
+          left: 50%;
+          transform: translateX(-50%);
+          padding: 12px 24px;
+          border-radius: var(--radius-lg);
+          color: white;
+          font-size: 0.9rem;
+          z-index: 10000;
+          animation: toastIn 0.3s ease;
+        }
+
+        @keyframes toastIn {
+          from { transform: translateX(-50%) translateY(20px); opacity: 0; }
+          to { transform: translateX(-50%) translateY(0); opacity: 1; }
+        }
+
+        .toast-info {
+          background: #3b82f6;
+        }
+
+        .toast-success {
+          background: #16a34a;
+        }
+
+        .toast-error {
+          background: #dc2626;
+        }
+      </style>
+
+      <script>
+        // Store chart instances for cleanup
+        const chartInstances = {};
+
+        // Initialize all charts when page loads
+        document.addEventListener('DOMContentLoaded', function() {
+          const productCards = document.querySelectorAll('.tracked-product-card');
+          productCards.forEach(card => {
+            const productId = card.dataset.productId;
+            loadPriceData(productId, '7d');
+          });
+
+          // Add click handlers for period toggles
+          document.querySelectorAll('.chart-period-toggle').forEach(toggle => {
+            toggle.addEventListener('click', function(e) {
+              if (e.target.classList.contains('period-btn')) {
+                const productId = this.dataset.productId;
+                const period = e.target.dataset.period;
+
+                // Update active state
+                this.querySelectorAll('.period-btn').forEach(btn => btn.classList.remove('active'));
+                e.target.classList.add('active');
+
+                // Reload chart with new period
+                loadPriceData(productId, period);
+              }
+            });
+          });
+        });
+
+        // Load price data and render chart
+        async function loadPriceData(productId, period) {
+          try {
+            const response = await fetch(\`/api/tracked/\${productId}/history?period=\${period}\`);
+            const data = await response.json();
+
+            if (!data.success) {
+              throw new Error(data.error || 'Failed to load data');
+            }
+
+            // Update statistics
+            updateStats(productId, data.statistics, data.goodDeal);
+
+            // Render chart
+            renderChart(productId, data.history, period);
+
+          } catch (error) {
+            console.error('Error loading price data:', error);
+            document.getElementById(\`stats-\${productId}\`).innerHTML =
+              '<div class="stat-loading" style="color: #dc2626;">Error loading data</div>';
+          }
+        }
+
+        // Update statistics display
+        function updateStats(productId, stats, goodDeal) {
+          const statsContainer = document.getElementById(\`stats-\${productId}\`);
+
+          if (!stats) {
+            statsContainer.innerHTML = '<div class="stat-loading">${lang === "es" ? "Sin datos de historial aún" : "No history data yet"}</div>';
+            return;
+          }
+
+          const priceChangeClass = stats.priceChange > 0 ? 'price-up' : stats.priceChange < 0 ? 'price-down' : '';
+          const priceChangeSign = stats.priceChange > 0 ? '+' : '';
+
+          statsContainer.innerHTML = \`
+            <div class="stat-item">
+              <div class="stat-label">${lang === "es" ? "Precio Actual" : "Current"}</div>
+              <div class="stat-value">\${formatPrice(stats.currentPrice)}</div>
+            </div>
+            <div class="stat-item">
+              <div class="stat-label">${lang === "es" ? "Promedio" : "Average"}</div>
+              <div class="stat-value">\${formatPrice(stats.avgPrice)}</div>
+            </div>
+            <div class="stat-item">
+              <div class="stat-label">${lang === "es" ? "Mínimo" : "Lowest"}</div>
+              <div class="stat-value price-down">\${formatPrice(stats.minPrice)}</div>
+            </div>
+            <div class="stat-item">
+              <div class="stat-label">${lang === "es" ? "Máximo" : "Highest"}</div>
+              <div class="stat-value price-up">\${formatPrice(stats.maxPrice)}</div>
+            </div>
+            <div class="stat-item">
+              <div class="stat-label">${lang === "es" ? "Cambio" : "Change"}</div>
+              <div class="stat-value \${priceChangeClass}">\${priceChangeSign}\${stats.priceChangePercent.toFixed(1)}%</div>
+            </div>
+            \${goodDeal && goodDeal.isGoodDeal ? \`
+              <div class="stat-item">
+                <div class="good-deal-badge">🔥 ${lang === "es" ? "Buen Precio" : "Good Deal"}!</div>
+              </div>
+            \` : ''}
+          \`;
+        }
+
+        // Render price chart
+        function renderChart(productId, history, period) {
+          const chartWrapper = document.getElementById(\`chart-wrapper-\${productId}\`);
+          const chartEmpty = document.getElementById(\`chart-empty-\${productId}\`);
+          const canvas = document.getElementById(\`chart-\${productId}\`);
+
+          // Destroy existing chart if it exists
+          if (chartInstances[productId]) {
+            chartInstances[productId].destroy();
+            delete chartInstances[productId];
+          }
+
+          // Show empty state if not enough data
+          if (!history || history.length < 2) {
+            chartWrapper.style.display = 'none';
+            chartEmpty.style.display = 'flex';
+            return;
+          }
+
+          chartWrapper.style.display = 'block';
+          chartEmpty.style.display = 'none';
+
+          // Prepare data (reverse to show oldest first)
+          const sortedHistory = [...history].reverse();
+          const labels = sortedHistory.map(h => new Date(h.recorded_at));
+          const prices = sortedHistory.map(h => parseFloat(h.price));
+
+          // Calculate min/max for better Y axis
+          const minPrice = Math.min(...prices);
+          const maxPrice = Math.max(...prices);
+          const padding = (maxPrice - minPrice) * 0.1 || maxPrice * 0.1;
+
+          // Get theme colors
+          const isDark = document.documentElement.getAttribute('data-theme') === 'dark';
+          const gridColor = isDark ? 'rgba(255, 255, 255, 0.1)' : 'rgba(0, 0, 0, 0.1)';
+          const textColor = isDark ? 'rgba(255, 255, 255, 0.7)' : 'rgba(0, 0, 0, 0.7)';
+
+          // Create gradient
+          const ctx = canvas.getContext('2d');
+          const gradient = ctx.createLinearGradient(0, 0, 0, 300);
+          gradient.addColorStop(0, 'rgba(59, 130, 246, 0.3)');
+          gradient.addColorStop(1, 'rgba(59, 130, 246, 0.0)');
+
+          // Create chart
+          chartInstances[productId] = new Chart(ctx, {
+            type: 'line',
+            data: {
+              labels: labels,
+              datasets: [{
+                label: '${lang === "es" ? "Precio" : "Price"}',
+                data: prices,
+                borderColor: '#3b82f6',
+                backgroundColor: gradient,
+                borderWidth: 2,
+                fill: true,
+                tension: 0.4,
+                pointRadius: 4,
+                pointHoverRadius: 6,
+                pointBackgroundColor: '#3b82f6',
+                pointBorderColor: '#fff',
+                pointBorderWidth: 2,
+              }]
+            },
+            options: {
+              responsive: true,
+              maintainAspectRatio: false,
+              interaction: {
+                intersect: false,
+                mode: 'index'
+              },
+              plugins: {
+                legend: {
+                  display: false
+                },
+                tooltip: {
+                  backgroundColor: isDark ? '#1f2937' : '#fff',
+                  titleColor: isDark ? '#fff' : '#111',
+                  bodyColor: isDark ? '#d1d5db' : '#374151',
+                  borderColor: isDark ? '#374151' : '#e5e7eb',
+                  borderWidth: 1,
+                  padding: 12,
+                  displayColors: false,
+                  callbacks: {
+                    title: function(items) {
+                      const date = new Date(items[0].parsed.x);
+                      return date.toLocaleDateString('${lang === "es" ? "es-MX" : "en-US"}', {
+                        weekday: 'short',
+                        year: 'numeric',
+                        month: 'short',
+                        day: 'numeric',
+                        hour: '2-digit',
+                        minute: '2-digit'
+                      });
+                    },
+                    label: function(item) {
+                      return '${lang === "es" ? "Precio" : "Price"}: ' + formatPrice(item.parsed.y);
+                    }
+                  }
+                }
+              },
+              scales: {
+                x: {
+                  type: 'time',
+                  time: {
+                    unit: period === '7d' ? 'day' : 'week',
+                    displayFormats: {
+                      day: 'MMM d',
+                      week: 'MMM d'
+                    }
+                  },
+                  grid: {
+                    color: gridColor,
+                    drawBorder: false
+                  },
+                  ticks: {
+                    color: textColor,
+                    maxTicksLimit: 7
+                  }
+                },
+                y: {
+                  min: Math.max(0, minPrice - padding),
+                  max: maxPrice + padding,
+                  grid: {
+                    color: gridColor,
+                    drawBorder: false
+                  },
+                  ticks: {
+                    color: textColor,
+                    callback: function(value) {
+                      return '$' + value.toLocaleString();
+                    }
+                  }
+                }
+              }
+            }
+          });
+        }
+
+        // Format price helper
+        function formatPrice(price) {
+          return '$' + parseFloat(price).toLocaleString('${lang === "es" ? "es-MX" : "en-US"}', {
+            minimumFractionDigits: 2,
+            maximumFractionDigits: 2
+          });
+        }
+
+        // Remove tracked product with custom confirmation modal
+        function removeTrackedProduct(productId) {
+          showConfirmModal(
+            '${lang === "es" ? "¿Eliminar producto?" : "Remove product?"}',
+            '${lang === "es" ? "¿Estás seguro de que quieres dejar de rastrear este producto?" : "Are you sure you want to stop tracking this product?"}',
+            async function() {
+              try {
+                const response = await fetch(\`/api/track/\${productId}\`, {
+                  method: 'DELETE',
+                  credentials: 'include'
+                });
+
+                const data = await response.json();
+
+                if (data.success) {
+                  // Refresh the page to show updated list
+                  location.reload();
+                } else {
+                  console.error('[Remove] Error:', data.error);
+                  showToast('${lang === "es" ? "Error al eliminar producto" : "Error removing product"}', 'error');
+                }
+              } catch (error) {
+                console.error('[Remove] Exception:', error);
+                showToast('${lang === "es" ? "Error al eliminar producto" : "Error removing product"}', 'error');
+              }
+            }
+          );
+        }
+
+        // Custom confirmation modal
+        function showConfirmModal(title, message, onConfirm) {
+          // Remove existing modal if any
+          const existingModal = document.getElementById('confirmModal');
+          if (existingModal) existingModal.remove();
+
+          const modal = document.createElement('div');
+          modal.id = 'confirmModal';
+          modal.className = 'confirm-modal-overlay';
+          modal.innerHTML = \`
+            <div class="confirm-modal">
+              <h3>\${title}</h3>
+              <p>\${message}</p>
+              <div class="confirm-modal-actions">
+                <button class="btn-cancel" onclick="closeConfirmModal()">${lang === "es" ? "Cancelar" : "Cancel"}</button>
+                <button class="btn-confirm" id="confirmBtn">${lang === "es" ? "Sí, eliminar" : "Yes, remove"}</button>
+              </div>
+            </div>
+          \`;
+
+          document.body.appendChild(modal);
+
+          // Add click handler for confirm button
+          document.getElementById('confirmBtn').onclick = function() {
+            closeConfirmModal();
+            onConfirm();
+          };
+
+          // Close on overlay click
+          modal.addEventListener('click', function(e) {
+            if (e.target === modal) closeConfirmModal();
+          });
+
+          // Close on Escape key
+          document.addEventListener('keydown', function escHandler(e) {
+            if (e.key === 'Escape') {
+              closeConfirmModal();
+              document.removeEventListener('keydown', escHandler);
+            }
+          });
+        }
+
+        function closeConfirmModal() {
+          const modal = document.getElementById('confirmModal');
+          if (modal) modal.remove();
+        }
+
+        // Toast notification
+        function showToast(message, type = 'info') {
+          const existingToast = document.querySelector('.toast');
+          if (existingToast) existingToast.remove();
+
+          const toast = document.createElement('div');
+          toast.className = \`toast toast-\${type}\`;
+          toast.textContent = message;
+          document.body.appendChild(toast);
+
+          setTimeout(() => toast.remove(), 3000);
+        }
+      </script>
+    `, true, userEmail, lang, userData));
+  });
+
   app.get("/product/:id", authRequired, async (req, res) => {
     const lang = getLang(req);
     const userEmail = req.user?.email || "";
@@ -3225,7 +4053,7 @@ State: ${state || 'none'}</pre>
           <p>${description}</p>
           <div class="product-actions">
             ${product.permalink ? `<a class="action-button ${isAmazon ? "amazon-btn" : ""}" href="${product.permalink}" target="_blank" rel="noreferrer">${viewButtonText}</a>` : ""}
-            <button class="action-button secondary" onclick="trackProduct('${product.id}', '${(product.title || "").replace(/'/g, "\\'")}', '${product.permalink || ""}', '${product.source || "mercadolibre"}', ${product.price || 0})">📊 ${t(lang, "trackPrice")}</button>
+            <button class="action-button secondary" id="trackPriceBtn">📊 ${t(lang, "trackPrice")}</button>
           </div>
         </div>
       </div>
@@ -3242,30 +4070,58 @@ State: ${state || 'none'}</pre>
         .action-button.amazon-btn:hover { background: #e88b00; }
       </style>
       <script>
-        async function trackProduct(productId, title, url, source, price) {
-          try {
-            const res = await fetch('/api/track', {
-              method: 'POST',
-              headers: { 'Content-Type': 'application/json' },
-              credentials: 'include',
-              body: JSON.stringify({
-                productId: productId,
-                productTitle: title,
-                productUrl: url,
-                source: source,
-                currentPrice: price
-              })
+        // Product data stored safely in JavaScript object
+        const productData = {
+          id: ${JSON.stringify(product.id)},
+          title: ${JSON.stringify(product.title || "Unknown Product")},
+          url: ${JSON.stringify(product.permalink || "")},
+          source: ${JSON.stringify(product.source || "mercadolibre")},
+          price: ${product.price || 0}
+        };
+
+        // Wait for DOM to be ready
+        document.addEventListener('DOMContentLoaded', function() {
+          const trackBtn = document.getElementById('trackPriceBtn');
+          if (trackBtn) {
+            trackBtn.addEventListener('click', async function() {
+              console.log('[TrackProduct] Starting to track product...');
+              console.log('[TrackProduct] Product Data:', productData);
+
+              try {
+                const payload = {
+                  productId: productData.id,
+                  productTitle: productData.title,
+                  productUrl: productData.url,
+                  source: productData.source,
+                  currentPrice: productData.price
+                };
+                console.log('[TrackProduct] Sending payload:', JSON.stringify(payload, null, 2));
+
+                const res = await fetch('/api/track', {
+                  method: 'POST',
+                  headers: { 'Content-Type': 'application/json' },
+                  credentials: 'include',
+                  body: JSON.stringify(payload)
+                });
+
+                console.log('[TrackProduct] Response status:', res.status);
+                const data = await res.json();
+                console.log('[TrackProduct] Response data:', JSON.stringify(data, null, 2));
+
+                if (data.success) {
+                  console.log('[TrackProduct] Success! Redirecting to dashboard...');
+                  window.location.href = '/dashboard';
+                } else {
+                  console.error('[TrackProduct] Error from server:', data.error);
+                  alert('Error: ' + (data.error || 'Could not track product'));
+                }
+              } catch (err) {
+                console.error('[TrackProduct] Exception:', err);
+                alert('Error: ' + err.message);
+              }
             });
-            const data = await res.json();
-            if (data.success) {
-              alert('Product added to price tracking!');
-            } else {
-              alert('Error: ' + (data.error || 'Could not track product'));
-            }
-          } catch (err) {
-            alert('Error: ' + err.message);
           }
-        }
+        });
       </script>
     `, true, userEmail, lang, userData));
   });
@@ -3287,14 +4143,27 @@ State: ${state || 'none'}</pre>
    * URL: POST /api/track
    */
   app.post("/api/track", authRequired, async (req, res) => {
+    console.log("[Track API] Received request");
+    console.log("[Track API] User ID:", req.user.id);
+    console.log("[Track API] Request body:", JSON.stringify(req.body, null, 2));
+
     try {
       const { productId, productTitle, productUrl, source, currentPrice } = req.body;
       const userId = req.user.id;
 
+      console.log("[Track API] Extracted fields:");
+      console.log("  - productId:", productId);
+      console.log("  - productTitle:", productTitle);
+      console.log("  - productUrl:", productUrl);
+      console.log("  - source:", source);
+      console.log("  - currentPrice:", currentPrice);
+
       if (!productId || !source) {
+        console.log("[Track API] Missing required fields");
         return res.status(400).json({ success: false, error: "Missing required fields" });
       }
 
+      console.log("[Track API] Calling addTrackedProduct...");
       const tracked = await supabaseDb.addTrackedProduct({
         userId,
         productId,
@@ -3305,14 +4174,20 @@ State: ${state || 'none'}</pre>
         currentPrice: currentPrice || 0,
       });
 
+      console.log("[Track API] addTrackedProduct result:", JSON.stringify(tracked, null, 2));
+
       if (tracked) {
         // Also record initial price in history
+        console.log("[Track API] Recording initial price in history...");
         await supabaseDb.addPriceHistory(tracked.id, currentPrice || 0);
+        console.log("[Track API] Price history recorded");
       }
 
+      console.log("[Track API] Sending success response");
       res.json({ success: true, tracked });
     } catch (error) {
-      console.error("[Track] Error:", error);
+      console.error("[Track API] Error:", error);
+      console.error("[Track API] Error stack:", error.stack);
       res.status(500).json({ success: false, error: error.message });
     }
   });
@@ -3597,18 +4472,116 @@ State: ${state || 'none'}</pre>
   /**
    * API: Get price history for a tracked product
    * URL: GET /api/tracked/:id/history
+   * Query params:
+   *   - period: '7d', '30d', or 'all' (default: '30d')
+   *   - limit: max number of records (default: 100)
+   *   - noCache: set to 'true' to bypass cache
    */
   app.get("/api/tracked/:id/history", authRequired, async function(req, res) {
     try {
       const { id } = req.params;
-      const limit = parseInt(req.query.limit) || 30;
+      const period = req.query.period || "30d";
+      const limit = parseInt(req.query.limit) || 100;
+      const noCache = req.query.noCache === "true";
 
-      const history = await supabaseDb.getPriceHistory(id, limit);
+      // Validate period
+      const validPeriods = ["7d", "30d", "all"];
+      if (!validPeriods.includes(period)) {
+        return res.status(400).json({
+          success: false,
+          error: `Invalid period. Must be one of: ${validPeriods.join(", ")}`,
+        });
+      }
+
+      // Try to get from cache first (unless noCache is set)
+      const { getCache, setCache, priceHistoryCacheKey } = require("./config/redis");
+      const cacheKey = priceHistoryCacheKey(id, period);
+
+      if (!noCache) {
+        const cachedData = await getCache(cacheKey);
+        if (cachedData) {
+          return res.json({
+            ...cachedData,
+            cached: true,
+          });
+        }
+      }
+
+      // Fetch from database
+      const history = await supabaseDb.getPriceHistory(id, { period, limit });
+      const statistics = await supabaseDb.getPriceStatistics(id, period);
+
+      const responseData = {
+        success: true,
+        trackedProductId: id,
+        period,
+        history,
+        statistics,
+        goodDeal: statistics ? {
+          isGoodDeal: statistics.isGoodDeal,
+          message: statistics.isGoodDeal
+            ? `Great deal! ${statistics.savingsPercent.toFixed(1)}% below average price`
+            : "Price is at or above average",
+          savingsFromAvg: statistics.savingsFromAvg,
+          savingsPercent: statistics.savingsPercent,
+        } : null,
+      };
+
+      // Cache the response (30 minutes TTL)
+      await setCache(cacheKey, responseData);
+
+      res.json({
+        ...responseData,
+        cached: false,
+      });
+    } catch (error) {
+      res.status(500).json({
+        success: false,
+        error: error.message,
+      });
+    }
+  });
+
+  /**
+   * API: Get price statistics only (lightweight endpoint)
+   * URL: GET /api/tracked/:id/stats
+   */
+  app.get("/api/tracked/:id/stats", authRequired, async function(req, res) {
+    try {
+      const { id } = req.params;
+      const period = req.query.period || "30d";
+
+      // Validate period
+      const validPeriods = ["7d", "30d", "all"];
+      if (!validPeriods.includes(period)) {
+        return res.status(400).json({
+          success: false,
+          error: `Invalid period. Must be one of: ${validPeriods.join(", ")}`,
+        });
+      }
+
+      const statistics = await supabaseDb.getPriceStatistics(id, period);
+
+      if (!statistics) {
+        return res.status(404).json({
+          success: false,
+          error: "No price history found for this product",
+        });
+      }
 
       res.json({
         success: true,
         trackedProductId: id,
-        history,
+        period,
+        statistics,
+        goodDeal: {
+          isGoodDeal: statistics.isGoodDeal,
+          message: statistics.isGoodDeal
+            ? `Great deal! ${statistics.savingsPercent.toFixed(1)}% below average price`
+            : "Price is at or above average",
+          savingsFromAvg: statistics.savingsFromAvg,
+          savingsPercent: statistics.savingsPercent,
+        },
       });
     } catch (error) {
       res.status(500).json({
