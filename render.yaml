@@ -3,7 +3,7 @@ services:
     name: shopsavvy-price-tracker
     env: node
     buildCommand: npm install
-    startCommand: node src/backend/server.js
+    startCommand: npm start
     envVars:
       - key: NODE_ENV
         value: production
