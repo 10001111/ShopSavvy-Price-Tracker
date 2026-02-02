@@ -1,0 +1,62 @@
+
+# File Organization
+
+This document explains the new file organization for the ShopSavvy Price Tracker project.
+
+## Root Directory
+
+The root directory contains the following files and folders:
+
+*   **.vscode**: This folder contains the Visual Studio Code settings for the project.
+*   **certs**: This folder contains the SSL certificates for the project.
+*   **data**: This folder contains the database file for the project.
+*   **node_modules**: This folder contains the node modules for the project.
+*   **src**: This folder contains the source code for the project.
+*   **supabase**: This folder contains the Supabase configuration for the project.
+*   **.env**: This file contains the environment variables for the project.
+*   **.gitignore**: This file contains the files and folders that should be ignored by Git.
+*   **package-lock.json**: This file contains the exact versions of the dependencies for the project.
+*   **package.json**: This file contains the dependencies and scripts for the project.
+*   **setup-https.ps1**: This file contains the script to set up HTTPS for the project.
+
+## `src` Directory
+
+The `src` directory contains the following folders:
+
+*   **backend**: This folder contains the back-end code for the project.
+*   **frontend**: This folder contains the front-end code for the project.
+
+### `backend` Directory
+
+The `backend` directory contains the following files and folders:
+
+*   **config**: This folder contains the configuration files for the back-end.
+*   **queue**: This folder contains the queue files for the back-end.
+*   **check-google-login.js**: This file contains the code to check the Google login.
+*   **db.js**: This file contains the code for the database.
+*   **server.js**: This file contains the code for the server.
+*   **supabase-db.js**: This file contains the code for the Supabase database.
+*   **test-price-history.js**: This file contains the code to test the price history.
+*   **setup-https.js**: This file contains the code to set up HTTPS.
+
+### `frontend` Directory
+
+The `frontend` directory contains the following files and folders:
+
+*   **images**: This folder contains the images for the front-end.
+*   **index.html**: This file is the main HTML file for the front-end.
+*   **styles.css**: This file contains the styles for the front-end.
+
+## `Docs` Directory
+
+The `Docs` directory contains the following files:
+
+*   **CALLBACKS-EXPLAINED.md**: This file explains how callbacks work.
+*   **HOW-CALLBACKS-WORK-WITH-APIS.md**: This file explains how callbacks work with APIs.
+*   **README.md**: This file contains the documentation for the project.
+*   **FIX-GOOGLE-LOGIN.md**: This file explains how to fix the Google login.
+*   **OAUTH-SETUP.md**: This file explains how to set up OAuth.
+*   **QUICK-START-GOOGLE-LOGIN.md**: This file explains how to quickly start with Google login.
+*   **SUPABASE-SETUP.md**: This file explains how to set up Supabase.
+
+This new file organization should make it easier to understand and navigate the project.

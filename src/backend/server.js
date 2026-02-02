@@ -9,7 +9,8 @@ const https = require("https");
 const dotenv = require("dotenv");
 
 // Load .env FIRST before checking any environment variables
-dotenv.config({ path: path.join(__dirname, "..", ".env") });
+// Go up two directories: src/backend -> src -> project root
+dotenv.config({ path: path.join(__dirname, "..", "..", ".env") });
 
 const { initDb } = require("./db");
 const supabaseDb = require("./supabase-db");
@@ -80,6 +81,9 @@ if (HAS_TLS) {
 
 const APP_BASE_URL = process.env.APP_BASE_URL
   || `${HAS_TLS ? "https" : "http"}://localhost:${PORT}`;
+
+// Handle favicon requests to prevent 404 errors
+const faviconSvg = `<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 100 100"><rect width="100" height="100" rx="20" fill="#3C91ED"/><text x="50" y="68" font-family="Arial" font-size="50" font-weight="bold" fill="white" text-anchor="middle">OR</text></svg>`;
 
 // Translations for bilingual support (English/Spanish)
 const translations = {
@@ -246,7 +250,7 @@ function renderPage(title, body, extraHead = "", isLoggedIn = false, userEmail =
   const userInitials = getInitials(userData?.username || userEmail);
 
   return `<!doctype html>
-<html lang="${lang}" data-theme="light">
+<html lang="${lang}" data-theme="dark">
   <head>
     <meta charset="utf-8" />
     <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no" />
@@ -260,17 +264,17 @@ function renderPage(title, body, extraHead = "", isLoggedIn = false, userEmail =
     <script src="https://cdn.jsdelivr.net/npm/chartjs-adapter-date-fns@3.0.0/dist/chartjs-adapter-date-fns.bundle.min.js"></script>
     <script>
       // Theme initialization - runs before page render to prevent flash
+      // Default to dark theme
       (function() {
         const savedTheme = localStorage.getItem('theme');
-        const prefersDark = window.matchMedia('(prefers-color-scheme: dark)').matches;
-        const theme = savedTheme || (prefersDark ? 'dark' : 'light');
+        const theme = savedTheme || 'dark';
         document.documentElement.setAttribute('data-theme', theme);
       })();
     </script>
     <style>/* Page-specific overrides */</style>
     ${extraHead}
   </head>
-  <body>
+  <body class="${isLoggedIn ? '' : 'guest-page'}">
     <header class="site-header">
       <a href="/" class="logo">OfertaRadar</a>
       <nav class="nav">
@@ -1469,8 +1473,14 @@ async function start() {
     next();
   });
 
-  // Serve static files from public folder
-  app.use(express.static(path.join(__dirname, "..", "public")));
+  // Favicon route to prevent 404 errors
+  app.get("/favicon.ico", (req, res) => {
+    res.type("image/svg+xml");
+    res.send(faviconSvg);
+  });
+
+  // Serve static files from frontend folder
+  app.use(express.static(path.join(__dirname, "..", "frontend")));
 
   // Language switch route
   app.get("/set-lang/:lang", (req, res) => {
@@ -1483,6 +1493,13 @@ async function start() {
   app.get("/", async (req, res) => {
     const lang = getLang(req);
     const hasToken = Boolean(req.cookies.token);
+
+    // DEBUG: Log all cookies and token status
+    console.log("[Home Route] =========== REQUEST DEBUG ===========");
+    console.log("[Home Route] Cookies received:", Object.keys(req.cookies || {}));
+    console.log("[Home Route] Token cookie exists:", !!req.cookies?.token);
+    console.log("[Home Route] hasToken:", hasToken);
+
     let userEmail = "";
     let userData = null;
     if (hasToken) {
@@ -1668,6 +1685,68 @@ async function start() {
         </div>
       </section>
 
+      <!-- Category Showcase -->
+      <section class="category-showcase" data-reveal="fade-up">
+        <div class="section-header" data-reveal="fade-up">
+          <span class="section-label">${lang === "es" ? "Explora por Categoría" : "Browse by Category"}</span>
+          <h2 class="section-title">${lang === "es" ? "Encuentra Ofertas en Todo lo que Necesitas" : "Find Deals on Everything You Need"}</h2>
+          <p class="section-subtitle">${lang === "es"
+            ? "Rastrea precios en miles de productos de las categorías más populares."
+            : "Track prices on thousands of products across the most popular categories."}</p>
+        </div>
+        <div class="category-showcase-grid" data-reveal-stagger>
+          <a href="/register" class="category-showcase-card" data-reveal="fade-up">
+            <span class="category-showcase-icon">📱</span>
+            <div class="category-showcase-name">${lang === "es" ? "Electrónica" : "Electronics"}</div>
+            <div class="category-showcase-desc">${lang === "es" ? "Smartphones, tablets, laptops" : "Smartphones, tablets, laptops"}</div>
+          </a>
+          <a href="/register" class="category-showcase-card" data-reveal="fade-up">
+            <span class="category-showcase-icon">🏠</span>
+            <div class="category-showcase-name">${lang === "es" ? "Hogar" : "Home & Kitchen"}</div>
+            <div class="category-showcase-desc">${lang === "es" ? "Electrodomésticos, muebles" : "Appliances, furniture"}</div>
+          </a>
+          <a href="/register" class="category-showcase-card" data-reveal="fade-up">
+            <span class="category-showcase-icon">👗</span>
+            <div class="category-showcase-name">${lang === "es" ? "Moda" : "Fashion"}</div>
+            <div class="category-showcase-desc">${lang === "es" ? "Ropa, zapatos, accesorios" : "Clothing, shoes, accessories"}</div>
+          </a>
+          <a href="/register" class="category-showcase-card" data-reveal="fade-up">
+            <span class="category-showcase-icon">⚽</span>
+            <div class="category-showcase-name">${lang === "es" ? "Deportes" : "Sports"}</div>
+            <div class="category-showcase-desc">${lang === "es" ? "Equipamiento, ropa deportiva" : "Equipment, sportswear"}</div>
+          </a>
+          <a href="/register" class="category-showcase-card" data-reveal="fade-up">
+            <span class="category-showcase-icon">💄</span>
+            <div class="category-showcase-name">${lang === "es" ? "Belleza" : "Beauty"}</div>
+            <div class="category-showcase-desc">${lang === "es" ? "Cosméticos, cuidado personal" : "Cosmetics, personal care"}</div>
+          </a>
+          <a href="/register" class="category-showcase-card" data-reveal="fade-up">
+            <span class="category-showcase-icon">🎮</span>
+            <div class="category-showcase-name">${lang === "es" ? "Videojuegos" : "Gaming"}</div>
+            <div class="category-showcase-desc">${lang === "es" ? "Consolas, juegos, accesorios" : "Consoles, games, accessories"}</div>
+          </a>
+          <a href="/register" class="category-showcase-card" data-reveal="fade-up">
+            <span class="category-showcase-icon">🔧</span>
+            <div class="category-showcase-name">${lang === "es" ? "Herramientas" : "Tools"}</div>
+            <div class="category-showcase-desc">${lang === "es" ? "Bricolaje, jardín, auto" : "DIY, garden, automotive"}</div>
+          </a>
+          <a href="/register" class="category-showcase-card" data-reveal="fade-up">
+            <span class="category-showcase-icon">🧸</span>
+            <div class="category-showcase-name">${lang === "es" ? "Juguetes" : "Toys"}</div>
+            <div class="category-showcase-desc">${lang === "es" ? "Juegos, figuras, educativos" : "Games, figures, educational"}</div>
+          </a>
+        </div>
+        <div class="category-showcase-cta" data-reveal="fade-up">
+          <a href="/register" class="btn-primary">
+            ${lang === "es" ? "Crear Cuenta y Empezar" : "Create Account & Start Tracking"}
+            <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+              <line x1="5" y1="12" x2="19" y2="12"></line>
+              <polyline points="12 5 19 12 12 19"></polyline>
+            </svg>
+          </a>
+        </div>
+      </section>
+
       <!-- How It Works -->
       <section class="features-section" data-reveal="fade-up">
         <div class="section-header" data-reveal="fade-up">
@@ -1801,11 +1880,326 @@ async function start() {
       </footer>
     `;
 
-    // Search page for logged-in users
+    // Fetch deals data for logged-in users
+    let highlightedDeals = [];
+    let popularProducts = [];
+    let topPriceDrops = [];
+    let categoryDiscounts = [];
+
+    console.log("[Home Debug] hasToken:", hasToken, "USE_SUPABASE:", USE_SUPABASE);
+
+    // ALWAYS try to fetch deals data (not just for logged-in users)
+    // This ensures sections show for testing
+    if (USE_SUPABASE) {
+      try {
+        [highlightedDeals, popularProducts, topPriceDrops, categoryDiscounts] = await Promise.all([
+          supabaseDb.getHighlightedDeals(12),
+          supabaseDb.getPopularProducts({ limit: 8 }),
+          supabaseDb.getTopPriceDrops({ period: "recent", limit: 8 }),
+          supabaseDb.getDiscountsByCategory()
+          ]);
+        } catch (err) {
+          console.error("[Home] Error fetching deals data:", err.message);
+        }
+      }
+
+      // Show demo data when no tracked products exist (ALWAYS show for testing)
+      // Demo Highlighted Deals - Using reliable Unsplash images
+      if (highlightedDeals.length === 0) {
+        highlightedDeals = [
+          { product_id: "MLM-demo-1", product_title: "Smart TV Samsung 55\" Crystal UHD 4K", current_price: 8999, avgPrice: 12499, isBestPrice: true, isGoodDeal: true, savingsPercent: 28, savingsAmount: 3500, source: "mercadolibre", thumbnail: "https://images.unsplash.com/photo-1593359677879-a4bb92f829d1?w=300&h=300&fit=crop" },
+          { product_id: "MLM-demo-2", product_title: "iPhone 15 Pro Max 256GB", current_price: 24999, avgPrice: 28999, isBestPrice: false, isGoodDeal: true, savingsPercent: 14, savingsAmount: 4000, source: "mercadolibre", thumbnail: "https://images.unsplash.com/photo-1592750475338-74b7b21085ab?w=300&h=300&fit=crop" },
+          { product_id: "MLM-demo-3", product_title: "Laptop ASUS VivoBook 15.6\" Ryzen 5", current_price: 12999, avgPrice: 15999, isBestPrice: true, isGoodDeal: true, savingsPercent: 19, savingsAmount: 3000, source: "mercadolibre", thumbnail: "https://images.unsplash.com/photo-1496181133206-80ce9b88a853?w=300&h=300&fit=crop" },
+          { product_id: "MLM-demo-4", product_title: "Audífonos Sony WH-1000XM5", current_price: 6499, avgPrice: 8499, isBestPrice: false, isGoodDeal: true, savingsPercent: 24, savingsAmount: 2000, source: "mercadolibre", thumbnail: "https://images.unsplash.com/photo-1505740420928-5e560c06d30e?w=300&h=300&fit=crop" },
+          { product_id: "MLM-demo-5", product_title: "Consola PlayStation 5 Slim", current_price: 11999, avgPrice: 14999, isBestPrice: true, isGoodDeal: true, savingsPercent: 20, savingsAmount: 3000, source: "mercadolibre", thumbnail: "https://images.unsplash.com/photo-1606144042614-b2417e99c4e3?w=300&h=300&fit=crop" },
+          { product_id: "MLM-demo-6", product_title: "Robot Aspiradora iRobot Roomba", current_price: 7999, avgPrice: 9999, isBestPrice: false, isGoodDeal: true, savingsPercent: 20, savingsAmount: 2000, source: "mercadolibre", thumbnail: "https://images.unsplash.com/photo-1558618666-fcd25c85cd64?w=300&h=300&fit=crop" },
+        ];
+      }
+
+      // Demo Popular Products - Using reliable Unsplash images
+      if (popularProducts.length === 0) {
+        popularProducts = [
+          { product_id: "MLM-pop-1", product_title: "AirPods Pro 2da Generación", current_price: 4499, avgPrice: 5499, isBestPrice: false, isGoodDeal: true, savingsPercent: 18, source: "mercadolibre", thumbnail: "https://images.unsplash.com/photo-1606220588913-b3aacb4d2f46?w=300&h=300&fit=crop" },
+          { product_id: "MLM-pop-2", product_title: "Nintendo Switch OLED", current_price: 6999, avgPrice: 7999, isBestPrice: true, isGoodDeal: true, savingsPercent: 13, source: "mercadolibre", thumbnail: "https://images.unsplash.com/photo-1578303512597-81e6cc155b3e?w=300&h=300&fit=crop" },
+          { product_id: "MLM-pop-3", product_title: "Samsung Galaxy S24 Ultra 256GB", current_price: 22999, avgPrice: 27999, isBestPrice: false, isGoodDeal: true, savingsPercent: 18, source: "mercadolibre", thumbnail: "https://images.unsplash.com/photo-1610945265064-0e34e5519bbf?w=300&h=300&fit=crop" },
+          { product_id: "MLM-pop-4", product_title: "MacBook Air M2 256GB", current_price: 19999, avgPrice: 24999, isBestPrice: true, isGoodDeal: true, savingsPercent: 20, source: "mercadolibre", thumbnail: "https://images.unsplash.com/photo-1517336714731-489689fd1ca8?w=300&h=300&fit=crop" },
+          { product_id: "MLM-pop-5", product_title: "Dyson V15 Detect Aspiradora", current_price: 14999, avgPrice: 17999, isBestPrice: false, isGoodDeal: true, savingsPercent: 17, source: "mercadolibre", thumbnail: "https://images.unsplash.com/photo-1558317374-067fb5f30001?w=300&h=300&fit=crop" },
+          { product_id: "MLM-pop-6", product_title: "Xbox Series X 1TB", current_price: 11499, avgPrice: 13999, isBestPrice: true, isGoodDeal: true, savingsPercent: 18, source: "mercadolibre", thumbnail: "https://images.unsplash.com/photo-1621259182978-fbf93132d53d?w=300&h=300&fit=crop" },
+          { product_id: "MLM-pop-7", product_title: "Monitor LG UltraGear 27\" 144Hz", current_price: 4999, avgPrice: 6499, isBestPrice: false, isGoodDeal: true, savingsPercent: 23, source: "mercadolibre", thumbnail: "https://images.unsplash.com/photo-1527443224154-c4a3942d3acf?w=300&h=300&fit=crop" },
+          { product_id: "MLM-pop-8", product_title: "Kindle Paperwhite 16GB", current_price: 2999, avgPrice: 3499, isBestPrice: true, isGoodDeal: true, savingsPercent: 14, source: "mercadolibre", thumbnail: "https://images.unsplash.com/photo-1611532736597-de2d4265fba3?w=300&h=300&fit=crop" },
+        ];
+      }
+
+      // Demo Top Price Drops - Using reliable Unsplash images
+      if (topPriceDrops.length === 0) {
+        topPriceDrops = [
+          { product_id: "MLM-drop-1", product_title: "Cámara Canon EOS R50 Kit", current_price: 18999, previousPrice: 24999, dropPercent: 24, dropAmount: 6000, isBestPrice: true, source: "mercadolibre", thumbnail: "https://images.unsplash.com/photo-1516035069371-29a1b244cc32?w=300&h=300&fit=crop" },
+          { product_id: "MLM-drop-2", product_title: "Refrigerador Samsung French Door", current_price: 29999, previousPrice: 39999, dropPercent: 25, dropAmount: 10000, isBestPrice: false, isGoodDeal: true, source: "mercadolibre", thumbnail: "https://images.unsplash.com/photo-1571175443880-49e1d25b2bc5?w=300&h=300&fit=crop" },
+          { product_id: "MLM-drop-3", product_title: "Apple Watch Series 9 GPS 45mm", current_price: 8499, previousPrice: 10999, dropPercent: 23, dropAmount: 2500, isBestPrice: true, source: "mercadolibre", thumbnail: "https://images.unsplash.com/photo-1546868871-7041f2a55e12?w=300&h=300&fit=crop" },
+          { product_id: "MLM-drop-4", product_title: "Bose QuietComfort Ultra", current_price: 7999, previousPrice: 9999, dropPercent: 20, dropAmount: 2000, isBestPrice: false, isGoodDeal: true, source: "mercadolibre", thumbnail: "https://images.unsplash.com/photo-1583394838336-acd977736f90?w=300&h=300&fit=crop" },
+          { product_id: "MLM-drop-5", product_title: "GoPro Hero 12 Black", current_price: 8499, previousPrice: 10999, dropPercent: 23, dropAmount: 2500, isBestPrice: true, source: "mercadolibre", thumbnail: "https://images.unsplash.com/photo-1564466809058-bf4114d55352?w=300&h=300&fit=crop" },
+          { product_id: "MLM-drop-6", product_title: "Lavadora LG TurboWash 22kg", current_price: 16999, previousPrice: 21999, dropPercent: 23, dropAmount: 5000, isBestPrice: false, isGoodDeal: true, source: "mercadolibre", thumbnail: "https://images.unsplash.com/photo-1626806787461-102c1bfaaea1?w=300&h=300&fit=crop" },
+          { product_id: "MLM-drop-7", product_title: "iPad Air M1 256GB WiFi", current_price: 12999, previousPrice: 16999, dropPercent: 24, dropAmount: 4000, isBestPrice: true, source: "mercadolibre", thumbnail: "https://images.unsplash.com/photo-1544244015-0df4b3ffc6b0?w=300&h=300&fit=crop" },
+          { product_id: "MLM-drop-8", product_title: "Silla Gamer Secretlab Titan", current_price: 9999, previousPrice: 12999, dropPercent: 23, dropAmount: 3000, isBestPrice: false, isGoodDeal: true, source: "mercadolibre", thumbnail: "https://images.unsplash.com/photo-1598550476439-6847785fcea6?w=300&h=300&fit=crop" },
+        ];
+      }
+
+      // Demo category discounts
+      if (categoryDiscounts.length === 0) {
+        categoryDiscounts = [
+          { key: "electronics", icon: "📱", nameEn: "Electronics", nameEs: "Electrónica", maxDiscount: 25, productCount: 156 },
+          { key: "home", icon: "🏠", nameEn: "Home & Kitchen", nameEs: "Hogar y Cocina", maxDiscount: 30, productCount: 89 },
+          { key: "fashion", icon: "👗", nameEn: "Fashion", nameEs: "Moda", maxDiscount: 40, productCount: 234 },
+          { key: "sports", icon: "⚽", nameEn: "Sports & Outdoors", nameEs: "Deportes", maxDiscount: 35, productCount: 67 },
+          { key: "beauty", icon: "💄", nameEn: "Beauty", nameEs: "Belleza", maxDiscount: 28, productCount: 112 },
+          { key: "toys", icon: "🎮", nameEn: "Toys & Games", nameEs: "Juguetes", maxDiscount: 32, productCount: 78 },
+        ];
+      }
+
+    console.log("[Home Debug] After demo data - highlightedDeals:", highlightedDeals.length, "popularProducts:", popularProducts.length, "topPriceDrops:", topPriceDrops.length);
+
+    // Helper to render deal card for carousel (CamelCamelCamel style)
+    const renderDealCard = (deal) => {
+      const badges = [];
+      if (deal.isBestPrice) {
+        badges.push(`<span class="badge-best-price">Best Price</span>`);
+      }
+      if (deal.isGoodDeal && !deal.isBestPrice) {
+        badges.push(`<span class="badge-good-deal">Good Deal</span>`);
+      }
+
+      // Use thumbnail if available, otherwise construct from product_id
+      const imageUrl = deal.thumbnail || (deal.product_url?.includes("amazon")
+        ? "/images/product-placeholder.svg"
+        : `https://http2.mlstatic.com/D_NQ_NP_${deal.product_id?.split("-")[1] || ""}-O.webp`);
+
+      return `
+        <div class="deal-card-ccc">
+          ${badges.length > 0 ? `<div class="deal-card-badges">${badges.join("")}</div>` : ""}
+          <div class="deal-card-image">
+            <img src="${imageUrl}"
+                 alt="${deal.product_title || ""}"
+                 loading="lazy"
+                 onerror="this.src='/images/product-placeholder.svg'" />
+          </div>
+          <div class="deal-card-content">
+            <h4 class="deal-card-title">${deal.product_title || "Product"}</h4>
+            <div class="deal-card-pricing">
+              <span class="deal-card-price">${formatPrice(deal.current_price, "MXN")}</span>
+              ${deal.avgPrice ? `<span class="deal-card-avg">Avg: ${formatPrice(deal.avgPrice, "MXN")}</span>` : ""}
+            </div>
+            ${deal.savingsPercent > 0 ? `
+              <div class="deal-card-savings">
+                Save ${Math.round(deal.savingsPercent)}% (${formatPrice(deal.savingsAmount || 0, "MXN")})
+              </div>
+            ` : ""}
+            <a href="/product/${encodeURIComponent(deal.product_id)}?source=${deal.source || 'mercadolibre'}" class="deal-card-btn">
+              ${lang === "es" ? "Ver en Mercado Libre" : "View on Mercado Libre"}
+            </a>
+          </div>
+        </div>
+      `;
+    };
+
+    // Helper to render home product card (CamelCamelCamel style)
+    const renderHomeProductCard = (product, showDrop = false) => {
+      const badges = [];
+      if (product.isBestPrice) {
+        badges.push(`<span class="badge-best-price">Best Price</span>`);
+      } else if (product.isGoodDeal) {
+        badges.push(`<span class="badge-good-deal">Good Deal</span>`);
+      }
+
+      // Use thumbnail if available
+      const imageUrl = product.thumbnail || (product.product_url?.includes("amazon")
+        ? "/images/product-placeholder.svg"
+        : `https://http2.mlstatic.com/D_NQ_NP_${product.product_id?.split("-")[1] || ""}-O.webp`);
+
+      const avgOrPrevPrice = product.previousPrice || product.avgPrice;
+      const savingsText = showDrop && product.dropPercent
+        ? `Save ${Math.round(product.dropPercent)}% (${formatPrice(product.dropAmount || 0, "MXN")})`
+        : product.savingsPercent
+          ? `Save ${Math.round(product.savingsPercent)}%`
+          : "";
+
+      return `
+        <div class="product-card-ccc">
+          ${badges.length > 0 ? `<div class="product-card-badges">${badges.join("")}</div>` : ""}
+          <div class="product-card-image">
+            <img src="${imageUrl}"
+                 alt="${product.product_title || ""}"
+                 loading="lazy"
+                 onerror="this.src='/images/product-placeholder.svg'" />
+          </div>
+          <div class="product-card-content">
+            <h4 class="product-card-title">${product.product_title || "Product"}</h4>
+            <div class="product-card-pricing">
+              <span class="product-card-price">${formatPrice(product.current_price, "MXN")}</span>
+              ${avgOrPrevPrice ? `<span class="product-card-avg">Avg: ${formatPrice(avgOrPrevPrice, "MXN")}</span>` : ""}
+            </div>
+            ${savingsText ? `<div class="product-card-savings">${savingsText}</div>` : ""}
+            <a href="/product/${encodeURIComponent(product.product_id)}?source=${product.source || 'mercadolibre'}" class="product-card-btn">
+              ${lang === "es" ? "Ver en Mercado Libre" : "View on Mercado Libre"}
+            </a>
+          </div>
+        </div>
+      `;
+    };
+
+    // Highlighted Deals Section (CamelCamelCamel style with carousel)
+    const highlightedDealsSection = highlightedDeals.length > 0 ? `
+      <section class="ccc-section" id="highlighted-deals">
+        <div class="ccc-section-header">
+          <div class="ccc-section-title-row">
+            <h2 class="ccc-section-title">Highlighted Deals →</h2>
+            <div class="carousel-nav-group">
+              <button class="carousel-nav-btn" data-carousel="deals-carousel" data-dir="prev" aria-label="Previous" title="Previous">‹</button>
+              <button class="carousel-nav-btn" data-carousel="deals-carousel" data-dir="next" aria-label="Next" title="Next">›</button>
+            </div>
+          </div>
+          <p class="ccc-section-desc">${lang === "es"
+            ? "Estas son ofertas excepcionales que encontramos y vale la pena compartir. Revisa seguido, estas se actualizan frecuentemente."
+            : "These are outstanding deals we've found and feel are worth sharing. Check back often as these are frequently updated."}</p>
+        </div>
+        <div class="ccc-carousel" id="deals-carousel">
+          ${highlightedDeals.map(renderDealCard).join("")}
+        </div>
+      </section>
+    ` : "";
+
+    // Popular Products Section (CamelCamelCamel style)
+    const popularProductsSection = popularProducts.length > 0 ? `
+      <section class="ccc-section" id="popular-products">
+        <div class="ccc-section-header">
+          <h2 class="ccc-section-title">Popular Products →</h2>
+          <p class="ccc-section-desc">${lang === "es"
+            ? "Mira estas ofertas populares recientes. Ve lo que otros usuarios de OfertaRadar han estado comprando últimamente."
+            : "Check out these recently popular deals. See what OfertaRadar users have been buying lately."}</p>
+          <div class="ccc-filter-row">
+            <div class="ccc-filter-tabs" data-filter-target="popular-grid">
+              <button class="ccc-filter-tab active" data-filter="all">All Products</button>
+              <button class="ccc-filter-tab" data-filter="deals">Deals Only</button>
+            </div>
+            <select class="ccc-category-select" id="popular-category">
+              <option value="">All Categories</option>
+              <option value="electronics">Electronics</option>
+              <option value="phones">Phones</option>
+              <option value="computers">Computers</option>
+              <option value="home">Home & Kitchen</option>
+              <option value="fashion">Fashion</option>
+              <option value="sports">Sports</option>
+            </select>
+            <div class="carousel-nav-group">
+              <button class="carousel-nav-btn-sm" data-carousel="popular-grid" data-dir="prev" aria-label="Previous" title="Previous">‹</button>
+              <button class="carousel-nav-btn-sm" data-carousel="popular-grid" data-dir="next" aria-label="Next" title="Next">›</button>
+            </div>
+          </div>
+        </div>
+        <div class="ccc-product-grid" id="popular-grid">
+          ${popularProducts.map(p => renderHomeProductCard(p, false)).join("")}
+        </div>
+      </section>
+    ` : "";
+
+    // Top Mercado Libre Price Drops Section (CamelCamelCamel style)
+    const priceDropsSection = topPriceDrops.length > 0 ? `
+      <section class="ccc-section" id="price-drops">
+        <div class="ccc-section-header">
+          <h2 class="ccc-section-title">Top Mercado Libre Price Drops →</h2>
+          <p class="ccc-section-desc">${lang === "es"
+            ? "Grandes bajas de precio. Los productos abajo fueron seleccionados de categorías que rastrean frecuentemente y han tenido grandes bajas de precio desde la última actualización."
+            : "Big price drops! The products below are selected from categories that you frequently track products in and have had large price drops since the last price update."}</p>
+          <div class="ccc-filter-row">
+            <div class="ccc-filter-tabs" data-filter-target="drops-grid">
+              <button class="ccc-filter-tab active" data-filter="recent">Most Recent</button>
+              <button class="ccc-filter-tab" data-filter="daily">Daily</button>
+              <button class="ccc-filter-tab" data-filter="weekly">Weekly</button>
+            </div>
+            <select class="ccc-category-select" id="drops-category">
+              <option value="">All Categories</option>
+              <option value="electronics">Electronics</option>
+              <option value="phones">Phones</option>
+              <option value="computers">Computers</option>
+              <option value="home">Home & Kitchen</option>
+              <option value="fashion">Fashion</option>
+              <option value="sports">Sports</option>
+            </select>
+            <div class="carousel-nav-group">
+              <button class="carousel-nav-btn-sm" data-carousel="drops-grid" data-dir="prev" aria-label="Previous" title="Previous">‹</button>
+              <button class="carousel-nav-btn-sm" data-carousel="drops-grid" data-dir="next" aria-label="Next" title="Next">›</button>
+            </div>
+          </div>
+        </div>
+        <div class="ccc-product-grid" id="drops-grid">
+          ${topPriceDrops.map(p => renderHomeProductCard(p, true)).join("")}
+        </div>
+      </section>
+    ` : "";
+
+    // Discounts by Category Section
+    const categorySection = categoryDiscounts.length > 0 ? `
+      <section class="home-section" id="category-discounts">
+        <div class="home-section-header">
+          <h2 class="home-section-title">
+            <span class="home-section-title-icon">🏷️</span>
+            ${lang === "es" ? "Descuentos por Categoría" : "Discounts by Category"}
+          </h2>
+        </div>
+        <div class="category-grid">
+          ${categoryDiscounts.map(cat => `
+            <a href="/?q=${encodeURIComponent(lang === "es" ? cat.nameEs : cat.nameEn)}" class="category-discount-card">
+              <span class="category-discount-icon">${cat.icon}</span>
+              <div class="category-discount-name">${lang === "es" ? cat.nameEs : cat.nameEn}</div>
+              <div class="category-discount-percent">
+                ${lang === "es" ? "Hasta" : "Up to"} ${cat.maxDiscount}% ${lang === "es" ? "OFF" : "OFF"}
+              </div>
+              <div class="category-discount-count">${cat.productCount} ${lang === "es" ? "productos" : "products"}</div>
+            </a>
+          `).join("")}
+        </div>
+      </section>
+    ` : "";
+
+    // Empty state if no deals data
+    const emptyDealsSection = (highlightedDeals.length === 0 && popularProducts.length === 0 && topPriceDrops.length === 0) && hasToken ? `
+      <section class="home-section">
+        <div class="home-section-empty">
+          <span class="home-section-empty-icon">📊</span>
+          <p class="home-section-empty-text">
+            ${lang === "es"
+              ? "Aún no hay datos de ofertas. ¡Empieza a rastrear productos para ver ofertas personalizadas!"
+              : "No deals data yet. Start tracking products to see personalized deals!"}
+          </p>
+          <a href="/?q=ofertas" class="home-section-empty-cta">
+            ${lang === "es" ? "Explorar Productos" : "Explore Products"}
+            <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+              <path d="M5 12h14M12 5l7 7-7 7"/>
+            </svg>
+          </a>
+        </div>
+      </section>
+    ` : "";
+
+    // DEBUG: Log section generation
+    console.log("[Home Route] =========== SECTIONS DEBUG ===========");
+    console.log("[Home Route] highlightedDealsSection length:", highlightedDealsSection.length);
+    console.log("[Home Route] popularProductsSection length:", popularProductsSection.length);
+    console.log("[Home Route] priceDropsSection length:", priceDropsSection.length);
+    console.log("[Home Route] categorySection length:", categorySection.length);
+    console.log("[Home Route] Will show:", hasToken ? "searchPage (logged in)" : "landingPage (guest)");
+
+    // Search page for logged-in users with CamelCamelCamel-style sections
     const searchPage = `
-      <div class="search-wrapper">
-        <p class="tagline">${t(lang, "siteTagline")}</p>
-        ${searchSection}
+      <div class="logged-in-home">
+        <div class="search-wrapper">
+          <p class="tagline">${t(lang, "siteTagline")}</p>
+          ${searchSection}
+        </div>
+        ${highlightedDealsSection}
+        ${popularProductsSection}
+        ${priceDropsSection}
+        ${categorySection}
+        ${emptyDealsSection}
       </div>
     `;
 
@@ -1853,6 +2247,84 @@ async function start() {
           minInput?.addEventListener("input", () => syncRanges(minInput));
           maxInput?.addEventListener("input", () => syncRanges(maxInput));
           syncRanges();
+
+          // Carousel Navigation
+          (function() {
+            const carouselNavButtons = document.querySelectorAll('.carousel-nav');
+
+            carouselNavButtons.forEach(btn => {
+              btn.addEventListener('click', function() {
+                const carouselId = this.getAttribute('data-carousel');
+                const direction = this.getAttribute('data-dir');
+                const carousel = document.getElementById(carouselId);
+
+                if (!carousel) return;
+
+                const scrollAmount = 300;
+                const currentScroll = carousel.scrollLeft;
+
+                if (direction === 'next') {
+                  carousel.scrollTo({
+                    left: currentScroll + scrollAmount,
+                    behavior: 'smooth'
+                  });
+                } else {
+                  carousel.scrollTo({
+                    left: currentScroll - scrollAmount,
+                    behavior: 'smooth'
+                  });
+                }
+              });
+            });
+          })();
+
+          // Tab Filtering for Popular Products and Price Drops
+          (function() {
+            const filterTabs = document.querySelectorAll('.filter-tabs');
+
+            filterTabs.forEach(tabGroup => {
+              const tabs = tabGroup.querySelectorAll('.filter-tab');
+
+              tabs.forEach(tab => {
+                tab.addEventListener('click', async function() {
+                  // Update active state
+                  tabs.forEach(t => t.classList.remove('active'));
+                  this.classList.add('active');
+
+                  const filterValue = this.getAttribute('data-filter');
+                  const targetId = tabGroup.getAttribute('data-filter-target');
+                  const targetGrid = document.getElementById(targetId);
+
+                  if (!targetGrid) return;
+
+                  // Show loading state
+                  targetGrid.style.opacity = '0.5';
+
+                  // Fetch filtered data via API
+                  try {
+                    let endpoint = '';
+                    if (targetId === 'popular-grid') {
+                      endpoint = '/api/deals/popular?dealsOnly=' + (filterValue === 'deals');
+                    } else if (targetId === 'drops-grid') {
+                      endpoint = '/api/deals/price-drops?period=' + filterValue;
+                    }
+
+                    if (endpoint) {
+                      const response = await fetch(endpoint);
+                      if (response.ok) {
+                        const html = await response.text();
+                        targetGrid.innerHTML = html;
+                      }
+                    }
+                  } catch (err) {
+                    console.error('Filter error:', err);
+                  } finally {
+                    targetGrid.style.opacity = '1';
+                  }
+                });
+              });
+            });
+          })();
 
           // Scroll animations for landing page
           (function() {
@@ -3205,9 +3677,9 @@ State: ${state || 'none'}</pre>
               </div>
             </div>
             <div class="tracked-product-actions">
-              ${product.product_url ? `<a href="${product.product_url}" target="_blank" rel="noopener" class="btn-small btn-secondary">
+              <a href="/product/${product.product_id}" class="btn-small btn-secondary">
                 ${lang === "es" ? "Ver Producto" : "View Product"}
-              </a>` : ''}
+              </a>
               <button class="btn-small btn-danger" onclick="removeTrackedProduct('${product.id}')">
                 ${lang === "es" ? "Eliminar" : "Remove"}
               </button>
@@ -4030,6 +4502,62 @@ State: ${state || 'none'}</pre>
 
     const viewButtonText = isAmazon ? "View on Amazon" : t(lang, "viewOnML");
 
+    // Check if user is tracking this product and get price statistics
+    let trackedProduct = null;
+    let priceStats = null;
+    let isGoodDeal = false;
+
+    try {
+      const trackedProducts = await supabaseDb.getTrackedProducts(req.user.id);
+      trackedProduct = trackedProducts.find(tp => tp.product_id === id);
+
+      if (trackedProduct) {
+        priceStats = await supabaseDb.getPriceStatistics(trackedProduct.id, "30d");
+        isGoodDeal = priceStats?.isGoodDeal || false;
+      }
+    } catch (err) {
+      console.error("[Product Detail] Error fetching tracking status:", err);
+    }
+
+    // Generate price statistics HTML
+    const priceStatsHtml = priceStats ? `
+      <div class="price-stats-section">
+        <h3>${lang === "es" ? "Estadísticas de Precio (30 días)" : "Price Statistics (30 days)"}</h3>
+        ${isGoodDeal ? `<div class="good-deal-badge good-deal-badge-large">${lang === "es" ? "Buen Precio" : "Good Deal"} - ${priceStats.savingsPercent.toFixed(1)}% ${lang === "es" ? "menos" : "off"}</div>` : ""}
+        <div class="price-stats-component">
+          <div class="price-stat-item">
+            <div class="price-stat-label">${lang === "es" ? "Actual" : "Current"}</div>
+            <div class="price-stat-value current">${formatPrice(priceStats.currentPrice, "MXN")}</div>
+          </div>
+          <div class="price-stat-item">
+            <div class="price-stat-label">${lang === "es" ? "Promedio" : "Average"}</div>
+            <div class="price-stat-value">${formatPrice(priceStats.avgPrice, "MXN")}</div>
+          </div>
+          <div class="price-stat-item">
+            <div class="price-stat-label">${lang === "es" ? "Mínimo" : "Lowest"}</div>
+            <div class="price-stat-value good">${formatPrice(priceStats.minPrice, "MXN")}</div>
+          </div>
+          <div class="price-stat-item">
+            <div class="price-stat-label">${lang === "es" ? "Máximo" : "Highest"}</div>
+            <div class="price-stat-value expensive">${formatPrice(priceStats.maxPrice, "MXN")}</div>
+          </div>
+        </div>
+        <div class="price-change-section">
+          <span>${lang === "es" ? "Cambio de precio:" : "Price change:"}</span>
+          <span class="price-change ${priceStats.priceChange > 0 ? 'up' : priceStats.priceChange < 0 ? 'down' : 'neutral'}">
+            <span class="price-change-arrow">${priceStats.priceChange > 0 ? '↑' : priceStats.priceChange < 0 ? '↓' : '→'}</span>
+            ${priceStats.priceChange > 0 ? '+' : ''}${priceStats.priceChangePercent.toFixed(1)}%
+          </span>
+        </div>
+      </div>
+    ` : "";
+
+    // Generate tracking button text based on status
+    const trackButtonText = trackedProduct
+      ? (lang === "es" ? "Ya rastreando" : "Already Tracking")
+      : `📊 ${t(lang, "trackPrice")}`;
+    const trackButtonClass = trackedProduct ? "action-button secondary tracked" : "action-button secondary";
+
     res.send(renderPage(product.title || t(lang, "product"), `
       <div class="breadcrumb">
         <a href="/">${t(lang, "home")}</a>
@@ -4039,26 +4567,62 @@ State: ${state || 'none'}</pre>
       </div>
       ${result.notice ? `<div class="notice">${result.notice}</div>` : ""}
       <div class="product-detail">
-        <img class="product-image" src="${product.thumbnail || ""}" alt="${product.title || t(lang, "product")}" />
-        <div>
+        <div class="product-image-container">
+          <img class="product-image" src="${product.thumbnail || ""}" alt="${product.title || t(lang, "product")}" />
+          ${isGoodDeal ? `<div class="good-deal-badge good-deal-badge-card">${lang === "es" ? "Buen Precio" : "Good Deal"}</div>` : ""}
+        </div>
+        <div class="product-info">
           <h1>${product.title || t(lang, "product")}</h1>
           ${retailerBadge}
-          <div class="product-price">${formatPrice(product.price, product.currency_id || (isAmazon ? "USD" : "MXN"))}</div>
+          <div class="product-price-section">
+            <div class="product-price">${formatPrice(product.price, product.currency_id || (isAmazon ? "USD" : "MXN"))}</div>
+            ${priceStats && priceStats.avgPrice > product.price ? `
+              <div class="product-price-comparison">
+                <span class="avg-label">${lang === "es" ? "Promedio:" : "Avg:"}</span>
+                <span class="avg-value">${formatPrice(priceStats.avgPrice, "MXN")}</span>
+              </div>
+            ` : ""}
+          </div>
           <div class="product-meta">
             <span class="condition">${condition}</span>
             ${available > 0 ? `<span class="stock">· ${available} ${t(lang, "available")}</span>` : `<span class="stock out">· ${t(lang, "outOfStock")}</span>`}
           </div>
           ${product.brand ? `<div class="seller-info"><strong>${product.brand}</strong></div>` : ""}
           ${product.seller?.nickname ? `<div class="seller-info">${t(lang, "soldBy")}: <strong>${product.seller.nickname}</strong></div>` : ""}
+
+          ${priceStatsHtml}
+
           <p>${description}</p>
           <div class="product-actions">
             ${product.permalink ? `<a class="action-button ${isAmazon ? "amazon-btn" : ""}" href="${product.permalink}" target="_blank" rel="noreferrer">${viewButtonText}</a>` : ""}
-            <button class="action-button secondary" id="trackPriceBtn">📊 ${t(lang, "trackPrice")}</button>
+            ${trackedProduct
+              ? `<a href="/dashboard" class="action-button secondary tracked">✓ ${lang === "es" ? "Ver en Panel" : "View in Dashboard"}</a>`
+              : `<button class="action-button secondary" id="trackPriceBtn">📊 ${t(lang, "trackPrice")}</button>`
+            }
           </div>
         </div>
       </div>
     `, `
       <style>
+        .product-detail {
+          display: grid;
+          grid-template-columns: 1fr;
+          gap: 24px;
+        }
+        @media (min-width: 768px) {
+          .product-detail {
+            grid-template-columns: 1fr 1fr;
+            gap: 40px;
+          }
+        }
+        .product-image-container {
+          position: relative;
+        }
+        .product-image-container .good-deal-badge-card {
+          position: absolute;
+          top: 16px;
+          left: 16px;
+        }
         .product-meta { margin: 8px 0 16px; font-size: 14px; color: #666; }
         .condition { background: #e8f5e9; color: #2e7d32; padding: 4px 8px; border-radius: 4px; }
         .stock { margin-left: 8px; }
@@ -4068,6 +4632,49 @@ State: ${state || 'none'}</pre>
         .retailer-badge.ml-badge { background: #ffe600; }
         .action-button.amazon-btn { background: #ff9900; color: #111; }
         .action-button.amazon-btn:hover { background: #e88b00; }
+        .action-button.tracked { background: #dcfce7; color: #16a34a; border-color: #16a34a; }
+        .action-button.tracked:hover { background: #bbf7d0; }
+
+        /* Price Section */
+        .product-price-section {
+          display: flex;
+          align-items: baseline;
+          gap: 12px;
+          flex-wrap: wrap;
+        }
+        .product-price-comparison {
+          font-size: 14px;
+          color: var(--text-muted);
+        }
+        .product-price-comparison .avg-value {
+          text-decoration: line-through;
+          color: #ef4444;
+        }
+
+        /* Price Stats Section */
+        .price-stats-section {
+          margin: 24px 0;
+          padding: 20px;
+          background: var(--bg-secondary);
+          border-radius: var(--radius-lg);
+          border: 1px solid var(--border-color);
+        }
+        .price-stats-section h3 {
+          font-size: 16px;
+          margin: 0 0 16px 0;
+          color: var(--text-primary);
+        }
+        .price-stats-section .good-deal-badge-large {
+          margin-bottom: 16px;
+        }
+        .price-change-section {
+          margin-top: 16px;
+          display: flex;
+          align-items: center;
+          gap: 8px;
+          font-size: 14px;
+          color: var(--text-muted);
+        }
       </style>
       <script>
         // Product data stored safely in JavaScript object
@@ -4401,6 +5008,137 @@ State: ${state || 'none'}</pre>
         baseUrl: APP_BASE_URL
       });
     });
+  });
+
+  // ============================================
+  // DEALS API ENDPOINTS - For Home Page Filtering
+  // ============================================
+
+  /**
+   * API: Get popular products with optional deals filter
+   * URL: GET /api/deals/popular?dealsOnly=true&category=electronics
+   */
+  app.get("/api/deals/popular", authRequired, async function(req, res) {
+    const lang = getLang(req);
+    const dealsOnly = req.query.dealsOnly === "true";
+    const category = req.query.category || "";
+
+    try {
+      const products = await supabaseDb.getPopularProducts({
+        limit: 8,
+        category,
+        dealsOnly
+      });
+
+      // Render product cards HTML
+      const html = products.map(product => {
+        const badges = [];
+        if (product.isBestPrice) {
+          badges.push(`<span class="badge-best-price">${lang === "es" ? "Mejor Precio" : "Best Price"}</span>`);
+        } else if (product.isGoodDeal) {
+          badges.push(`<span class="good-deal-badge">${lang === "es" ? "Buen Precio" : "Good Deal"}</span>`);
+        }
+
+        return `
+          <div class="home-product-card">
+            <a href="/product/${encodeURIComponent(product.product_id)}?source=${product.source || 'mercadolibre'}" class="home-product-card-link">
+              <div class="home-product-card-image">
+                ${badges.length > 0 ? `<div class="home-product-card-badges">${badges.join("")}</div>` : ""}
+                <img src="${product.product_url?.includes("amazon") ? "/images/product-placeholder.svg" : `https://http2.mlstatic.com/D_NQ_NP_${product.product_id?.split("-")[1] || ""}-O.webp`}"
+                     alt="${product.product_title || ""}"
+                     loading="lazy"
+                     onerror="this.src='/images/product-placeholder.svg'" />
+              </div>
+              <div class="home-product-card-content">
+                <h4 class="home-product-card-title">${product.product_title || (lang === "es" ? "Producto" : "Product")}</h4>
+                <div class="home-product-card-pricing">
+                  <span class="home-product-card-price">${formatPrice(product.current_price, "MXN")}</span>
+                  ${product.avgPrice ? `<span class="home-product-card-original">${formatPrice(product.avgPrice, "MXN")}</span>` : ""}
+                </div>
+                ${product.savingsPercent ? `
+                  <div class="home-product-card-savings">
+                    ${lang === "es" ? "Ahorras" : "Save"} ${Math.round(product.savingsPercent)}%
+                  </div>
+                ` : ""}
+                ${product.trackCount ? `
+                  <div class="home-product-card-meta">
+                    <span class="home-product-card-trackers">
+                      <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+                        <path d="M17 21v-2a4 4 0 0 0-4-4H5a4 4 0 0 0-4 4v2"/>
+                        <circle cx="9" cy="7" r="4"/>
+                      </svg>
+                      ${product.trackCount} ${lang === "es" ? "siguiendo" : "tracking"}
+                    </span>
+                  </div>
+                ` : ""}
+              </div>
+            </a>
+          </div>
+        `;
+      }).join("");
+
+      res.send(html || `<p class="muted">${lang === "es" ? "No hay productos" : "No products found"}</p>`);
+    } catch (error) {
+      console.error("[API] /api/deals/popular error:", error);
+      res.status(500).send(`<p class="error">${lang === "es" ? "Error al cargar productos" : "Error loading products"}</p>`);
+    }
+  });
+
+  /**
+   * API: Get top price drops with period filter
+   * URL: GET /api/deals/price-drops?period=daily&category=electronics
+   */
+  app.get("/api/deals/price-drops", authRequired, async function(req, res) {
+    const lang = getLang(req);
+    const period = req.query.period || "recent";
+    const category = req.query.category || "";
+
+    try {
+      const products = await supabaseDb.getTopPriceDrops({
+        period,
+        category,
+        limit: 8
+      });
+
+      // Render product cards HTML
+      const html = products.map(product => {
+        const badges = [];
+        if (product.dropPercent) {
+          badges.push(`<span class="drop-badge">${lang === "es" ? "Bajó" : "Down"} ${Math.round(product.dropPercent)}%</span>`);
+        }
+
+        return `
+          <div class="home-product-card">
+            <a href="/product/${encodeURIComponent(product.product_id)}?source=${product.source || 'mercadolibre'}" class="home-product-card-link">
+              <div class="home-product-card-image">
+                ${badges.length > 0 ? `<div class="home-product-card-badges">${badges.join("")}</div>` : ""}
+                <img src="${product.product_url?.includes("amazon") ? "/images/product-placeholder.svg" : `https://http2.mlstatic.com/D_NQ_NP_${product.product_id?.split("-")[1] || ""}-O.webp`}"
+                     alt="${product.product_title || ""}"
+                     loading="lazy"
+                     onerror="this.src='/images/product-placeholder.svg'" />
+              </div>
+              <div class="home-product-card-content">
+                <h4 class="home-product-card-title">${product.product_title || (lang === "es" ? "Producto" : "Product")}</h4>
+                <div class="home-product-card-pricing">
+                  <span class="home-product-card-price">${formatPrice(product.current_price, "MXN")}</span>
+                  ${product.previousPrice ? `<span class="home-product-card-original">${formatPrice(product.previousPrice, "MXN")}</span>` : ""}
+                </div>
+                ${product.dropAmount ? `
+                  <div class="home-product-card-savings">
+                    ${lang === "es" ? "Bajó" : "Down"} ${formatPrice(product.dropAmount, "MXN")}
+                  </div>
+                ` : ""}
+              </div>
+            </a>
+          </div>
+        `;
+      }).join("");
+
+      res.send(html || `<p class="muted">${lang === "es" ? "No hay bajas de precio" : "No price drops found"}</p>`);
+    } catch (error) {
+      console.error("[API] /api/deals/price-drops error:", error);
+      res.status(500).send(`<p class="error">${lang === "es" ? "Error al cargar productos" : "Error loading products"}</p>`);
+    }
   });
 
   // ============================================

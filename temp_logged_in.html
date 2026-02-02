@@ -1,0 +1,1127 @@
+<!doctype html>
+<html lang="en" data-theme="dark">
+  <head>
+    <meta charset="utf-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no" />
+    <title>Price Tracker | OfertaRadar</title>
+    <link rel="preconnect" href="https://fonts.googleapis.com">
+    <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+    <link href="https://fonts.googleapis.com/css2?family=Inter:wght@300;400;500;600;700;800&display=swap" rel="stylesheet">
+    <link rel="stylesheet" href="/styles.css">
+    <!-- Chart.js for price history charts -->
+    <script src="https://cdn.jsdelivr.net/npm/chart.js@4.4.1/dist/chart.umd.min.js"></script>
+    <script src="https://cdn.jsdelivr.net/npm/chartjs-adapter-date-fns@3.0.0/dist/chartjs-adapter-date-fns.bundle.min.js"></script>
+    <script>
+      // Theme initialization - runs before page render to prevent flash
+      // Default to dark theme
+      (function() {
+        const savedTheme = localStorage.getItem('theme');
+        const theme = savedTheme || 'dark';
+        document.documentElement.setAttribute('data-theme', theme);
+      })();
+    </script>
+    <style>/* Page-specific overrides */</style>
+    
+        <style>
+          .tagline { color: var(--text-muted); margin-bottom: 24px; font-size: 1.1rem; }
+          .search-wrapper { max-width: 900px; margin: 0 auto; }
+        </style>
+        <script>
+          // Price range sync for search
+          const minInput = document.getElementById("minPrice");
+          const maxInput = document.getElementById("maxPrice");
+          const minValue = document.getElementById("minPriceValue");
+          const maxValue = document.getElementById("maxPriceValue");
+
+          function formatMXN(value) {
+            return new Intl.NumberFormat('es-MX', { style: 'currency', currency: 'MXN' }).format(value);
+          }
+
+          function syncRanges(changed) {
+            if (!minInput || !maxInput || !minValue || !maxValue) {
+              return;
+            }
+            let min = Number(minInput.value);
+            let max = Number(maxInput.value);
+            if (min > max) {
+              if (changed === minInput) {
+                max = min;
+                maxInput.value = String(max);
+              } else {
+                min = max;
+                minInput.value = String(min);
+              }
+            }
+            minValue.textContent = formatMXN(min);
+            maxValue.textContent = formatMXN(max);
+          }
+
+          minInput?.addEventListener("input", () => syncRanges(minInput));
+          maxInput?.addEventListener("input", () => syncRanges(maxInput));
+          syncRanges();
+
+          // Carousel Navigation
+          (function() {
+            const carouselNavButtons = document.querySelectorAll('.carousel-nav');
+
+            carouselNavButtons.forEach(btn => {
+              btn.addEventListener('click', function() {
+                const carouselId = this.getAttribute('data-carousel');
+                const direction = this.getAttribute('data-dir');
+                const carousel = document.getElementById(carouselId);
+
+                if (!carousel) return;
+
+                const scrollAmount = 300;
+                const currentScroll = carousel.scrollLeft;
+
+                if (direction === 'next') {
+                  carousel.scrollTo({
+                    left: currentScroll + scrollAmount,
+                    behavior: 'smooth'
+                  });
+                } else {
+                  carousel.scrollTo({
+                    left: currentScroll - scrollAmount,
+                    behavior: 'smooth'
+                  });
+                }
+              });
+            });
+          })();
+
+          // Tab Filtering for Popular Products and Price Drops
+          (function() {
+            const filterTabs = document.querySelectorAll('.filter-tabs');
+
+            filterTabs.forEach(tabGroup => {
+              const tabs = tabGroup.querySelectorAll('.filter-tab');
+
+              tabs.forEach(tab => {
+                tab.addEventListener('click', async function() {
+                  // Update active state
+                  tabs.forEach(t => t.classList.remove('active'));
+                  this.classList.add('active');
+
+                  const filterValue = this.getAttribute('data-filter');
+                  const targetId = tabGroup.getAttribute('data-filter-target');
+                  const targetGrid = document.getElementById(targetId);
+
+                  if (!targetGrid) return;
+
+                  // Show loading state
+                  targetGrid.style.opacity = '0.5';
+
+                  // Fetch filtered data via API
+                  try {
+                    let endpoint = '';
+                    if (targetId === 'popular-grid') {
+                      endpoint = '/api/deals/popular?dealsOnly=' + (filterValue === 'deals');
+                    } else if (targetId === 'drops-grid') {
+                      endpoint = '/api/deals/price-drops?period=' + filterValue;
+                    }
+
+                    if (endpoint) {
+                      const response = await fetch(endpoint);
+                      if (response.ok) {
+                        const html = await response.text();
+                        targetGrid.innerHTML = html;
+                      }
+                    }
+                  } catch (err) {
+                    console.error('Filter error:', err);
+                  } finally {
+                    targetGrid.style.opacity = '1';
+                  }
+                });
+              });
+            });
+          })();
+
+          // Scroll animations for landing page
+          (function() {
+            const animatedElements = document.querySelectorAll('.animate-on-scroll');
+
+            if (animatedElements.length === 0) return;
+
+            // Add class to enable animations only when JS is ready
+            document.body.classList.add('js-animations-ready');
+
+            const observerOptions = {
+              root: null,
+              rootMargin: '0px 0px -50px 0px',
+              threshold: 0.1
+            };
+
+            const observer = new IntersectionObserver((entries) => {
+              entries.forEach(entry => {
+                if (entry.isIntersecting) {
+                  entry.target.classList.add('visible');
+                  observer.unobserve(entry.target);
+                }
+              });
+            }, observerOptions);
+
+            animatedElements.forEach(el => observer.observe(el));
+
+            // Smooth scroll for anchor links
+            document.querySelectorAll('a[href^="#"]').forEach(anchor => {
+              anchor.addEventListener('click', function(e) {
+                e.preventDefault();
+                const target = document.querySelector(this.getAttribute('href'));
+                if (target) {
+                  target.scrollIntoView({
+                    behavior: 'smooth',
+                    block: 'start'
+                  });
+                }
+              });
+            });
+          })();
+        </script>
+      
+  </head>
+  <body class="">
+    <header class="site-header">
+      <a href="/" class="logo">OfertaRadar</a>
+      <nav class="nav">
+        
+          <div class="user-dropdown" id="userDropdown">
+            <button class="user-dropdown-toggle" type="button" id="dropdownToggle">
+              <div class="user-avatar-small">
+                <span class="avatar-initials-small">?</span>
+              </div>
+              <svg class="chevron" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+                <path d="M6 9l6 6 6-6"/>
+              </svg>
+            </button>
+            <div class="user-dropdown-menu" id="dropdownMenu">
+              <div class="dropdown-header">
+                <div class="dropdown-avatar">
+                  <span class="avatar-initials">?</span>
+                </div>
+                <div class="dropdown-user-info">
+                  <span class="dropdown-name"></span>
+                  <span class="dropdown-email"></span>
+                </div>
+              </div>
+              <div class="dropdown-divider"></div>
+              <a href="/profile">
+                <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+                  <path d="M20 21v-2a4 4 0 0 0-4-4H8a4 4 0 0 0-4 4v2"></path>
+                  <circle cx="12" cy="7" r="4"></circle>
+                </svg>
+                Profile
+              </a>
+              <a href="/dashboard">
+                <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+                  <path d="M3 3v18h18"></path>
+                  <path d="M18 17V9"></path>
+                  <path d="M13 17V5"></path>
+                  <path d="M8 17v-3"></path>
+                </svg>
+                Dashboard
+              </a>
+              <a href="/profile/settings">
+                <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+                  <circle cx="12" cy="12" r="3"></circle>
+                  <path d="M19.4 15a1.65 1.65 0 0 0 .33 1.82l.06.06a2 2 0 0 1 0 2.83 2 2 0 0 1-2.83 0l-.06-.06a1.65 1.65 0 0 0-1.82-.33 1.65 1.65 0 0 0-1 1.51V21a2 2 0 0 1-2 2 2 2 0 0 1-2-2v-.09A1.65 1.65 0 0 0 9 19.4a1.65 1.65 0 0 0-1.82.33l-.06.06a2 2 0 0 1-2.83 0 2 2 0 0 1 0-2.83l.06-.06a1.65 1.65 0 0 0 .33-1.82 1.65 1.65 0 0 0-1.51-1H3a2 2 0 0 1-2-2 2 2 0 0 1 2-2h.09A1.65 1.65 0 0 0 4.6 9a1.65 1.65 0 0 0-.33-1.82l-.06-.06a2 2 0 0 1 0-2.83 2 2 0 0 1 2.83 0l.06.06a1.65 1.65 0 0 0 1.82.33H9a1.65 1.65 0 0 0 1-1.51V3a2 2 0 0 1 2-2 2 2 0 0 1 2 2v.09a1.65 1.65 0 0 0 1 1.51 1.65 1.65 0 0 0 1.82-.33l.06-.06a2 2 0 0 1 2.83 0 2 2 0 0 1 0 2.83l-.06.06a1.65 1.65 0 0 0-.33 1.82V9a1.65 1.65 0 0 0 1.51 1H21a2 2 0 0 1 2 2 2 2 0 0 1-2 2h-.09a1.65 1.65 0 0 0-1.51 1z"></path>
+                </svg>
+                Settings
+              </a>
+              <div class="dropdown-divider"></div>
+              <form method="post" action="/logout" class="dropdown-logout-form">
+                <button type="submit" class="dropdown-logout">
+                  <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+                    <path d="M9 21H5a2 2 0 0 1-2-2V5a2 2 0 0 1 2-2h4"></path>
+                    <polyline points="16 17 21 12 16 7"></polyline>
+                    <line x1="21" y1="12" x2="9" y2="12"></line>
+                  </svg>
+                  Logout
+                </button>
+              </form>
+            </div>
+          </div>
+        
+
+        <!-- Theme Toggle -->
+        <button class="theme-toggle" id="themeToggle" title="Toggle theme">
+          <svg class="sun-icon" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+            <circle cx="12" cy="12" r="5"></circle>
+            <line x1="12" y1="1" x2="12" y2="3"></line>
+            <line x1="12" y1="21" x2="12" y2="23"></line>
+            <line x1="4.22" y1="4.22" x2="5.64" y2="5.64"></line>
+            <line x1="18.36" y1="18.36" x2="19.78" y2="19.78"></line>
+            <line x1="1" y1="12" x2="3" y2="12"></line>
+            <line x1="21" y1="12" x2="23" y2="12"></line>
+            <line x1="4.22" y1="19.78" x2="5.64" y2="18.36"></line>
+            <line x1="18.36" y1="5.64" x2="19.78" y2="4.22"></line>
+          </svg>
+          <svg class="moon-icon" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+            <path d="M21 12.79A9 9 0 1 1 11.21 3 7 7 0 0 0 21 12.79z"></path>
+          </svg>
+        </button>
+
+        <!-- Language Dropdown -->
+        <div class="lang-dropdown" id="langDropdown">
+          <button class="lang-dropdown-toggle" type="button">
+            <span class="flag">🇺🇸</span>
+            <span>EN</span>
+            <svg class="chevron" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+              <path d="M6 9l6 6 6-6"/>
+            </svg>
+          </button>
+          <div class="lang-dropdown-menu">
+            <a href="/set-lang/en" class="active">
+              <span class="flag">🇺🇸</span>
+              English
+            </a>
+            <a href="/set-lang/es" class="">
+              <span class="flag">🇲🇽</span>
+              Español
+            </a>
+          </div>
+        </div>
+      </nav>
+    </header>
+    <nav class="category-nav">
+      <div class="category-tabs">
+        <a href="/?q=Electronics" class="category-tab">Electronics</a>
+        <a href="/?q=Phones" class="category-tab">Phones</a>
+        <a href="/?q=Computers" class="category-tab">Computers</a>
+        <a href="/?q=Clothing" class="category-tab">Clothing</a>
+        <a href="/?q=Home" class="category-tab">Home</a>
+        <a href="/?q=Sports" class="category-tab">Sports</a>
+        <a href="/?q=Toys" class="category-tab">Toys</a>
+        <a href="/?q=Beauty" class="category-tab">Beauty</a>
+      </div>
+    </nav>
+    <main class="main-content">
+    
+      <div class="logged-in-home">
+        <div class="search-wrapper">
+          <p class="tagline">Track prices and find the best deals</p>
+          
+      <form class="search-form" method="get" action="/">
+        <div class="full">
+          <input name="q" type="text" placeholder="Search products..." value="" />
+        </div>
+        <div class="filters full">
+          <div class="range-row">
+            <label>Min price: <span id="minPriceValue">$0.00</span></label>
+            <input id="minPrice" name="minPrice" type="range" min="0" max="50000" step="500" value="0" />
+          </div>
+          <div class="range-row">
+            <label>Max price: <span id="maxPriceValue">$50,000.00</span></label>
+            <input id="maxPrice" name="maxPrice" type="range" min="0" max="50000" step="500" value="50000" />
+          </div>
+          <div class="range-row">
+            <label>Sort by</label>
+            <select name="sort">
+              <option value="price_asc" selected>Price: low to high</option>
+              <option value="price_desc" >Price: high to low</option>
+            </select>
+          </div>
+          <div class="range-row">
+            <label>Source</label>
+            <select name="source">
+              <option value="all" selected>All Stores</option>
+              <option value="mercadolibre" >Mercado Libre</option>
+              <option value="amazon" >Amazon (Not configured)</option>
+            </select>
+          </div>
+        </div>
+        <div class="full">
+          <button type="submit">Search</button>
+        </div>
+      </form>
+      
+    
+        </div>
+        
+      <section class="ccc-section" id="highlighted-deals">
+        <div class="ccc-section-header">
+          <div class="ccc-section-title-row">
+            <h2 class="ccc-section-title">Highlighted Deals →</h2>
+            <div class="carousel-nav-group">
+              <button class="carousel-nav-btn" data-carousel="deals-carousel" data-dir="prev" aria-label="Previous" title="Previous">‹</button>
+              <button class="carousel-nav-btn" data-carousel="deals-carousel" data-dir="next" aria-label="Next" title="Next">›</button>
+            </div>
+          </div>
+          <p class="ccc-section-desc">These are outstanding deals we've found and feel are worth sharing. Check back often as these are frequently updated.</p>
+        </div>
+        <div class="ccc-carousel" id="deals-carousel">
+          
+        <div class="deal-card-ccc">
+          <div class="deal-card-badges"><span class="badge-best-price">Best Price</span></div>
+          <div class="deal-card-image">
+            <img src="https://images.unsplash.com/photo-1593359677879-a4bb92f829d1?w=300&h=300&fit=crop"
+                 alt="Smart TV Samsung 55" Crystal UHD 4K"
+                 loading="lazy"
+                 onerror="this.src='/images/product-placeholder.svg'" />
+          </div>
+          <div class="deal-card-content">
+            <h4 class="deal-card-title">Smart TV Samsung 55" Crystal UHD 4K</h4>
+            <div class="deal-card-pricing">
+              <span class="deal-card-price">$8,999.00</span>
+              <span class="deal-card-avg">Avg: $12,499.00</span>
+            </div>
+            
+              <div class="deal-card-savings">
+                Save 28% ($3,500.00)
+              </div>
+            
+            <a href="/product/MLM-demo-1?source=mercadolibre" class="deal-card-btn">
+              View on Mercado Libre
+            </a>
+          </div>
+        </div>
+      
+        <div class="deal-card-ccc">
+          <div class="deal-card-badges"><span class="badge-good-deal">Good Deal</span></div>
+          <div class="deal-card-image">
+            <img src="https://images.unsplash.com/photo-1592750475338-74b7b21085ab?w=300&h=300&fit=crop"
+                 alt="iPhone 15 Pro Max 256GB"
+                 loading="lazy"
+                 onerror="this.src='/images/product-placeholder.svg'" />
+          </div>
+          <div class="deal-card-content">
+            <h4 class="deal-card-title">iPhone 15 Pro Max 256GB</h4>
+            <div class="deal-card-pricing">
+              <span class="deal-card-price">$24,999.00</span>
+              <span class="deal-card-avg">Avg: $28,999.00</span>
+            </div>
+            
+              <div class="deal-card-savings">
+                Save 14% ($4,000.00)
+              </div>
+            
+            <a href="/product/MLM-demo-2?source=mercadolibre" class="deal-card-btn">
+              View on Mercado Libre
+            </a>
+          </div>
+        </div>
+      
+        <div class="deal-card-ccc">
+          <div class="deal-card-badges"><span class="badge-best-price">Best Price</span></div>
+          <div class="deal-card-image">
+            <img src="https://images.unsplash.com/photo-1496181133206-80ce9b88a853?w=300&h=300&fit=crop"
+                 alt="Laptop ASUS VivoBook 15.6" Ryzen 5"
+                 loading="lazy"
+                 onerror="this.src='/images/product-placeholder.svg'" />
+          </div>
+          <div class="deal-card-content">
+            <h4 class="deal-card-title">Laptop ASUS VivoBook 15.6" Ryzen 5</h4>
+            <div class="deal-card-pricing">
+              <span class="deal-card-price">$12,999.00</span>
+              <span class="deal-card-avg">Avg: $15,999.00</span>
+            </div>
+            
+              <div class="deal-card-savings">
+                Save 19% ($3,000.00)
+              </div>
+            
+            <a href="/product/MLM-demo-3?source=mercadolibre" class="deal-card-btn">
+              View on Mercado Libre
+            </a>
+          </div>
+        </div>
+      
+        <div class="deal-card-ccc">
+          <div class="deal-card-badges"><span class="badge-good-deal">Good Deal</span></div>
+          <div class="deal-card-image">
+            <img src="https://images.unsplash.com/photo-1505740420928-5e560c06d30e?w=300&h=300&fit=crop"
+                 alt="Audífonos Sony WH-1000XM5"
+                 loading="lazy"
+                 onerror="this.src='/images/product-placeholder.svg'" />
+          </div>
+          <div class="deal-card-content">
+            <h4 class="deal-card-title">Audífonos Sony WH-1000XM5</h4>
+            <div class="deal-card-pricing">
+              <span class="deal-card-price">$6,499.00</span>
+              <span class="deal-card-avg">Avg: $8,499.00</span>
+            </div>
+            
+              <div class="deal-card-savings">
+                Save 24% ($2,000.00)
+              </div>
+            
+            <a href="/product/MLM-demo-4?source=mercadolibre" class="deal-card-btn">
+              View on Mercado Libre
+            </a>
+          </div>
+        </div>
+      
+        <div class="deal-card-ccc">
+          <div class="deal-card-badges"><span class="badge-best-price">Best Price</span></div>
+          <div class="deal-card-image">
+            <img src="https://images.unsplash.com/photo-1606144042614-b2417e99c4e3?w=300&h=300&fit=crop"
+                 alt="Consola PlayStation 5 Slim"
+                 loading="lazy"
+                 onerror="this.src='/images/product-placeholder.svg'" />
+          </div>
+          <div class="deal-card-content">
+            <h4 class="deal-card-title">Consola PlayStation 5 Slim</h4>
+            <div class="deal-card-pricing">
+              <span class="deal-card-price">$11,999.00</span>
+              <span class="deal-card-avg">Avg: $14,999.00</span>
+            </div>
+            
+              <div class="deal-card-savings">
+                Save 20% ($3,000.00)
+              </div>
+            
+            <a href="/product/MLM-demo-5?source=mercadolibre" class="deal-card-btn">
+              View on Mercado Libre
+            </a>
+          </div>
+        </div>
+      
+        <div class="deal-card-ccc">
+          <div class="deal-card-badges"><span class="badge-good-deal">Good Deal</span></div>
+          <div class="deal-card-image">
+            <img src="https://images.unsplash.com/photo-1558618666-fcd25c85cd64?w=300&h=300&fit=crop"
+                 alt="Robot Aspiradora iRobot Roomba"
+                 loading="lazy"
+                 onerror="this.src='/images/product-placeholder.svg'" />
+          </div>
+          <div class="deal-card-content">
+            <h4 class="deal-card-title">Robot Aspiradora iRobot Roomba</h4>
+            <div class="deal-card-pricing">
+              <span class="deal-card-price">$7,999.00</span>
+              <span class="deal-card-avg">Avg: $9,999.00</span>
+            </div>
+            
+              <div class="deal-card-savings">
+                Save 20% ($2,000.00)
+              </div>
+            
+            <a href="/product/MLM-demo-6?source=mercadolibre" class="deal-card-btn">
+              View on Mercado Libre
+            </a>
+          </div>
+        </div>
+      
+        </div>
+      </section>
+    
+        
+      <section class="ccc-section" id="popular-products">
+        <div class="ccc-section-header">
+          <h2 class="ccc-section-title">Popular Products →</h2>
+          <p class="ccc-section-desc">Check out these recently popular deals. See what OfertaRadar users have been buying lately.</p>
+          <div class="ccc-filter-row">
+            <div class="ccc-filter-tabs" data-filter-target="popular-grid">
+              <button class="ccc-filter-tab active" data-filter="all">All Products</button>
+              <button class="ccc-filter-tab" data-filter="deals">Deals Only</button>
+            </div>
+            <select class="ccc-category-select" id="popular-category">
+              <option value="">All Categories</option>
+              <option value="electronics">Electronics</option>
+              <option value="phones">Phones</option>
+              <option value="computers">Computers</option>
+              <option value="home">Home & Kitchen</option>
+              <option value="fashion">Fashion</option>
+              <option value="sports">Sports</option>
+            </select>
+            <div class="carousel-nav-group">
+              <button class="carousel-nav-btn-sm" data-carousel="popular-grid" data-dir="prev" aria-label="Previous" title="Previous">‹</button>
+              <button class="carousel-nav-btn-sm" data-carousel="popular-grid" data-dir="next" aria-label="Next" title="Next">›</button>
+            </div>
+          </div>
+        </div>
+        <div class="ccc-product-grid" id="popular-grid">
+          
+        <div class="product-card-ccc">
+          <div class="product-card-badges"><span class="badge-good-deal">Good Deal</span></div>
+          <div class="product-card-image">
+            <img src="https://images.unsplash.com/photo-1606220588913-b3aacb4d2f46?w=300&h=300&fit=crop"
+                 alt="AirPods Pro 2da Generación"
+                 loading="lazy"
+                 onerror="this.src='/images/product-placeholder.svg'" />
+          </div>
+          <div class="product-card-content">
+            <h4 class="product-card-title">AirPods Pro 2da Generación</h4>
+            <div class="product-card-pricing">
+              <span class="product-card-price">$4,499.00</span>
+              <span class="product-card-avg">Avg: $5,499.00</span>
+            </div>
+            <div class="product-card-savings">Save 18%</div>
+            <a href="/product/MLM-pop-1?source=mercadolibre" class="product-card-btn">
+              View on Mercado Libre
+            </a>
+          </div>
+        </div>
+      
+        <div class="product-card-ccc">
+          <div class="product-card-badges"><span class="badge-best-price">Best Price</span></div>
+          <div class="product-card-image">
+            <img src="https://images.unsplash.com/photo-1578303512597-81e6cc155b3e?w=300&h=300&fit=crop"
+                 alt="Nintendo Switch OLED"
+                 loading="lazy"
+                 onerror="this.src='/images/product-placeholder.svg'" />
+          </div>
+          <div class="product-card-content">
+            <h4 class="product-card-title">Nintendo Switch OLED</h4>
+            <div class="product-card-pricing">
+              <span class="product-card-price">$6,999.00</span>
+              <span class="product-card-avg">Avg: $7,999.00</span>
+            </div>
+            <div class="product-card-savings">Save 13%</div>
+            <a href="/product/MLM-pop-2?source=mercadolibre" class="product-card-btn">
+              View on Mercado Libre
+            </a>
+          </div>
+        </div>
+      
+        <div class="product-card-ccc">
+          <div class="product-card-badges"><span class="badge-good-deal">Good Deal</span></div>
+          <div class="product-card-image">
+            <img src="https://images.unsplash.com/photo-1610945265064-0e34e5519bbf?w=300&h=300&fit=crop"
+                 alt="Samsung Galaxy S24 Ultra 256GB"
+                 loading="lazy"
+                 onerror="this.src='/images/product-placeholder.svg'" />
+          </div>
+          <div class="product-card-content">
+            <h4 class="product-card-title">Samsung Galaxy S24 Ultra 256GB</h4>
+            <div class="product-card-pricing">
+              <span class="product-card-price">$22,999.00</span>
+              <span class="product-card-avg">Avg: $27,999.00</span>
+            </div>
+            <div class="product-card-savings">Save 18%</div>
+            <a href="/product/MLM-pop-3?source=mercadolibre" class="product-card-btn">
+              View on Mercado Libre
+            </a>
+          </div>
+        </div>
+      
+        <div class="product-card-ccc">
+          <div class="product-card-badges"><span class="badge-best-price">Best Price</span></div>
+          <div class="product-card-image">
+            <img src="https://images.unsplash.com/photo-1517336714731-489689fd1ca8?w=300&h=300&fit=crop"
+                 alt="MacBook Air M2 256GB"
+                 loading="lazy"
+                 onerror="this.src='/images/product-placeholder.svg'" />
+          </div>
+          <div class="product-card-content">
+            <h4 class="product-card-title">MacBook Air M2 256GB</h4>
+            <div class="product-card-pricing">
+              <span class="product-card-price">$19,999.00</span>
+              <span class="product-card-avg">Avg: $24,999.00</span>
+            </div>
+            <div class="product-card-savings">Save 20%</div>
+            <a href="/product/MLM-pop-4?source=mercadolibre" class="product-card-btn">
+              View on Mercado Libre
+            </a>
+          </div>
+        </div>
+      
+        <div class="product-card-ccc">
+          <div class="product-card-badges"><span class="badge-good-deal">Good Deal</span></div>
+          <div class="product-card-image">
+            <img src="https://images.unsplash.com/photo-1558317374-067fb5f30001?w=300&h=300&fit=crop"
+                 alt="Dyson V15 Detect Aspiradora"
+                 loading="lazy"
+                 onerror="this.src='/images/product-placeholder.svg'" />
+          </div>
+          <div class="product-card-content">
+            <h4 class="product-card-title">Dyson V15 Detect Aspiradora</h4>
+            <div class="product-card-pricing">
+              <span class="product-card-price">$14,999.00</span>
+              <span class="product-card-avg">Avg: $17,999.00</span>
+            </div>
+            <div class="product-card-savings">Save 17%</div>
+            <a href="/product/MLM-pop-5?source=mercadolibre" class="product-card-btn">
+              View on Mercado Libre
+            </a>
+          </div>
+        </div>
+      
+        <div class="product-card-ccc">
+          <div class="product-card-badges"><span class="badge-best-price">Best Price</span></div>
+          <div class="product-card-image">
+            <img src="https://images.unsplash.com/photo-1621259182978-fbf93132d53d?w=300&h=300&fit=crop"
+                 alt="Xbox Series X 1TB"
+                 loading="lazy"
+                 onerror="this.src='/images/product-placeholder.svg'" />
+          </div>
+          <div class="product-card-content">
+            <h4 class="product-card-title">Xbox Series X 1TB</h4>
+            <div class="product-card-pricing">
+              <span class="product-card-price">$11,499.00</span>
+              <span class="product-card-avg">Avg: $13,999.00</span>
+            </div>
+            <div class="product-card-savings">Save 18%</div>
+            <a href="/product/MLM-pop-6?source=mercadolibre" class="product-card-btn">
+              View on Mercado Libre
+            </a>
+          </div>
+        </div>
+      
+        <div class="product-card-ccc">
+          <div class="product-card-badges"><span class="badge-good-deal">Good Deal</span></div>
+          <div class="product-card-image">
+            <img src="https://images.unsplash.com/photo-1527443224154-c4a3942d3acf?w=300&h=300&fit=crop"
+                 alt="Monitor LG UltraGear 27" 144Hz"
+                 loading="lazy"
+                 onerror="this.src='/images/product-placeholder.svg'" />
+          </div>
+          <div class="product-card-content">
+            <h4 class="product-card-title">Monitor LG UltraGear 27" 144Hz</h4>
+            <div class="product-card-pricing">
+              <span class="product-card-price">$4,999.00</span>
+              <span class="product-card-avg">Avg: $6,499.00</span>
+            </div>
+            <div class="product-card-savings">Save 23%</div>
+            <a href="/product/MLM-pop-7?source=mercadolibre" class="product-card-btn">
+              View on Mercado Libre
+            </a>
+          </div>
+        </div>
+      
+        <div class="product-card-ccc">
+          <div class="product-card-badges"><span class="badge-best-price">Best Price</span></div>
+          <div class="product-card-image">
+            <img src="https://images.unsplash.com/photo-1611532736597-de2d4265fba3?w=300&h=300&fit=crop"
+                 alt="Kindle Paperwhite 16GB"
+                 loading="lazy"
+                 onerror="this.src='/images/product-placeholder.svg'" />
+          </div>
+          <div class="product-card-content">
+            <h4 class="product-card-title">Kindle Paperwhite 16GB</h4>
+            <div class="product-card-pricing">
+              <span class="product-card-price">$2,999.00</span>
+              <span class="product-card-avg">Avg: $3,499.00</span>
+            </div>
+            <div class="product-card-savings">Save 14%</div>
+            <a href="/product/MLM-pop-8?source=mercadolibre" class="product-card-btn">
+              View on Mercado Libre
+            </a>
+          </div>
+        </div>
+      
+        </div>
+      </section>
+    
+        
+      <section class="ccc-section" id="price-drops">
+        <div class="ccc-section-header">
+          <h2 class="ccc-section-title">Top Mercado Libre Price Drops →</h2>
+          <p class="ccc-section-desc">Big price drops! The products below are selected from categories that you frequently track products in and have had large price drops since the last price update.</p>
+          <div class="ccc-filter-row">
+            <div class="ccc-filter-tabs" data-filter-target="drops-grid">
+              <button class="ccc-filter-tab active" data-filter="recent">Most Recent</button>
+              <button class="ccc-filter-tab" data-filter="daily">Daily</button>
+              <button class="ccc-filter-tab" data-filter="weekly">Weekly</button>
+            </div>
+            <select class="ccc-category-select" id="drops-category">
+              <option value="">All Categories</option>
+              <option value="electronics">Electronics</option>
+              <option value="phones">Phones</option>
+              <option value="computers">Computers</option>
+              <option value="home">Home & Kitchen</option>
+              <option value="fashion">Fashion</option>
+              <option value="sports">Sports</option>
+            </select>
+            <div class="carousel-nav-group">
+              <button class="carousel-nav-btn-sm" data-carousel="drops-grid" data-dir="prev" aria-label="Previous" title="Previous">‹</button>
+              <button class="carousel-nav-btn-sm" data-carousel="drops-grid" data-dir="next" aria-label="Next" title="Next">›</button>
+            </div>
+          </div>
+        </div>
+        <div class="ccc-product-grid" id="drops-grid">
+          
+        <div class="product-card-ccc">
+          <div class="product-card-badges"><span class="badge-best-price">Best Price</span></div>
+          <div class="product-card-image">
+            <img src="https://images.unsplash.com/photo-1516035069371-29a1b244cc32?w=300&h=300&fit=crop"
+                 alt="Cámara Canon EOS R50 Kit"
+                 loading="lazy"
+                 onerror="this.src='/images/product-placeholder.svg'" />
+          </div>
+          <div class="product-card-content">
+            <h4 class="product-card-title">Cámara Canon EOS R50 Kit</h4>
+            <div class="product-card-pricing">
+              <span class="product-card-price">$18,999.00</span>
+              <span class="product-card-avg">Avg: $24,999.00</span>
+            </div>
+            <div class="product-card-savings">Save 24% ($6,000.00)</div>
+            <a href="/product/MLM-drop-1?source=mercadolibre" class="product-card-btn">
+              View on Mercado Libre
+            </a>
+          </div>
+        </div>
+      
+        <div class="product-card-ccc">
+          <div class="product-card-badges"><span class="badge-good-deal">Good Deal</span></div>
+          <div class="product-card-image">
+            <img src="https://images.unsplash.com/photo-1571175443880-49e1d25b2bc5?w=300&h=300&fit=crop"
+                 alt="Refrigerador Samsung French Door"
+                 loading="lazy"
+                 onerror="this.src='/images/product-placeholder.svg'" />
+          </div>
+          <div class="product-card-content">
+            <h4 class="product-card-title">Refrigerador Samsung French Door</h4>
+            <div class="product-card-pricing">
+              <span class="product-card-price">$29,999.00</span>
+              <span class="product-card-avg">Avg: $39,999.00</span>
+            </div>
+            <div class="product-card-savings">Save 25% ($10,000.00)</div>
+            <a href="/product/MLM-drop-2?source=mercadolibre" class="product-card-btn">
+              View on Mercado Libre
+            </a>
+          </div>
+        </div>
+      
+        <div class="product-card-ccc">
+          <div class="product-card-badges"><span class="badge-best-price">Best Price</span></div>
+          <div class="product-card-image">
+            <img src="https://images.unsplash.com/photo-1546868871-7041f2a55e12?w=300&h=300&fit=crop"
+                 alt="Apple Watch Series 9 GPS 45mm"
+                 loading="lazy"
+                 onerror="this.src='/images/product-placeholder.svg'" />
+          </div>
+          <div class="product-card-content">
+            <h4 class="product-card-title">Apple Watch Series 9 GPS 45mm</h4>
+            <div class="product-card-pricing">
+              <span class="product-card-price">$8,499.00</span>
+              <span class="product-card-avg">Avg: $10,999.00</span>
+            </div>
+            <div class="product-card-savings">Save 23% ($2,500.00)</div>
+            <a href="/product/MLM-drop-3?source=mercadolibre" class="product-card-btn">
+              View on Mercado Libre
+            </a>
+          </div>
+        </div>
+      
+        <div class="product-card-ccc">
+          <div class="product-card-badges"><span class="badge-good-deal">Good Deal</span></div>
+          <div class="product-card-image">
+            <img src="https://images.unsplash.com/photo-1583394838336-acd977736f90?w=300&h=300&fit=crop"
+                 alt="Bose QuietComfort Ultra"
+                 loading="lazy"
+                 onerror="this.src='/images/product-placeholder.svg'" />
+          </div>
+          <div class="product-card-content">
+            <h4 class="product-card-title">Bose QuietComfort Ultra</h4>
+            <div class="product-card-pricing">
+              <span class="product-card-price">$7,999.00</span>
+              <span class="product-card-avg">Avg: $9,999.00</span>
+            </div>
+            <div class="product-card-savings">Save 20% ($2,000.00)</div>
+            <a href="/product/MLM-drop-4?source=mercadolibre" class="product-card-btn">
+              View on Mercado Libre
+            </a>
+          </div>
+        </div>
+      
+        <div class="product-card-ccc">
+          <div class="product-card-badges"><span class="badge-best-price">Best Price</span></div>
+          <div class="product-card-image">
+            <img src="https://images.unsplash.com/photo-1564466809058-bf4114d55352?w=300&h=300&fit=crop"
+                 alt="GoPro Hero 12 Black"
+                 loading="lazy"
+                 onerror="this.src='/images/product-placeholder.svg'" />
+          </div>
+          <div class="product-card-content">
+            <h4 class="product-card-title">GoPro Hero 12 Black</h4>
+            <div class="product-card-pricing">
+              <span class="product-card-price">$8,499.00</span>
+              <span class="product-card-avg">Avg: $10,999.00</span>
+            </div>
+            <div class="product-card-savings">Save 23% ($2,500.00)</div>
+            <a href="/product/MLM-drop-5?source=mercadolibre" class="product-card-btn">
+              View on Mercado Libre
+            </a>
+          </div>
+        </div>
+      
+        <div class="product-card-ccc">
+          <div class="product-card-badges"><span class="badge-good-deal">Good Deal</span></div>
+          <div class="product-card-image">
+            <img src="https://images.unsplash.com/photo-1626806787461-102c1bfaaea1?w=300&h=300&fit=crop"
+                 alt="Lavadora LG TurboWash 22kg"
+                 loading="lazy"
+                 onerror="this.src='/images/product-placeholder.svg'" />
+          </div>
+          <div class="product-card-content">
+            <h4 class="product-card-title">Lavadora LG TurboWash 22kg</h4>
+            <div class="product-card-pricing">
+              <span class="product-card-price">$16,999.00</span>
+              <span class="product-card-avg">Avg: $21,999.00</span>
+            </div>
+            <div class="product-card-savings">Save 23% ($5,000.00)</div>
+            <a href="/product/MLM-drop-6?source=mercadolibre" class="product-card-btn">
+              View on Mercado Libre
+            </a>
+          </div>
+        </div>
+      
+        <div class="product-card-ccc">
+          <div class="product-card-badges"><span class="badge-best-price">Best Price</span></div>
+          <div class="product-card-image">
+            <img src="https://images.unsplash.com/photo-1544244015-0df4b3ffc6b0?w=300&h=300&fit=crop"
+                 alt="iPad Air M1 256GB WiFi"
+                 loading="lazy"
+                 onerror="this.src='/images/product-placeholder.svg'" />
+          </div>
+          <div class="product-card-content">
+            <h4 class="product-card-title">iPad Air M1 256GB WiFi</h4>
+            <div class="product-card-pricing">
+              <span class="product-card-price">$12,999.00</span>
+              <span class="product-card-avg">Avg: $16,999.00</span>
+            </div>
+            <div class="product-card-savings">Save 24% ($4,000.00)</div>
+            <a href="/product/MLM-drop-7?source=mercadolibre" class="product-card-btn">
+              View on Mercado Libre
+            </a>
+          </div>
+        </div>
+      
+        <div class="product-card-ccc">
+          <div class="product-card-badges"><span class="badge-good-deal">Good Deal</span></div>
+          <div class="product-card-image">
+            <img src="https://images.unsplash.com/photo-1598550476439-6847785fcea6?w=300&h=300&fit=crop"
+                 alt="Silla Gamer Secretlab Titan"
+                 loading="lazy"
+                 onerror="this.src='/images/product-placeholder.svg'" />
+          </div>
+          <div class="product-card-content">
+            <h4 class="product-card-title">Silla Gamer Secretlab Titan</h4>
+            <div class="product-card-pricing">
+              <span class="product-card-price">$9,999.00</span>
+              <span class="product-card-avg">Avg: $12,999.00</span>
+            </div>
+            <div class="product-card-savings">Save 23% ($3,000.00)</div>
+            <a href="/product/MLM-drop-8?source=mercadolibre" class="product-card-btn">
+              View on Mercado Libre
+            </a>
+          </div>
+        </div>
+      
+        </div>
+      </section>
+    
+        
+      <section class="home-section" id="category-discounts">
+        <div class="home-section-header">
+          <h2 class="home-section-title">
+            <span class="home-section-title-icon">🏷️</span>
+            Discounts by Category
+          </h2>
+        </div>
+        <div class="category-grid">
+          
+            <a href="/?q=Electronics" class="category-discount-card">
+              <span class="category-discount-icon">📱</span>
+              <div class="category-discount-name">Electronics</div>
+              <div class="category-discount-percent">
+                Up to 25% OFF
+              </div>
+              <div class="category-discount-count">156 products</div>
+            </a>
+          
+            <a href="/?q=Home%20%26%20Kitchen" class="category-discount-card">
+              <span class="category-discount-icon">🏠</span>
+              <div class="category-discount-name">Home & Kitchen</div>
+              <div class="category-discount-percent">
+                Up to 30% OFF
+              </div>
+              <div class="category-discount-count">89 products</div>
+            </a>
+          
+            <a href="/?q=Fashion" class="category-discount-card">
+              <span class="category-discount-icon">👗</span>
+              <div class="category-discount-name">Fashion</div>
+              <div class="category-discount-percent">
+                Up to 40% OFF
+              </div>
+              <div class="category-discount-count">234 products</div>
+            </a>
+          
+            <a href="/?q=Sports%20%26%20Outdoors" class="category-discount-card">
+              <span class="category-discount-icon">⚽</span>
+              <div class="category-discount-name">Sports & Outdoors</div>
+              <div class="category-discount-percent">
+                Up to 35% OFF
+              </div>
+              <div class="category-discount-count">67 products</div>
+            </a>
+          
+            <a href="/?q=Beauty" class="category-discount-card">
+              <span class="category-discount-icon">💄</span>
+              <div class="category-discount-name">Beauty</div>
+              <div class="category-discount-percent">
+                Up to 28% OFF
+              </div>
+              <div class="category-discount-count">112 products</div>
+            </a>
+          
+            <a href="/?q=Toys%20%26%20Games" class="category-discount-card">
+              <span class="category-discount-icon">🎮</span>
+              <div class="category-discount-name">Toys & Games</div>
+              <div class="category-discount-percent">
+                Up to 32% OFF
+              </div>
+              <div class="category-discount-count">78 products</div>
+            </a>
+          
+        </div>
+      </section>
+    
+        
+      </div>
+    
+    </main>
+    
+    <script>
+      (function() {
+        const dropdown = document.querySelector('.user-dropdown');
+        const toggle = document.querySelector('.user-dropdown-toggle');
+        const menu = document.querySelector('.user-dropdown-menu');
+
+        if (toggle && dropdown && menu) {
+          toggle.addEventListener('click', function(e) {
+            e.preventDefault();
+            e.stopPropagation();
+            dropdown.classList.toggle('open');
+          });
+
+          menu.querySelectorAll('a').forEach(function(link) {
+            link.addEventListener('click', function() {
+              dropdown.classList.remove('open');
+            });
+          });
+
+          document.addEventListener('click', function(e) {
+            if (!dropdown.contains(e.target)) {
+              dropdown.classList.remove('open');
+            }
+          });
+
+          document.addEventListener('keydown', function(e) {
+            if (e.key === 'Escape') {
+              dropdown.classList.remove('open');
+            }
+          });
+        }
+      })();
+    </script>
+    
+    <script>
+      // Header scroll effect
+      (function() {
+        const header = document.querySelector('.site-header');
+        if (!header) return;
+
+        let ticking = false;
+
+        function updateHeader() {
+          if (window.scrollY > 50) {
+            header.classList.add('scrolled');
+          } else {
+            header.classList.remove('scrolled');
+          }
+          ticking = false;
+        }
+
+        window.addEventListener('scroll', function() {
+          if (!ticking) {
+            window.requestAnimationFrame(updateHeader);
+            ticking = true;
+          }
+        }, { passive: true });
+
+        updateHeader();
+      })();
+
+      // Theme Toggle
+      (function() {
+        const themeToggle = document.getElementById('themeToggle');
+        if (!themeToggle) return;
+
+        function setTheme(theme) {
+          document.documentElement.setAttribute('data-theme', theme);
+          localStorage.setItem('theme', theme);
+        }
+
+        function toggleTheme() {
+          const currentTheme = document.documentElement.getAttribute('data-theme');
+          const newTheme = currentTheme === 'dark' ? 'light' : 'dark';
+          setTheme(newTheme);
+        }
+
+        themeToggle.addEventListener('click', toggleTheme);
+
+        // Listen for system theme changes
+        window.matchMedia('(prefers-color-scheme: dark)').addEventListener('change', (e) => {
+          if (!localStorage.getItem('theme')) {
+            setTheme(e.matches ? 'dark' : 'light');
+          }
+        });
+      })();
+
+      // Language Dropdown
+      (function() {
+        const langDropdown = document.getElementById('langDropdown');
+        if (!langDropdown) return;
+
+        const toggle = langDropdown.querySelector('.lang-dropdown-toggle');
+
+        toggle.addEventListener('click', function(e) {
+          e.preventDefault();
+          e.stopPropagation();
+          langDropdown.classList.toggle('open');
+        });
+
+        // Close on outside click
+        document.addEventListener('click', function(e) {
+          if (!langDropdown.contains(e.target)) {
+            langDropdown.classList.remove('open');
+          }
+        });
+
+        // Close on escape
+        document.addEventListener('keydown', function(e) {
+          if (e.key === 'Escape') {
+            langDropdown.classList.remove('open');
+          }
+        });
+      })();
+
+      // Scroll Reveal Animations (Intersection Observer)
+      (function() {
+        // Only run if IntersectionObserver is supported
+        if (!('IntersectionObserver' in window)) return;
+
+        // Mark body as ready for reveal animations
+        document.body.classList.add('reveal-ready');
+
+        // Get all elements with data-reveal attribute
+        const revealElements = document.querySelectorAll('[data-reveal]');
+        if (!revealElements.length) return;
+
+        // Create the observer
+        const observer = new IntersectionObserver(function(entries) {
+          entries.forEach(function(entry) {
+            // When element enters viewport
+            if (entry.isIntersecting) {
+              entry.target.classList.add('revealed');
+              // Stop observing once revealed (animate only once)
+              observer.unobserve(entry.target);
+            }
+          });
+        }, {
+          root: null, // viewport
+          rootMargin: '0px 0px -50px 0px', // trigger slightly before fully visible
+          threshold: 0.1 // trigger when 10% visible
+        });
+
+        // Observe all reveal elements
+        revealElements.forEach(function(el) {
+          observer.observe(el);
+        });
+      })();
+    </script>
+  </body>
+</html>

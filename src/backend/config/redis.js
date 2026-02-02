@@ -21,6 +21,20 @@ function parseRedisUrl(url) {
       username: parsed.username !== "default" ? parsed.username : undefined,
       maxRetriesPerRequest: null, // Required for Bull
       enableReadyCheck: false,
+      retryStrategy: (times) => {
+        // Exponential backoff with max 30 second delay
+        const delay = Math.min(times * 1000, 30000);
+        if (times > 10) {
+          console.log("[Redis] Max retries reached, stopping reconnection attempts");
+          return null; // Stop retrying after 10 attempts
+        }
+        return delay;
+      },
+      reconnectOnError: (err) => {
+        // Only reconnect on specific errors
+        const targetErrors = ['READONLY', 'ECONNRESET', 'ETIMEDOUT'];
+        return targetErrors.some(e => err.message.includes(e));
+      },
     };
   } catch (error) {
     console.error("[Redis] Failed to parse REDIS_URL:", error.message);

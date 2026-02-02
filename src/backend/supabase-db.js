@@ -35,6 +35,50 @@ function initSupabase() {
 }
 
 /**
+ * Helper to check a single table with retry for transient errors
+ */
+async function checkTableWithRetry(table, maxRetries = 3) {
+  for (let attempt = 1; attempt <= maxRetries; attempt++) {
+    try {
+      const { data, error } = await getSupabase()
+        .from(table)
+        .select("id")
+        .limit(1);
+
+      if (error) {
+        // Check if it's a transient network error
+        const isTransient = error.message.includes("fetch failed") ||
+                           error.message.includes("ECONNRESET") ||
+                           error.message.includes("ETIMEDOUT");
+
+        if (isTransient && attempt < maxRetries) {
+          // Wait before retry (exponential backoff)
+          await new Promise(resolve => setTimeout(resolve, 100 * attempt));
+          continue;
+        }
+
+        return { success: false, error };
+      }
+
+      return { success: true, data };
+    } catch (err) {
+      // Check if it's a transient error
+      const isTransient = err.message.includes("fetch failed") ||
+                         err.message.includes("ECONNRESET") ||
+                         err.message.includes("ETIMEDOUT");
+
+      if (isTransient && attempt < maxRetries) {
+        await new Promise(resolve => setTimeout(resolve, 100 * attempt));
+        continue;
+      }
+
+      return { success: false, error: { message: err.message } };
+    }
+  }
+  return { success: false, error: { message: "Max retries exceeded" } };
+}
+
+/**
  * Verify that required tables exist in Supabase
  * Returns { ok: boolean, missingTables: string[], error: string|null }
  */
@@ -46,34 +90,27 @@ async function verifyTables() {
   console.log("[Supabase] Checking tables...");
 
   for (const table of requiredTables) {
-    try {
-      const { data, error } = await getSupabase()
-        .from(table)
-        .select("id")
-        .limit(1);
+    const result = await checkTableWithRetry(table);
 
-      if (error) {
-        // Log the actual error for debugging
-        console.log(`[Supabase]   ${table}: ❌ ${error.message}`);
-        tableErrors[table] = error.message;
+    if (!result.success) {
+      const error = result.error;
+      // Log the actual error for debugging
+      console.log(`[Supabase]   ${table}: ❌ ${error.message}`);
+      tableErrors[table] = error.message;
 
-        // Check for common error patterns that indicate missing table
-        const errorMsg = error.message.toLowerCase();
-        if (errorMsg.includes("schema cache") ||
-            errorMsg.includes("does not exist") ||
-            errorMsg.includes("relation") ||
-            errorMsg.includes("permission denied") ||
-            error.code === "42P01" || // PostgreSQL: undefined_table
-            error.code === "PGRST204") { // PostgREST: no such table
-          missingTables.push(table);
-        }
-      } else {
-        console.log(`[Supabase]   ${table}: ✓`);
+      // Check for common error patterns that indicate missing table
+      const errorMsg = error.message.toLowerCase();
+      if (errorMsg.includes("schema cache") ||
+          errorMsg.includes("does not exist") ||
+          errorMsg.includes("relation") ||
+          errorMsg.includes("permission denied") ||
+          errorMsg.includes("fetch failed") || // Treat persistent fetch failures as table issues
+          error.code === "42P01" || // PostgreSQL: undefined_table
+          error.code === "PGRST204") { // PostgREST: no such table
+        missingTables.push(table);
       }
-    } catch (err) {
-      console.log(`[Supabase]   ${table}: ❌ Exception: ${err.message}`);
-      missingTables.push(table);
-      tableErrors[table] = err.message;
+    } else {
+      console.log(`[Supabase]   ${table}: ✓`);
     }
   }
 
@@ -506,6 +543,373 @@ async function getPriceStatistics(trackedProductId, period = "30d") {
 }
 
 // ============================================
+// HIGHLIGHTED DEALS & DISCOVERY FUNCTIONS
+// ============================================
+
+/**
+ * Get highlighted deals - products with best prices or good deals
+ * Aggregates data across all users' tracked products
+ * @param {number} limit - Maximum products to return
+ */
+async function getHighlightedDeals(limit = 10) {
+  try {
+    // Get all tracked products with their price history
+    const { data: products, error } = await getSupabase()
+      .from("tracked_products")
+      .select("*")
+      .not("current_price", "is", null)
+      .order("created_at", { ascending: false });
+
+    if (error) {
+      console.error("[Supabase] getHighlightedDeals error:", error);
+      return [];
+    }
+
+    if (!products || products.length === 0) return [];
+
+    // Get unique products by product_id (aggregate across users)
+    const productMap = new Map();
+    for (const p of products) {
+      if (!productMap.has(p.product_id)) {
+        productMap.set(p.product_id, p);
+      }
+    }
+
+    // Calculate stats for each unique product
+    const dealsWithStats = [];
+    for (const product of productMap.values()) {
+      const history = await getPriceHistory(product.id, { period: "30d", limit: 100 });
+
+      if (history && history.length > 0) {
+        const prices = history.map(h => parseFloat(h.price));
+        const currentPrice = parseFloat(product.current_price);
+        const minPrice = Math.min(...prices);
+        const avgPrice = prices.reduce((sum, p) => sum + p, 0) / prices.length;
+
+        const isBestPrice = currentPrice <= minPrice;
+        const isGoodDeal = currentPrice < avgPrice * 0.95;
+        const savingsPercent = avgPrice > 0 ? ((avgPrice - currentPrice) / avgPrice) * 100 : 0;
+
+        if (isBestPrice || isGoodDeal) {
+          dealsWithStats.push({
+            ...product,
+            minPrice,
+            avgPrice: Math.round(avgPrice * 100) / 100,
+            isBestPrice,
+            isGoodDeal,
+            savingsPercent: Math.round(savingsPercent * 100) / 100,
+            savingsAmount: Math.round((avgPrice - currentPrice) * 100) / 100,
+            dataPoints: history.length
+          });
+        }
+      }
+    }
+
+    // Sort by savings percentage (best deals first)
+    dealsWithStats.sort((a, b) => b.savingsPercent - a.savingsPercent);
+
+    return dealsWithStats.slice(0, limit);
+  } catch (err) {
+    console.error("[Supabase] getHighlightedDeals exception:", err);
+    return [];
+  }
+}
+
+/**
+ * Get popular products - most tracked across all users
+ * @param {Object} options - Query options
+ * @param {number} options.limit - Max products to return
+ * @param {string} options.category - Filter by category (optional)
+ * @param {boolean} options.dealsOnly - Only return products that are deals
+ */
+async function getPopularProducts({ limit = 8, category = "", dealsOnly = false } = {}) {
+  try {
+    // Get all tracked products
+    const { data: products, error } = await getSupabase()
+      .from("tracked_products")
+      .select("*")
+      .not("current_price", "is", null);
+
+    if (error) {
+      console.error("[Supabase] getPopularProducts error:", error);
+      return [];
+    }
+
+    if (!products || products.length === 0) return [];
+
+    // Count tracking frequency per product_id
+    const productCounts = new Map();
+    for (const p of products) {
+      const key = p.product_id;
+      if (!productCounts.has(key)) {
+        productCounts.set(key, { product: p, count: 0 });
+      }
+      productCounts.get(key).count++;
+    }
+
+    // Convert to array and sort by popularity
+    let popularProducts = Array.from(productCounts.values())
+      .sort((a, b) => b.count - a.count)
+      .map(item => ({ ...item.product, trackCount: item.count }));
+
+    // Filter by category if specified
+    if (category) {
+      popularProducts = popularProducts.filter(p =>
+        p.product_title?.toLowerCase().includes(category.toLowerCase()) ||
+        p.source?.toLowerCase() === category.toLowerCase()
+      );
+    }
+
+    // If dealsOnly, calculate and filter deals
+    if (dealsOnly) {
+      const dealsFiltered = [];
+      for (const product of popularProducts) {
+        const history = await getPriceHistory(product.id, { period: "30d", limit: 50 });
+        if (history && history.length > 0) {
+          const prices = history.map(h => parseFloat(h.price));
+          const currentPrice = parseFloat(product.current_price);
+          const avgPrice = prices.reduce((sum, p) => sum + p, 0) / prices.length;
+          const minPrice = Math.min(...prices);
+
+          const isGoodDeal = currentPrice < avgPrice * 0.95;
+          const isBestPrice = currentPrice <= minPrice;
+
+          if (isGoodDeal || isBestPrice) {
+            dealsFiltered.push({
+              ...product,
+              avgPrice: Math.round(avgPrice * 100) / 100,
+              minPrice,
+              isGoodDeal,
+              isBestPrice,
+              savingsPercent: Math.round(((avgPrice - currentPrice) / avgPrice) * 100 * 100) / 100
+            });
+          }
+        }
+      }
+      return dealsFiltered.slice(0, limit);
+    }
+
+    return popularProducts.slice(0, limit);
+  } catch (err) {
+    console.error("[Supabase] getPopularProducts exception:", err);
+    return [];
+  }
+}
+
+/**
+ * Get top price drops - products with biggest recent price decreases
+ * @param {Object} options - Query options
+ * @param {string} options.period - 'recent' (24h), 'daily' (today), 'weekly' (7 days)
+ * @param {string} options.category - Filter by category (optional)
+ * @param {number} options.limit - Max products to return
+ */
+async function getTopPriceDrops({ period = "recent", category = "", limit = 8 } = {}) {
+  try {
+    // Determine time range based on period
+    let hoursBack;
+    switch (period) {
+      case "daily":
+        hoursBack = 24;
+        break;
+      case "weekly":
+        hoursBack = 168; // 7 * 24
+        break;
+      case "recent":
+      default:
+        hoursBack = 48;
+        break;
+    }
+
+    const cutoffDate = new Date();
+    cutoffDate.setHours(cutoffDate.getHours() - hoursBack);
+
+    // Get all tracked products
+    const { data: products, error } = await getSupabase()
+      .from("tracked_products")
+      .select("*")
+      .not("current_price", "is", null);
+
+    if (error) {
+      console.error("[Supabase] getTopPriceDrops error:", error);
+      return [];
+    }
+
+    if (!products || products.length === 0) return [];
+
+    // Get unique products by product_id
+    const productMap = new Map();
+    for (const p of products) {
+      if (!productMap.has(p.product_id)) {
+        productMap.set(p.product_id, p);
+      }
+    }
+
+    // Calculate price drops for each product
+    const priceDrops = [];
+    for (const product of productMap.values()) {
+      // Filter by category if specified
+      if (category && !product.product_title?.toLowerCase().includes(category.toLowerCase())) {
+        continue;
+      }
+
+      const history = await getPriceHistory(product.id, { period: period === "weekly" ? "7d" : "30d", limit: 100 });
+
+      if (history && history.length >= 2) {
+        const currentPrice = parseFloat(product.current_price);
+
+        // Find the oldest price in our period
+        const pricesInPeriod = history.filter(h => new Date(h.recorded_at) >= cutoffDate);
+
+        if (pricesInPeriod.length > 0) {
+          const oldestInPeriod = pricesInPeriod[pricesInPeriod.length - 1];
+          const periodStartPrice = parseFloat(oldestInPeriod.price);
+
+          if (periodStartPrice > currentPrice) {
+            const dropAmount = periodStartPrice - currentPrice;
+            const dropPercent = (dropAmount / periodStartPrice) * 100;
+
+            priceDrops.push({
+              ...product,
+              previousPrice: periodStartPrice,
+              dropAmount: Math.round(dropAmount * 100) / 100,
+              dropPercent: Math.round(dropPercent * 100) / 100,
+              periodStart: oldestInPeriod.recorded_at
+            });
+          }
+        }
+      }
+    }
+
+    // Sort by drop percentage (biggest drops first)
+    priceDrops.sort((a, b) => b.dropPercent - a.dropPercent);
+
+    return priceDrops.slice(0, limit);
+  } catch (err) {
+    console.error("[Supabase] getTopPriceDrops exception:", err);
+    return [];
+  }
+}
+
+/**
+ * Get discounts aggregated by category
+ * Returns categories with their max discount percentage
+ */
+async function getDiscountsByCategory() {
+  try {
+    // Get all tracked products
+    const { data: products, error } = await getSupabase()
+      .from("tracked_products")
+      .select("*")
+      .not("current_price", "is", null);
+
+    if (error) {
+      console.error("[Supabase] getDiscountsByCategory error:", error);
+      return [];
+    }
+
+    if (!products || products.length === 0) return [];
+
+    // Define category keywords and their display info
+    const categoryDefinitions = [
+      { key: "electronics", keywords: ["phone", "laptop", "computer", "tablet", "tv", "audio", "headphone", "speaker", "celular", "computadora", "televisor", "bocina"], icon: "📱", nameEn: "Electronics", nameEs: "Electrónica" },
+      { key: "home", keywords: ["home", "kitchen", "furniture", "decor", "hogar", "cocina", "mueble", "decoración"], icon: "🏠", nameEn: "Home & Kitchen", nameEs: "Hogar y Cocina" },
+      { key: "fashion", keywords: ["clothing", "shoes", "fashion", "watch", "jewelry", "ropa", "zapatos", "moda", "reloj", "joyería"], icon: "👗", nameEn: "Fashion", nameEs: "Moda" },
+      { key: "sports", keywords: ["sport", "fitness", "exercise", "outdoor", "deporte", "ejercicio", "aire libre"], icon: "⚽", nameEn: "Sports & Outdoors", nameEs: "Deportes" },
+      { key: "beauty", keywords: ["beauty", "cosmetic", "skincare", "perfume", "belleza", "cosmético", "cuidado piel"], icon: "💄", nameEn: "Beauty", nameEs: "Belleza" },
+      { key: "toys", keywords: ["toy", "game", "puzzle", "lego", "juguete", "juego"], icon: "🎮", nameEn: "Toys & Games", nameEs: "Juguetes" },
+      { key: "books", keywords: ["book", "kindle", "reading", "libro", "lectura"], icon: "📚", nameEn: "Books", nameEs: "Libros" },
+      { key: "automotive", keywords: ["car", "auto", "vehicle", "motor", "carro", "vehículo", "coche"], icon: "🚗", nameEn: "Automotive", nameEs: "Automotriz" },
+      { key: "other", keywords: [], icon: "📦", nameEn: "Other", nameEs: "Otros" }
+    ];
+
+    // Categorize products and find max discounts
+    const categoryStats = new Map();
+
+    for (const cat of categoryDefinitions) {
+      categoryStats.set(cat.key, {
+        ...cat,
+        maxDiscount: 0,
+        productCount: 0,
+        bestDealProduct: null
+      });
+    }
+
+    // Process each product
+    for (const product of products) {
+      const title = (product.product_title || "").toLowerCase();
+      let matchedCategory = "other";
+
+      // Find matching category
+      for (const cat of categoryDefinitions) {
+        if (cat.keywords.some(kw => title.includes(kw))) {
+          matchedCategory = cat.key;
+          break;
+        }
+      }
+
+      // Get price stats for this product
+      const history = await getPriceHistory(product.id, { period: "30d", limit: 50 });
+
+      if (history && history.length > 0) {
+        const prices = history.map(h => parseFloat(h.price));
+        const currentPrice = parseFloat(product.current_price);
+        const avgPrice = prices.reduce((sum, p) => sum + p, 0) / prices.length;
+
+        if (avgPrice > currentPrice) {
+          const discountPercent = ((avgPrice - currentPrice) / avgPrice) * 100;
+
+          const catStat = categoryStats.get(matchedCategory);
+          catStat.productCount++;
+
+          if (discountPercent > catStat.maxDiscount) {
+            catStat.maxDiscount = Math.round(discountPercent);
+            catStat.bestDealProduct = {
+              ...product,
+              avgPrice: Math.round(avgPrice * 100) / 100,
+              discountPercent: Math.round(discountPercent)
+            };
+          }
+        }
+      }
+    }
+
+    // Convert to array and filter out empty categories
+    const results = Array.from(categoryStats.values())
+      .filter(cat => cat.productCount > 0 && cat.maxDiscount > 0)
+      .sort((a, b) => b.maxDiscount - a.maxDiscount);
+
+    return results;
+  } catch (err) {
+    console.error("[Supabase] getDiscountsByCategory exception:", err);
+    return [];
+  }
+}
+
+/**
+ * Get all unique categories from tracked products
+ */
+async function getProductCategories() {
+  try {
+    const { data: products, error } = await getSupabase()
+      .from("tracked_products")
+      .select("source")
+      .not("source", "is", null);
+
+    if (error) {
+      console.error("[Supabase] getProductCategories error:", error);
+      return [];
+    }
+
+    // Get unique sources
+    const sources = [...new Set(products.map(p => p.source).filter(Boolean))];
+    return sources;
+  } catch (err) {
+    console.error("[Supabase] getProductCategories exception:", err);
+    return [];
+  }
+}
+
+// ============================================
 // DEMO DATA SETUP
 // ============================================
 
@@ -641,6 +1045,12 @@ module.exports = {
   addPriceHistory,
   getPriceHistory,
   getPriceStatistics,
+  // Discovery & Deals
+  getHighlightedDeals,
+  getPopularProducts,
+  getTopPriceDrops,
+  getDiscountsByCategory,
+  getProductCategories,
   // Setup
   createDemoAccounts
 };

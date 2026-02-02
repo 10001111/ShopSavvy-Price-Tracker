@@ -2,13 +2,13 @@
   "name": "ofertaradar",
   "version": "0.1.0",
   "description": "OfertaRadar - Price Tracker for Mexico",
-  "main": "src/server.js",
+  "main": "src/backend/server.js",
   "engines": {
     "node": ">=18.0.0"
   },
   "scripts": {
-    "start": "node src/server.js",
-    "dev": "node src/server.js",
+    "start": "node src/backend/server.js",
+    "dev": "node src/backend/server.js",
     "setup:https": "node setup-https.js"
   },
   "dependencies": {
