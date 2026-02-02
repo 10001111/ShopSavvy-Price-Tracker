@@ -87,6 +87,120 @@ const HAS_AMAZON_API = Boolean(
   AMAZON_ACCESS_KEY && AMAZON_SECRET_KEY && AMAZON_PARTNER_TAG,
 );
 
+// ============================================
+// CATEGORY SYSTEM CONFIGURATION
+// ============================================
+const CATEGORIES = {
+  electronics: {
+    id: "electronics",
+    name: { en: "Electronics", es: "Electrónica" },
+    icon: "📱",
+    keywords: [
+      "iphone",
+      "samsung",
+      "laptop",
+      "macbook",
+      "ipad",
+      "watch",
+      "airpods",
+      "tv",
+      "televisor",
+      "headphone",
+      "earbud",
+      "phone",
+      "tablet",
+      "computer",
+      "smart tv",
+      "celular",
+      "computadora",
+      "audífonos",
+    ],
+  },
+  "home-kitchen": {
+    id: "home-kitchen",
+    name: { en: "Home & Kitchen", es: "Hogar y Cocina" },
+    icon: "🏠",
+    keywords: [
+      "aspiradora",
+      "dyson",
+      "vacuum",
+      "refrigerador",
+      "microondas",
+      "lavadora",
+      "furniture",
+      "muebles",
+      "cocina",
+      "hogar",
+    ],
+  },
+  fashion: {
+    id: "fashion",
+    name: { en: "Fashion", es: "Moda" },
+    icon: "👗",
+    keywords: [
+      "ropa",
+      "zapatos",
+      "adidas",
+      "nike",
+      "shirt",
+      "pants",
+      "vestido",
+      "clothing",
+      "shoes",
+      "fashion",
+      "moda",
+    ],
+  },
+  "sports-outdoors": {
+    id: "sports-outdoors",
+    name: { en: "Sports & Outdoors", es: "Deportes" },
+    icon: "⚽",
+    keywords: [
+      "futbol",
+      "basketball",
+      "deportes",
+      "fitness",
+      "gym",
+      "sports",
+      "outdoor",
+      "camping",
+    ],
+  },
+  beauty: {
+    id: "beauty",
+    name: { en: "Beauty", es: "Belleza" },
+    icon: "💄",
+    keywords: [
+      "cosmeticos",
+      "perfume",
+      "belleza",
+      "skincare",
+      "maquillaje",
+      "beauty",
+      "makeup",
+      "cosmetics",
+    ],
+  },
+  toys: {
+    id: "toys",
+    name: { en: "Toys & Games", es: "Juguetes" },
+    icon: "🎮",
+    keywords: [
+      "ps5",
+      "playstation",
+      "xbox",
+      "nintendo",
+      "juguetes",
+      "lego",
+      "game",
+      "gaming",
+      "consola",
+      "videojuego",
+      "toy",
+    ],
+  },
+};
+
 // Auto-detect certs in ./certs directory (supports both PEM and PFX)
 const defaultKeyPath = path.join(__dirname, "..", "certs", "localhost-key.pem");
 const defaultCertPath = path.join(__dirname, "..", "certs", "localhost.pem");
@@ -442,14 +556,14 @@ function renderPage(
     </header>
     <nav class="category-nav">
       <div class="category-tabs">
-        <a href="/?q=${lang === "es" ? "Electrónica" : "Electronics"}" class="category-tab">${lang === "es" ? "Electrónica" : "Electronics"}</a>
-        <a href="/?q=${lang === "es" ? "Celulares" : "Phones"}" class="category-tab">${lang === "es" ? "Celulares" : "Phones"}</a>
-        <a href="/?q=${lang === "es" ? "Computadoras" : "Computers"}" class="category-tab">${lang === "es" ? "Computadoras" : "Computers"}</a>
-        <a href="/?q=${lang === "es" ? "Ropa" : "Clothing"}" class="category-tab">${lang === "es" ? "Ropa" : "Clothing"}</a>
-        <a href="/?q=${lang === "es" ? "Hogar" : "Home"}" class="category-tab">${lang === "es" ? "Hogar" : "Home"}</a>
-        <a href="/?q=${lang === "es" ? "Deportes" : "Sports"}" class="category-tab">${lang === "es" ? "Deportes" : "Sports"}</a>
-        <a href="/?q=${lang === "es" ? "Juguetes" : "Toys"}" class="category-tab">${lang === "es" ? "Juguetes" : "Toys"}</a>
-        <a href="/?q=${lang === "es" ? "Belleza" : "Beauty"}" class="category-tab">${lang === "es" ? "Belleza" : "Beauty"}</a>
+        <a href="/?category=electronics" class="category-tab">${lang === "es" ? "Electrónica" : "Electronics"}</a>
+        <a href="/?q=phone&category=electronics" class="category-tab">${lang === "es" ? "Celulares" : "Phones"}</a>
+        <a href="/?q=laptop&category=electronics" class="category-tab">${lang === "es" ? "Computadoras" : "Computers"}</a>
+        <a href="/?category=fashion" class="category-tab">${lang === "es" ? "Ropa" : "Clothing"}</a>
+        <a href="/?category=home-kitchen" class="category-tab">${lang === "es" ? "Hogar" : "Home"}</a>
+        <a href="/?category=sports-outdoors" class="category-tab">${lang === "es" ? "Deportes" : "Sports"}</a>
+        <a href="/?category=toys" class="category-tab">${lang === "es" ? "Juguetes" : "Toys"}</a>
+        <a href="/?category=beauty" class="category-tab">${lang === "es" ? "Belleza" : "Beauty"}</a>
       </div>
     </nav>
     <main class="main-content">
@@ -784,6 +898,75 @@ function formatPrice(value, currency = "MXN") {
   }).format(value);
 }
 
+// ============================================
+// CATEGORY HELPER FUNCTIONS
+// ============================================
+
+/**
+ * Detect product category based on title keywords
+ * @param {string} productTitle - Product title to analyze
+ * @returns {string|null} Category ID or null if no match
+ */
+function detectCategory(productTitle) {
+  if (!productTitle) return null;
+
+  const lowerTitle = productTitle.toLowerCase();
+
+  for (const [catId, catConfig] of Object.entries(CATEGORIES)) {
+    for (const keyword of catConfig.keywords) {
+      if (lowerTitle.includes(keyword.toLowerCase())) {
+        return catId;
+      }
+    }
+  }
+
+  return null; // uncategorized
+}
+
+/**
+ * Calculate real category statistics from actual products
+ * @param {Array} products - Array of product objects
+ * @param {string} lang - Language code (en/es)
+ * @returns {Array} Category stats with real counts and discounts
+ */
+function getCategoryStats(products, lang = "en") {
+  const stats = [];
+
+  for (const [catId, catConfig] of Object.entries(CATEGORIES)) {
+    const categoryProducts = products.filter((p) => p.category === catId);
+
+    // Skip empty categories
+    if (categoryProducts.length === 0) {
+      continue;
+    }
+
+    // Calculate real discount percentages
+    let maxDiscount = 0;
+    categoryProducts.forEach((p) => {
+      // Check if product has price tracking data with average price
+      if (p.avgPrice && p.price < p.avgPrice) {
+        const discount = ((p.avgPrice - p.price) / p.avgPrice) * 100;
+        maxDiscount = Math.max(maxDiscount, discount);
+      }
+      // Also check for savingsPercent property from deals
+      if (p.savingsPercent) {
+        maxDiscount = Math.max(maxDiscount, p.savingsPercent);
+      }
+    });
+
+    stats.push({
+      key: catId,
+      icon: catConfig.icon,
+      nameEn: catConfig.name.en,
+      nameEs: catConfig.name.es,
+      maxDiscount: Math.round(maxDiscount),
+      productCount: categoryProducts.length,
+    });
+  }
+
+  return stats;
+}
+
 // Get Mercado Libre access token
 async function getMLAccessToken() {
   // Return cached token if still valid
@@ -871,6 +1054,7 @@ function getMockProducts() {
         "El iPhone más avanzado con chip A17 Pro, cámara de 48MP y Dynamic Island.",
       price: 28999,
       currency_id: "MXN",
+      category: "electronics",
       thumbnail:
         "https://http2.mlstatic.com/D_NQ_NP_2X_600741-MLA54876949912_042023-F.webp",
       permalink: "https://www.mercadolibre.com.mx/",
@@ -885,6 +1069,7 @@ function getMockProducts() {
         "Smartphone con Galaxy AI, cámara de 200MP y S Pen incluido.",
       price: 24999,
       currency_id: "MXN",
+      category: "electronics",
       thumbnail:
         "https://http2.mlstatic.com/D_NQ_NP_2X_896939-MLM72661707718_112023-F.webp",
       permalink: "https://www.mercadolibre.com.mx/",
@@ -899,6 +1084,7 @@ function getMockProducts() {
         "Laptop ultraligera con chip M3, 18 horas de batería y pantalla Liquid Retina.",
       price: 26999,
       currency_id: "MXN",
+      category: "electronics",
       thumbnail:
         "https://http2.mlstatic.com/D_NQ_NP_2X_854712-MLA74601558556_022024-F.webp",
       permalink: "https://www.mercadolibre.com.mx/",
@@ -913,6 +1099,7 @@ function getMockProducts() {
         "Consola de nueva generación con SSD ultrarrápido y DualSense.",
       price: 9499,
       currency_id: "MXN",
+      category: "toys",
       thumbnail:
         "https://http2.mlstatic.com/D_NQ_NP_2X_691344-MLM74174576447_012024-F.webp",
       permalink: "https://www.mercadolibre.com.mx/",
@@ -927,6 +1114,7 @@ function getMockProducts() {
         "Los mejores audífonos con cancelación de ruido y 30 horas de batería.",
       price: 6499,
       currency_id: "MXN",
+      category: "electronics",
       thumbnail:
         "https://http2.mlstatic.com/D_NQ_NP_2X_673653-MLA51543508498_092022-F.webp",
       permalink: "https://www.mercadolibre.com.mx/",
@@ -941,6 +1129,7 @@ function getMockProducts() {
         "La tablet más potente con chip M4, pantalla Ultra Retina XDR y Apple Pencil Pro.",
       price: 21999,
       currency_id: "MXN",
+      category: "electronics",
       thumbnail:
         "https://http2.mlstatic.com/D_NQ_NP_2X_929429-MLA75879827421_042024-F.webp",
       permalink: "https://www.mercadolibre.com.mx/",
@@ -955,6 +1144,7 @@ function getMockProducts() {
         "Consola portátil con pantalla OLED de 7 pulgadas, edición especial.",
       price: 7999,
       currency_id: "MXN",
+      category: "toys",
       thumbnail:
         "https://http2.mlstatic.com/D_NQ_NP_2X_943597-MLM73034589839_112023-F.webp",
       permalink: "https://www.mercadolibre.com.mx/",
@@ -969,6 +1159,7 @@ function getMockProducts() {
         "Audífonos con cancelación activa de ruido, audio espacial y estuche MagSafe.",
       price: 4499,
       currency_id: "MXN",
+      category: "electronics",
       thumbnail:
         "https://http2.mlstatic.com/D_NQ_NP_2X_756250-MLA73970988653_012024-F.webp",
       permalink: "https://www.mercadolibre.com.mx/",
@@ -983,6 +1174,7 @@ function getMockProducts() {
         "Televisor inteligente con Tizen, Gaming Hub y diseño AirSlim.",
       price: 8999,
       currency_id: "MXN",
+      category: "electronics",
       thumbnail:
         "https://http2.mlstatic.com/D_NQ_NP_2X_600741-MLA54876949912_042023-F.webp",
       permalink: "https://www.mercadolibre.com.mx/",
@@ -996,6 +1188,7 @@ function getMockProducts() {
       description: "La consola Xbox más rápida con 4K a 120fps y Quick Resume.",
       price: 12999,
       currency_id: "MXN",
+      category: "toys",
       thumbnail:
         "https://http2.mlstatic.com/D_NQ_NP_2X_709115-MLA45629061694_042021-F.webp",
       permalink: "https://www.mercadolibre.com.mx/",
@@ -1010,6 +1203,7 @@ function getMockProducts() {
         "Aspiradora inalámbrica con láser para detectar polvo microscópico.",
       price: 14999,
       currency_id: "MXN",
+      category: "home-kitchen",
       thumbnail:
         "https://http2.mlstatic.com/D_NQ_NP_2X_672464-MLA50401987399_062022-F.webp",
       permalink: "https://www.mercadolibre.com.mx/",
@@ -1024,6 +1218,7 @@ function getMockProducts() {
         "Reloj inteligente con chip S9, doble toque y pantalla siempre activa.",
       price: 8999,
       currency_id: "MXN",
+      category: "electronics",
       thumbnail:
         "https://http2.mlstatic.com/D_NQ_NP_2X_667508-MLA73458044571_122023-F.webp",
       permalink: "https://www.mercadolibre.com.mx/",
