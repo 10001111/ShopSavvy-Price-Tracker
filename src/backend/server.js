@@ -1311,8 +1311,15 @@ async function fetchMLProducts({
     if (response.ok) {
       const data = await response.json();
       console.log(`[ML API] Found ${data.paging?.total || 0} results`);
+
+      // Auto-categorize products based on title
+      const products = (data.results || []).map((item) => ({
+        ...item,
+        category: detectCategory(item.title),
+      }));
+
       return {
-        products: data.results || [],
+        products: products,
         total: data.paging?.total || 0,
         totalPages: Math.ceil((data.paging?.total || 0) / pageSize),
         error: "",
@@ -1365,6 +1372,10 @@ async function fetchMLProductById(id) {
     if (response.ok) {
       const product = await response.json();
       console.log(`[ML API] Product found: ${product.title}`);
+
+      // Auto-categorize the product
+      product.category = detectCategory(product.title);
+
       return { product, notice: "", error: "", isRealData: true };
     }
 
@@ -1567,23 +1578,28 @@ async function fetchAmazonProducts({
       const items = data.SearchResult?.Items || [];
 
       // Transform Amazon items to match our product format
-      const products = items.map((item) => ({
-        id: `AMZN-${item.ASIN}`,
-        asin: item.ASIN,
-        title: item.ItemInfo?.Title?.DisplayValue || "Amazon Product",
-        price: item.Offers?.Listings?.[0]?.Price?.Amount || 0,
-        currency_id: item.Offers?.Listings?.[0]?.Price?.Currency || "USD",
-        thumbnail: item.Images?.Primary?.Large?.URL || "",
-        condition: item.Offers?.Listings?.[0]?.Condition?.Value || "New",
-        available_quantity: item.Offers?.Listings?.[0]?.Availability?.Message
-          ? 1
-          : 0,
-        permalink: `https://www.amazon.com/dp/${item.ASIN}?tag=${AMAZON_PARTNER_TAG}`,
-        seller: {
-          nickname: item.Offers?.Listings?.[0]?.MerchantInfo?.Name || "Amazon",
-        },
-        source: "amazon",
-      }));
+      const products = items.map((item) => {
+        const title = item.ItemInfo?.Title?.DisplayValue || "Amazon Product";
+        return {
+          id: `AMZN-${item.ASIN}`,
+          asin: item.ASIN,
+          title: title,
+          price: item.Offers?.Listings?.[0]?.Price?.Amount || 0,
+          currency_id: item.Offers?.Listings?.[0]?.Price?.Currency || "USD",
+          thumbnail: item.Images?.Primary?.Large?.URL || "",
+          condition: item.Offers?.Listings?.[0]?.Condition?.Value || "New",
+          available_quantity: item.Offers?.Listings?.[0]?.Availability?.Message
+            ? 1
+            : 0,
+          permalink: `https://www.amazon.com/dp/${item.ASIN}?tag=${AMAZON_PARTNER_TAG}`,
+          seller: {
+            nickname:
+              item.Offers?.Listings?.[0]?.MerchantInfo?.Name || "Amazon",
+          },
+          source: "amazon",
+          category: detectCategory(title), // Auto-categorize
+        };
+      });
 
       return {
         products,
@@ -1685,10 +1701,11 @@ async function fetchAmazonProductById(asin) {
         return { product: null, error: "Product not found", source: "amazon" };
       }
 
+      const title = item.ItemInfo?.Title?.DisplayValue || "Amazon Product";
       const product = {
         id: `AMZN-${item.ASIN}`,
         asin: item.ASIN,
-        title: item.ItemInfo?.Title?.DisplayValue || "Amazon Product",
+        title: title,
         price:
           item.Offers?.Listings?.[0]?.Price?.Amount ||
           item.Offers?.Summaries?.[0]?.LowestPrice?.Amount ||
@@ -1708,6 +1725,7 @@ async function fetchAmazonProductById(asin) {
         },
         brand: item.ItemInfo?.ByLineInfo?.Brand?.DisplayValue || "",
         source: "amazon",
+        category: detectCategory(title), // Auto-categorize
       };
 
       return { product, error: "", source: "amazon" };
@@ -2113,6 +2131,21 @@ async function start() {
               <option value="all" ${source === "all" ? "selected" : ""}>${t(lang, "sourceAll")}</option>
               <option value="mercadolibre" ${source === "mercadolibre" ? "selected" : ""}>${t(lang, "sourceMercadoLibre")}</option>
               <option value="amazon" ${source === "amazon" ? "selected" : ""}>${t(lang, "sourceAmazon")}${HAS_AMAZON_API ? "" : " (Not configured)"}</option>
+            </select>
+          </div>
+          <div class="range-row">
+            <label>${lang === "es" ? "Categoría" : "Category"}</label>
+            <select name="category">
+              <option value="">${lang === "es" ? "Todas las Categorías" : "All Categories"}</option>
+              ${Object.entries(CATEGORIES)
+                .map(
+                  ([id, cat]) => `
+                <option value="${id}" ${category === id ? "selected" : ""}>
+                  ${cat.icon} ${lang === "es" ? cat.name.es : cat.name.en}
+                </option>
+              `,
+                )
+                .join("")}
             </select>
           </div>
         </div>
@@ -2786,7 +2819,7 @@ async function start() {
           : `https://http2.mlstatic.com/D_NQ_NP_${deal.product_id?.split("-")[1] || ""}-O.webp`);
 
       return `
-        <div class="deal-card-ccc">
+        <div class="deal-card-ccc" data-category="${deal.category || detectCategory(deal.product_title) || ""}" data-drop-date="${deal.dropDate || ""}">
           ${badges.length > 0 ? `<div class="deal-card-badges">${badges.join("")}</div>` : ""}
           <div class="deal-card-image">
             <img src="${imageUrl}"
@@ -2842,7 +2875,7 @@ async function start() {
             : "";
 
       return `
-        <div class="product-card-ccc">
+        <div class="ccc-product-card" data-category="${product.category || detectCategory(product.product_title) || ""}" data-drop-date="${product.dropDate || ""}">
           ${badges.length > 0 ? `<div class="product-card-badges">${badges.join("")}</div>` : ""}
           <div class="product-card-image">
             <img src="${imageUrl}"
@@ -3112,17 +3145,23 @@ async function start() {
 
           // Carousel Navigation
           (function() {
-            const carouselNavButtons = document.querySelectorAll('.carousel-nav');
+            // Fixed selector to match actual button classes
+            const carouselNavButtons = document.querySelectorAll('.carousel-nav-btn, .carousel-nav-btn-sm');
 
             carouselNavButtons.forEach(btn => {
-              btn.addEventListener('click', function() {
+              btn.addEventListener('click', function(e) {
+                e.preventDefault();
+
                 const carouselId = this.getAttribute('data-carousel');
                 const direction = this.getAttribute('data-dir');
                 const carousel = document.getElementById(carouselId);
 
-                if (!carousel) return;
+                if (!carousel) {
+                  console.error('Carousel not found:', carouselId);
+                  return;
+                }
 
-                const scrollAmount = 300;
+                const scrollAmount = 320; // Width of one card + gap
                 const currentScroll = carousel.scrollLeft;
 
                 if (direction === 'next') {
@@ -3130,7 +3169,7 @@ async function start() {
                     left: currentScroll + scrollAmount,
                     behavior: 'smooth'
                   });
-                } else {
+                } else if (direction === 'prev') {
                   carousel.scrollTo({
                     left: currentScroll - scrollAmount,
                     behavior: 'smooth'
@@ -3140,48 +3179,79 @@ async function start() {
             });
           })();
 
-          // Tab Filtering for Popular Products and Price Drops
+          // Filter Tabs (All Products / Deals Only / Daily / Weekly / Recent)
           (function() {
-            const filterTabs = document.querySelectorAll('.filter-tabs');
+            document.querySelectorAll('.ccc-filter-tab').forEach(tab => {
+              tab.addEventListener('click', function(e) {
+                e.preventDefault();
 
-            filterTabs.forEach(tabGroup => {
-              const tabs = tabGroup.querySelectorAll('.filter-tab');
+                const filterTarget = this.parentElement.getAttribute('data-filter-target');
+                const targetGrid = document.getElementById(filterTarget);
+                const filterType = this.getAttribute('data-filter');
 
-              tabs.forEach(tab => {
-                tab.addEventListener('click', async function() {
-                  // Update active state
-                  tabs.forEach(t => t.classList.remove('active'));
-                  this.classList.add('active');
+                if (!targetGrid) return;
 
-                  const filterValue = this.getAttribute('data-filter');
-                  const targetId = tabGroup.getAttribute('data-filter-target');
-                  const targetGrid = document.getElementById(targetId);
+                // Update active tab
+                this.parentElement.querySelectorAll('.ccc-filter-tab').forEach(t => {
+                  t.classList.remove('active');
+                });
+                this.classList.add('active');
 
-                  if (!targetGrid) return;
+                // Filter products
+                const cards = targetGrid.querySelectorAll('.ccc-product-card, .deal-card-ccc');
 
-                  // Show loading state
-                  targetGrid.style.opacity = '0.5';
+                cards.forEach(card => {
+                  let shouldShow = true;
 
-                  // Fetch filtered data via API
-                  try {
-                    let endpoint = '';
-                    if (targetId === 'popular-grid') {
-                      endpoint = '/api/deals/popular?dealsOnly=' + (filterValue === 'deals');
-                    } else if (targetId === 'drops-grid') {
-                      endpoint = '/api/deals/price-drops?period=' + filterValue;
+                  if (filterType === 'deals') {
+                    // Only show if has discount/savings
+                    const savingsBadge = card.querySelector('.savings-badge, .deal-card-savings, .badge-good-deal, .badge-best-price');
+                    shouldShow = savingsBadge !== null;
+                  } else if (filterType === 'daily') {
+                    // Show products with price drops in last 24 hours
+                    const dropDate = card.getAttribute('data-drop-date');
+                    if (dropDate) {
+                      const daysDiff = (new Date() - new Date(dropDate)) / (1000 * 60 * 60 * 24);
+                      shouldShow = daysDiff <= 1;
+                    } else {
+                      shouldShow = false;
                     }
-
-                    if (endpoint) {
-                      const response = await fetch(endpoint);
-                      if (response.ok) {
-                        const html = await response.text();
-                        targetGrid.innerHTML = html;
-                      }
+                  } else if (filterType === 'weekly') {
+                    // Show products with price drops in last 7 days
+                    const dropDate = card.getAttribute('data-drop-date');
+                    if (dropDate) {
+                      const daysDiff = (new Date() - new Date(dropDate)) / (1000 * 60 * 60 * 24);
+                      shouldShow = daysDiff <= 7;
+                    } else {
+                      shouldShow = false;
                     }
-                  } catch (err) {
-                    console.error('Filter error:', err);
-                  } finally {
-                    targetGrid.style.opacity = '1';
+                  }
+                  // 'all' or 'recent' shows everything
+
+                  card.style.display = shouldShow ? '' : 'none';
+                });
+              });
+            });
+          })();
+
+          // Category Dropdown Filtering
+          (function() {
+            document.querySelectorAll('.ccc-category-select').forEach(select => {
+              select.addEventListener('change', function() {
+                const targetGrid = document.getElementById(this.id.replace('-category', '-grid'));
+                const selectedCategory = this.value;
+
+                if (!targetGrid) return;
+
+                const cards = targetGrid.querySelectorAll('.ccc-product-card, .deal-card-ccc');
+
+                cards.forEach(card => {
+                  const productCategory = card.getAttribute('data-category');
+
+                  if (!selectedCategory || productCategory === selectedCategory) {
+                    card.style.display = '';
+                  } else {
+                    card.style.display = 'none';
                   }
                 });
               });
