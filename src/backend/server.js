@@ -2133,27 +2133,12 @@ async function start() {
               <option value="amazon" ${source === "amazon" ? "selected" : ""}>${t(lang, "sourceAmazon")}${HAS_AMAZON_API ? "" : " (Not configured)"}</option>
             </select>
           </div>
-          <div class="range-row">
-            <label>${lang === "es" ? "Categoría" : "Category"}</label>
-            <select name="category">
-              <option value="">${lang === "es" ? "Todas las Categorías" : "All Categories"}</option>
-              ${Object.entries(CATEGORIES)
-                .map(
-                  ([id, cat]) => `
-                <option value="${id}" ${category === id ? "selected" : ""}>
-                  ${cat.icon} ${lang === "es" ? cat.name.es : cat.name.en}
-                </option>
-              `,
-                )
-                .join("")}
-            </select>
-          </div>
+
         </div>
         <div class="full">
           <button type="submit">${t(lang, "search")}</button>
         </div>
       </form>
-      ${resultsHtml}
     `;
 
     // Landing page for guests (Modern & Dynamic)
@@ -2779,13 +2764,15 @@ async function start() {
         })),
       ];
 
-      // Remove duplicates by ID
+      // Remove duplicates by ID (compare both id and product_id fields)
       const uniqueProducts = allProducts.filter(
         (product, index, self) =>
           index ===
-          self.findIndex(
-            (p) => p.id === product.id || p.product_id === product.product_id,
-          ),
+          self.findIndex((p) => {
+            const pId = p.id || p.product_id;
+            const productId = product.id || product.product_id;
+            return pId === productId;
+          }),
       );
 
       // Calculate real category stats
@@ -3089,6 +3076,7 @@ async function start() {
           <p class="tagline">${t(lang, "siteTagline")}</p>
           ${searchSection}
         </div>
+        ${resultsHtml}
         ${highlightedDealsSection}
         ${popularProductsSection}
         ${priceDropsSection}
