@@ -1974,6 +1974,7 @@ async function start() {
       }
     }
     const query = String(req.query.q || "").trim();
+    const category = String(req.query.category || "").trim();
     const minPrice = parseNumber(req.query.minPrice, 0);
     const maxPrice = parseNumber(req.query.maxPrice, 50000);
     const sort = String(req.query.sort || "price_asc");
@@ -1990,7 +1991,7 @@ async function start() {
     };
     let isFeatured = false;
 
-    if (query) {
+    if (query || category) {
       results = await fetchAllProducts({
         query,
         minPrice,
@@ -2000,6 +2001,15 @@ async function start() {
         pageSize,
         source,
       });
+
+      // Filter by category if specified
+      if (category && CATEGORIES[category]) {
+        results.products = results.products.filter(
+          (p) => p.category === category,
+        );
+        results.total = results.products.length;
+        results.totalPages = Math.ceil(results.total / pageSize);
+      }
     } else {
       // Fetch featured/trending products when no search query (for all users)
       isFeatured = true;
@@ -2708,58 +2718,45 @@ async function start() {
       ];
     }
 
-    // Demo category discounts
+    // Calculate real category discounts from actual products
     if (categoryDiscounts.length === 0) {
-      categoryDiscounts = [
-        {
-          key: "electronics",
-          icon: "📱",
-          nameEn: "Electronics",
-          nameEs: "Electrónica",
-          maxDiscount: 25,
-          productCount: 156,
-        },
-        {
-          key: "home",
-          icon: "🏠",
-          nameEn: "Home & Kitchen",
-          nameEs: "Hogar y Cocina",
-          maxDiscount: 30,
-          productCount: 89,
-        },
-        {
-          key: "fashion",
-          icon: "👗",
-          nameEn: "Fashion",
-          nameEs: "Moda",
-          maxDiscount: 40,
-          productCount: 234,
-        },
-        {
-          key: "sports",
-          icon: "⚽",
-          nameEn: "Sports & Outdoors",
-          nameEs: "Deportes",
-          maxDiscount: 35,
-          productCount: 67,
-        },
-        {
-          key: "beauty",
-          icon: "💄",
-          nameEn: "Beauty",
-          nameEs: "Belleza",
-          maxDiscount: 28,
-          productCount: 112,
-        },
-        {
-          key: "toys",
-          icon: "🎮",
-          nameEn: "Toys & Games",
-          nameEs: "Juguetes",
-          maxDiscount: 32,
-          productCount: 78,
-        },
+      // Get all mock products for category stats
+      const allMockProducts = getMockProducts();
+
+      // Merge mock products with deal products to get full dataset
+      const allProducts = [
+        ...allMockProducts,
+        ...highlightedDeals.map((d) => ({
+          ...d,
+          price: d.current_price,
+          title: d.product_title,
+          category: detectCategory(d.product_title),
+        })),
+        ...popularProducts.map((p) => ({
+          ...p,
+          price: p.current_price,
+          title: p.product_title,
+          category: detectCategory(p.product_title),
+        })),
+        ...topPriceDrops.map((p) => ({
+          ...p,
+          price: p.current_price,
+          title: p.product_title,
+          category: detectCategory(p.product_title),
+        })),
       ];
+
+      // Remove duplicates by ID
+      const uniqueProducts = allProducts.filter(
+        (product, index, self) =>
+          index ===
+          self.findIndex(
+            (p) => p.id === product.id || p.product_id === product.product_id,
+          ),
+      );
+
+      // Calculate real category stats
+      categoryDiscounts = getCategoryStats(uniqueProducts, lang);
     }
 
     console.log(
@@ -2988,11 +2985,11 @@ async function start() {
           ${categoryDiscounts
             .map(
               (cat) => `
-            <a href="/?q=${encodeURIComponent(lang === "es" ? cat.nameEs : cat.nameEn)}" class="category-discount-card">
+            <a href="/?category=${cat.key}" class="category-discount-card">
               <span class="category-discount-icon">${cat.icon}</span>
               <div class="category-discount-name">${lang === "es" ? cat.nameEs : cat.nameEn}</div>
               <div class="category-discount-percent">
-                ${lang === "es" ? "Hasta" : "Up to"} ${cat.maxDiscount}% ${lang === "es" ? "OFF" : "OFF"}
+                ${cat.maxDiscount > 0 ? `${lang === "es" ? "Hasta" : "Up to"} ${cat.maxDiscount}% ${lang === "es" ? "OFF" : "OFF"}` : `${lang === "es" ? "Ver productos" : "View products"}`}
               </div>
               <div class="category-discount-count">${cat.productCount} ${lang === "es" ? "productos" : "products"}</div>
             </a>
