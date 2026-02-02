@@ -2221,11 +2221,11 @@ async function start() {
     }
 
     // Show demo data when no tracked products exist (ALWAYS show for testing)
-    // Demo Highlighted Deals - Using reliable Unsplash images
+    // Demo Highlighted Deals - Using actual mock product IDs
     if (highlightedDeals.length === 0) {
       highlightedDeals = [
         {
-          product_id: "MLM-demo-1",
+          product_id: "MLM-009", // Smart TV Samsung 55" Crystal UHD 4K
           product_title: 'Smart TV Samsung 55" Crystal UHD 4K',
           current_price: 8999,
           avgPrice: 12499,
@@ -2238,7 +2238,7 @@ async function start() {
             "https://images.unsplash.com/photo-1593359677879-a4bb92f829d1?w=300&h=300&fit=crop",
         },
         {
-          product_id: "MLM-demo-2",
+          product_id: "MLM-001", // iPhone 15 Pro Max 256GB - Titanio Natural
           product_title: "iPhone 15 Pro Max 256GB",
           current_price: 24999,
           avgPrice: 28999,
@@ -2251,20 +2251,20 @@ async function start() {
             "https://images.unsplash.com/photo-1592750475338-74b7b21085ab?w=300&h=300&fit=crop",
         },
         {
-          product_id: "MLM-demo-3",
-          product_title: 'Laptop ASUS VivoBook 15.6" Ryzen 5',
-          current_price: 12999,
-          avgPrice: 15999,
+          product_id: "MLM-003", // MacBook Air M3 13" 256GB - Medianoche
+          product_title: 'Laptop MacBook Air M3 13"',
+          current_price: 26999,
+          avgPrice: 29999,
           isBestPrice: true,
           isGoodDeal: true,
-          savingsPercent: 19,
+          savingsPercent: 10,
           savingsAmount: 3000,
           source: "mercadolibre",
           thumbnail:
             "https://images.unsplash.com/photo-1496181133206-80ce9b88a853?w=300&h=300&fit=crop",
         },
         {
-          product_id: "MLM-demo-4",
+          product_id: "MLM-005", // Audífonos Sony WH-1000XM5 Bluetooth Negro
           product_title: "Audífonos Sony WH-1000XM5",
           current_price: 6499,
           avgPrice: 8499,
@@ -2277,27 +2277,27 @@ async function start() {
             "https://images.unsplash.com/photo-1505740420928-5e560c06d30e?w=300&h=300&fit=crop",
         },
         {
-          product_id: "MLM-demo-5",
+          product_id: "MLM-004", // PlayStation 5 Slim 1TB Digital Edition
           product_title: "Consola PlayStation 5 Slim",
-          current_price: 11999,
-          avgPrice: 14999,
+          current_price: 9499,
+          avgPrice: 11499,
           isBestPrice: true,
           isGoodDeal: true,
-          savingsPercent: 20,
-          savingsAmount: 3000,
+          savingsPercent: 17,
+          savingsAmount: 2000,
           source: "mercadolibre",
           thumbnail:
             "https://images.unsplash.com/photo-1606144042614-b2417e99c4e3?w=300&h=300&fit=crop",
         },
         {
-          product_id: "MLM-demo-6",
-          product_title: "Robot Aspiradora iRobot Roomba",
-          current_price: 7999,
-          avgPrice: 9999,
+          product_id: "MLM-011", // Aspiradora Dyson V15 Detect Absolute
+          product_title: "Aspiradora Dyson V15 Detect",
+          current_price: 14999,
+          avgPrice: 17999,
           isBestPrice: false,
           isGoodDeal: true,
-          savingsPercent: 20,
-          savingsAmount: 2000,
+          savingsPercent: 17,
+          savingsAmount: 3000,
           source: "mercadolibre",
           thumbnail:
             "https://images.unsplash.com/photo-1558618666-fcd25c85cd64?w=300&h=300&fit=crop",
@@ -2305,11 +2305,11 @@ async function start() {
       ];
     }
 
-    // Demo Popular Products - Using reliable Unsplash images
+    // Demo Popular Products - Using actual mock product IDs
     if (popularProducts.length === 0) {
       popularProducts = [
         {
-          product_id: "MLM-pop-1",
+          product_id: "MLM-008", // AirPods Pro 2 con USB-C
           product_title: "AirPods Pro 2da Generación",
           current_price: 4499,
           avgPrice: 5499,
@@ -2321,43 +2321,43 @@ async function start() {
             "https://images.unsplash.com/photo-1606220588913-b3aacb4d2f46?w=300&h=300&fit=crop",
         },
         {
-          product_id: "MLM-pop-2",
+          product_id: "MLM-007", // Nintendo Switch OLED Edición Zelda
           product_title: "Nintendo Switch OLED",
-          current_price: 6999,
-          avgPrice: 7999,
+          current_price: 7999,
+          avgPrice: 8999,
           isBestPrice: true,
           isGoodDeal: true,
-          savingsPercent: 13,
+          savingsPercent: 11,
           source: "mercadolibre",
           thumbnail:
             "https://images.unsplash.com/photo-1578303512597-81e6cc155b3e?w=300&h=300&fit=crop",
         },
         {
-          product_id: "MLM-pop-3",
+          product_id: "MLM-002", // Samsung Galaxy S24 Ultra 256GB Negro
           product_title: "Samsung Galaxy S24 Ultra 256GB",
-          current_price: 22999,
+          current_price: 24999,
           avgPrice: 27999,
           isBestPrice: false,
           isGoodDeal: true,
-          savingsPercent: 18,
+          savingsPercent: 11,
           source: "mercadolibre",
           thumbnail:
             "https://images.unsplash.com/photo-1610945265064-0e34e5519bbf?w=300&h=300&fit=crop",
         },
         {
-          product_id: "MLM-pop-4",
-          product_title: "MacBook Air M2 256GB",
-          current_price: 19999,
-          avgPrice: 24999,
+          product_id: "MLM-003", // MacBook Air M3 13" 256GB - Medianoche
+          product_title: 'MacBook Air M3 13"',
+          current_price: 26999,
+          avgPrice: 29999,
           isBestPrice: true,
           isGoodDeal: true,
-          savingsPercent: 20,
+          savingsPercent: 10,
           source: "mercadolibre",
           thumbnail:
             "https://images.unsplash.com/photo-1517336714731-489689fd1ca8?w=300&h=300&fit=crop",
         },
         {
-          product_id: "MLM-pop-5",
+          product_id: "MLM-011", // Aspiradora Dyson V15 Detect Absolute
           product_title: "Dyson V15 Detect Aspiradora",
           current_price: 14999,
           avgPrice: 17999,
@@ -2369,37 +2369,37 @@ async function start() {
             "https://images.unsplash.com/photo-1558317374-067fb5f30001?w=300&h=300&fit=crop",
         },
         {
-          product_id: "MLM-pop-6",
+          product_id: "MLM-010", // Xbox Series X 1TB Negro
           product_title: "Xbox Series X 1TB",
-          current_price: 11499,
-          avgPrice: 13999,
+          current_price: 12999,
+          avgPrice: 14999,
           isBestPrice: true,
           isGoodDeal: true,
-          savingsPercent: 18,
+          savingsPercent: 13,
           source: "mercadolibre",
           thumbnail:
             "https://images.unsplash.com/photo-1621259182978-fbf93132d53d?w=300&h=300&fit=crop",
         },
         {
-          product_id: "MLM-pop-7",
-          product_title: 'Monitor LG UltraGear 27" 144Hz',
-          current_price: 4999,
-          avgPrice: 6499,
+          product_id: "MLM-006", // iPad Pro M4 11" 256GB WiFi Space Black
+          product_title: 'iPad Pro M4 11" 256GB',
+          current_price: 21999,
+          avgPrice: 24999,
           isBestPrice: false,
           isGoodDeal: true,
-          savingsPercent: 23,
+          savingsPercent: 12,
           source: "mercadolibre",
           thumbnail:
             "https://images.unsplash.com/photo-1527443224154-c4a3942d3acf?w=300&h=300&fit=crop",
         },
         {
-          product_id: "MLM-pop-8",
-          product_title: "Kindle Paperwhite 16GB",
-          current_price: 2999,
-          avgPrice: 3499,
+          product_id: "MLM-012", // Apple Watch Series 9 GPS 45mm Aluminio
+          product_title: "Apple Watch Series 9",
+          current_price: 8999,
+          avgPrice: 9999,
           isBestPrice: true,
           isGoodDeal: true,
-          savingsPercent: 14,
+          savingsPercent: 10,
           source: "mercadolibre",
           thumbnail:
             "https://images.unsplash.com/photo-1611532736597-de2d4265fba3?w=300&h=300&fit=crop",
@@ -2407,28 +2407,28 @@ async function start() {
       ];
     }
 
-    // Demo Top Price Drops - Using reliable Unsplash images
+    // Demo Top Price Drops - Using actual mock product IDs
     if (topPriceDrops.length === 0) {
       topPriceDrops = [
         {
-          product_id: "MLM-drop-1",
-          product_title: "Cámara Canon EOS R50 Kit",
-          current_price: 18999,
-          previousPrice: 24999,
-          dropPercent: 24,
-          dropAmount: 6000,
+          product_id: "MLM-001", // iPhone 15 Pro Max 256GB - Titanio Natural
+          product_title: "iPhone 15 Pro Max 256GB",
+          current_price: 28999,
+          previousPrice: 32999,
+          dropPercent: 12,
+          dropAmount: 4000,
           isBestPrice: true,
           source: "mercadolibre",
           thumbnail:
             "https://images.unsplash.com/photo-1516035069371-29a1b244cc32?w=300&h=300&fit=crop",
         },
         {
-          product_id: "MLM-drop-2",
-          product_title: "Refrigerador Samsung French Door",
-          current_price: 29999,
-          previousPrice: 39999,
-          dropPercent: 25,
-          dropAmount: 10000,
+          product_id: "MLM-002", // Samsung Galaxy S24 Ultra 256GB Negro
+          product_title: "Samsung Galaxy S24 Ultra 256GB",
+          current_price: 24999,
+          previousPrice: 29999,
+          dropPercent: 17,
+          dropAmount: 5000,
           isBestPrice: false,
           isGoodDeal: true,
           source: "mercadolibre",
@@ -2436,23 +2436,23 @@ async function start() {
             "https://images.unsplash.com/photo-1571175443880-49e1d25b2bc5?w=300&h=300&fit=crop",
         },
         {
-          product_id: "MLM-drop-3",
+          product_id: "MLM-012", // Apple Watch Series 9 GPS 45mm Aluminio
           product_title: "Apple Watch Series 9 GPS 45mm",
-          current_price: 8499,
+          current_price: 8999,
           previousPrice: 10999,
-          dropPercent: 23,
-          dropAmount: 2500,
+          dropPercent: 18,
+          dropAmount: 2000,
           isBestPrice: true,
           source: "mercadolibre",
           thumbnail:
             "https://images.unsplash.com/photo-1546868871-7041f2a55e12?w=300&h=300&fit=crop",
         },
         {
-          product_id: "MLM-drop-4",
-          product_title: "Bose QuietComfort Ultra",
-          current_price: 7999,
-          previousPrice: 9999,
-          dropPercent: 20,
+          product_id: "MLM-005", // Audífonos Sony WH-1000XM5 Bluetooth Negro
+          product_title: "Audífonos Sony WH-1000XM5",
+          current_price: 6499,
+          previousPrice: 8499,
+          dropPercent: 24,
           dropAmount: 2000,
           isBestPrice: false,
           isGoodDeal: true,
@@ -2461,24 +2461,24 @@ async function start() {
             "https://images.unsplash.com/photo-1583394838336-acd977736f90?w=300&h=300&fit=crop",
         },
         {
-          product_id: "MLM-drop-5",
-          product_title: "GoPro Hero 12 Black",
-          current_price: 8499,
-          previousPrice: 10999,
-          dropPercent: 23,
-          dropAmount: 2500,
+          product_id: "MLM-004", // PlayStation 5 Slim 1TB Digital Edition
+          product_title: "PlayStation 5 Slim",
+          current_price: 9499,
+          previousPrice: 11499,
+          dropPercent: 17,
+          dropAmount: 2000,
           isBestPrice: true,
           source: "mercadolibre",
           thumbnail:
             "https://images.unsplash.com/photo-1564466809058-bf4114d55352?w=300&h=300&fit=crop",
         },
         {
-          product_id: "MLM-drop-6",
-          product_title: "Lavadora LG TurboWash 22kg",
-          current_price: 16999,
-          previousPrice: 21999,
-          dropPercent: 23,
-          dropAmount: 5000,
+          product_id: "MLM-011", // Aspiradora Dyson V15 Detect Absolute
+          product_title: "Aspiradora Dyson V15 Detect",
+          current_price: 14999,
+          previousPrice: 18999,
+          dropPercent: 21,
+          dropAmount: 4000,
           isBestPrice: false,
           isGoodDeal: true,
           source: "mercadolibre",
@@ -2486,11 +2486,11 @@ async function start() {
             "https://images.unsplash.com/photo-1626806787461-102c1bfaaea1?w=300&h=300&fit=crop",
         },
         {
-          product_id: "MLM-drop-7",
-          product_title: "iPad Air M1 256GB WiFi",
-          current_price: 12999,
-          previousPrice: 16999,
-          dropPercent: 24,
+          product_id: "MLM-006", // iPad Pro M4 11" 256GB WiFi Space Black
+          product_title: 'iPad Pro M4 11" 256GB',
+          current_price: 21999,
+          previousPrice: 25999,
+          dropPercent: 15,
           dropAmount: 4000,
           isBestPrice: true,
           source: "mercadolibre",
@@ -2498,12 +2498,12 @@ async function start() {
             "https://images.unsplash.com/photo-1544244015-0df4b3ffc6b0?w=300&h=300&fit=crop",
         },
         {
-          product_id: "MLM-drop-8",
-          product_title: "Silla Gamer Secretlab Titan",
-          current_price: 9999,
-          previousPrice: 12999,
-          dropPercent: 23,
-          dropAmount: 3000,
+          product_id: "MLM-007", // Nintendo Switch OLED Edición Zelda
+          product_title: "Nintendo Switch OLED Zelda",
+          current_price: 7999,
+          previousPrice: 9499,
+          dropPercent: 16,
+          dropAmount: 1500,
           isBestPrice: false,
           isGoodDeal: true,
           source: "mercadolibre",
