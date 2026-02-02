@@ -1,0 +1,38 @@
+services:
+  - type: web
+    name: shopsavvy-price-tracker
+    env: node
+    buildCommand: npm install
+    startCommand: node src/backend/server.js
+    envVars:
+      - key: NODE_ENV
+        value: production
+      - key: PORT
+        fromService:
+          type: web
+          name: shopsavvy-price-tracker
+          property: port
+      - key: JWT_SECRET
+        sync: false
+      - key: SUPABASE_URL
+        sync: false
+      - key: SUPABASE_ANON_KEY
+        sync: false
+      - key: SUPABASE_SERVICE_ROLE_KEY
+        sync: false
+      - key: MERCADO_LIBRE_App_ID
+        sync: false
+      - key: MERCADO_LIBRE_CLIENT_SECRET
+        sync: false
+      - key: MERCADO_LIBRE_SITE
+        value: MLM
+      - key: REDIS_URL
+        sync: false
+      - key: AMAZON_ACCESS_KEY
+        sync: false
+      - key: AMAZON_SECRET_KEY
+        sync: false
+      - key: AMAZON_PARTNER_TAG
+        sync: false
+      - key: AMAZON_REGION
+        value: us-east-1

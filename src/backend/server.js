@@ -25,22 +25,46 @@ const {
 } = require("./queue");
 
 // Use Supabase for cloud storage, SQLite as fallback
-const USE_SUPABASE = Boolean(process.env.SUPABASE_URL && process.env.SUPABASE_ANON_KEY);
-console.log("[Config] Database:", USE_SUPABASE ? "Supabase (cloud)" : "SQLite (local)");
+const USE_SUPABASE = Boolean(
+  process.env.SUPABASE_URL && process.env.SUPABASE_ANON_KEY,
+);
+console.log(
+  "[Config] Database:",
+  USE_SUPABASE ? "Supabase (cloud)" : "SQLite (local)",
+);
 
 // Debug: Log config status
-console.log("[Config] SUPABASE_URL:", process.env.SUPABASE_URL ? "✓ Set" : "✗ Not set");
-console.log("[Config] SUPABASE_ANON_KEY:", process.env.SUPABASE_ANON_KEY ? "✓ Set" : "✗ Not set");
-console.log("[Config] AMAZON_ACCESS_KEY:", process.env.AMAZON_ACCESS_KEY ? "✓ Set" : "✗ Not set");
-console.log("[Config] AMAZON_SECRET_KEY:", process.env.AMAZON_SECRET_KEY ? "✓ Set" : "✗ Not set");
-console.log("[Config] AMAZON_PARTNER_TAG:", process.env.AMAZON_PARTNER_TAG ? "✓ Set" : "✗ Not set");
-console.log("[Config] REDIS_URL:", process.env.REDIS_URL ? "✓ Set" : "✗ Not set");
+console.log(
+  "[Config] SUPABASE_URL:",
+  process.env.SUPABASE_URL ? "✓ Set" : "✗ Not set",
+);
+console.log(
+  "[Config] SUPABASE_ANON_KEY:",
+  process.env.SUPABASE_ANON_KEY ? "✓ Set" : "✗ Not set",
+);
+console.log(
+  "[Config] AMAZON_ACCESS_KEY:",
+  process.env.AMAZON_ACCESS_KEY ? "✓ Set" : "✗ Not set",
+);
+console.log(
+  "[Config] AMAZON_SECRET_KEY:",
+  process.env.AMAZON_SECRET_KEY ? "✓ Set" : "✗ Not set",
+);
+console.log(
+  "[Config] AMAZON_PARTNER_TAG:",
+  process.env.AMAZON_PARTNER_TAG ? "✓ Set" : "✗ Not set",
+);
+console.log(
+  "[Config] REDIS_URL:",
+  process.env.REDIS_URL ? "✓ Set" : "✗ Not set",
+);
 
 const PORT = process.env.PORT || 3000;
 const JWT_SECRET = process.env.JWT_SECRET || "dev-secret";
 
 // Mercado Libre API Configuration
-const ML_CLIENT_ID = process.env.MERCADO_LIBRE_App_ID || process.env.MERCADO_LIBRE_CLIENT_ID || "";
+const ML_CLIENT_ID =
+  process.env.MERCADO_LIBRE_App_ID || process.env.MERCADO_LIBRE_CLIENT_ID || "";
 const ML_CLIENT_SECRET = process.env.MERCADO_LIBRE_CLIENT_SECRET || "";
 const ML_SITE = process.env.MERCADO_LIBRE_SITE || "MLM"; // Default to Mexico
 
@@ -53,19 +77,30 @@ const AMAZON_ACCESS_KEY = process.env.AMAZON_ACCESS_KEY || "";
 const AMAZON_SECRET_KEY = process.env.AMAZON_SECRET_KEY || "";
 const AMAZON_PARTNER_TAG = process.env.AMAZON_PARTNER_TAG || "";
 const AMAZON_REGION = process.env.AMAZON_REGION || "us-east-1";
-const AMAZON_HOST = AMAZON_REGION === "us-east-1" ? "webservices.amazon.com" : `webservices.amazon.${AMAZON_REGION.split("-")[0]}`;
+const AMAZON_HOST =
+  AMAZON_REGION === "us-east-1"
+    ? "webservices.amazon.com"
+    : `webservices.amazon.${AMAZON_REGION.split("-")[0]}`;
 
 // Check if Amazon PA-API is configured
-const HAS_AMAZON_API = Boolean(AMAZON_ACCESS_KEY && AMAZON_SECRET_KEY && AMAZON_PARTNER_TAG);
+const HAS_AMAZON_API = Boolean(
+  AMAZON_ACCESS_KEY && AMAZON_SECRET_KEY && AMAZON_PARTNER_TAG,
+);
 
 // Auto-detect certs in ./certs directory (supports both PEM and PFX)
 const defaultKeyPath = path.join(__dirname, "..", "certs", "localhost-key.pem");
 const defaultCertPath = path.join(__dirname, "..", "certs", "localhost.pem");
 const defaultPfxPath = path.join(__dirname, "..", "certs", "localhost.pfx");
 
-const SSL_KEY_PATH = process.env.SSL_KEY_PATH || (fs.existsSync(defaultKeyPath) ? defaultKeyPath : "");
-const SSL_CERT_PATH = process.env.SSL_CERT_PATH || (fs.existsSync(defaultCertPath) ? defaultCertPath : "");
-const SSL_PFX_PATH = process.env.SSL_PFX_PATH || (fs.existsSync(defaultPfxPath) ? defaultPfxPath : "");
+const SSL_KEY_PATH =
+  process.env.SSL_KEY_PATH ||
+  (fs.existsSync(defaultKeyPath) ? defaultKeyPath : "");
+const SSL_CERT_PATH =
+  process.env.SSL_CERT_PATH ||
+  (fs.existsSync(defaultCertPath) ? defaultCertPath : "");
+const SSL_PFX_PATH =
+  process.env.SSL_PFX_PATH ||
+  (fs.existsSync(defaultPfxPath) ? defaultPfxPath : "");
 const SSL_PFX_PASSPHRASE = process.env.SSL_PFX_PASSPHRASE || "dev";
 
 const HAS_TLS =
@@ -76,11 +111,14 @@ const HAS_TLS =
 
 // Debug logging
 if (HAS_TLS) {
-  console.log(`TLS detected: ${SSL_PFX_PATH || `${SSL_KEY_PATH} + ${SSL_CERT_PATH}`}`);
+  console.log(
+    `TLS detected: ${SSL_PFX_PATH || `${SSL_KEY_PATH} + ${SSL_CERT_PATH}`}`,
+  );
 }
 
-const APP_BASE_URL = process.env.APP_BASE_URL
-  || `${HAS_TLS ? "https" : "http"}://localhost:${PORT}`;
+const APP_BASE_URL =
+  process.env.APP_BASE_URL ||
+  `${HAS_TLS ? "https" : "http"}://localhost:${PORT}`;
 
 // Handle favicon requests to prevent 404 errors
 const faviconSvg = `<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 100 100"><rect width="100" height="100" rx="20" fill="#3C91ED"/><text x="50" y="68" font-family="Arial" font-size="50" font-weight="bold" fill="white" text-anchor="middle">OR</text></svg>`;
@@ -103,7 +141,7 @@ const translations = {
     priceLowHigh: "Price: low to high",
     priceHighLow: "Price: high to low",
     search: "Search",
-    pleaseLogin: "Please <a href=\"/login\">log in</a> to search for products.",
+    pleaseLogin: 'Please <a href="/login">log in</a> to search for products.',
     noResults: "No results found.",
     page: "Page",
     of: "of",
@@ -158,7 +196,7 @@ const translations = {
     sourceMercadoLibre: "Mercado Libre",
     sourceAmazon: "Amazon",
     fromAmazon: "Amazon",
-    fromMercadoLibre: "Mercado Libre"
+    fromMercadoLibre: "Mercado Libre",
   },
   es: {
     // Header
@@ -176,7 +214,8 @@ const translations = {
     priceLowHigh: "Precio: menor a mayor",
     priceHighLow: "Precio: mayor a menor",
     search: "Buscar",
-    pleaseLogin: "Por favor <a href=\"/login\">inicia sesión</a> para buscar productos.",
+    pleaseLogin:
+      'Por favor <a href="/login">inicia sesión</a> para buscar productos.',
     noResults: "No se encontraron resultados.",
     page: "Página",
     of: "de",
@@ -231,21 +270,30 @@ const translations = {
     sourceMercadoLibre: "Mercado Libre",
     sourceAmazon: "Amazon",
     fromAmazon: "Amazon",
-    fromMercadoLibre: "Mercado Libre"
-  }
+    fromMercadoLibre: "Mercado Libre",
+  },
 };
 
 function t(lang, key) {
   return translations[lang]?.[key] || translations.en[key] || key;
 }
 
-function renderPage(title, body, extraHead = "", isLoggedIn = false, userEmail = "", lang = "en", userData = null) {
+function renderPage(
+  title,
+  body,
+  extraHead = "",
+  isLoggedIn = false,
+  userEmail = "",
+  lang = "en",
+  userData = null,
+) {
   const otherLang = lang === "en" ? "es" : "en";
   const currentFlag = lang === "en" ? "🇺🇸" : "🇲🇽";
   const currentLangName = lang === "en" ? "EN" : "ES";
 
   // User data for avatar display
-  const displayName = userData?.username || (userEmail ? userEmail.split("@")[0] : "");
+  const displayName =
+    userData?.username || (userEmail ? userEmail.split("@")[0] : "");
   const profilePic = userData?.profile_picture_url;
   const userInitials = getInitials(userData?.username || userEmail);
 
@@ -274,17 +322,20 @@ function renderPage(title, body, extraHead = "", isLoggedIn = false, userEmail =
     <style>/* Page-specific overrides */</style>
     ${extraHead}
   </head>
-  <body class="${isLoggedIn ? '' : 'guest-page'}">
+  <body class="${isLoggedIn ? "" : "guest-page"}">
     <header class="site-header">
       <a href="/" class="logo">OfertaRadar</a>
       <nav class="nav">
-        ${isLoggedIn ? `
+        ${
+          isLoggedIn
+            ? `
           <div class="user-dropdown" id="userDropdown">
             <button class="user-dropdown-toggle" type="button" id="dropdownToggle">
               <div class="user-avatar-small">
-                ${profilePic
-                  ? `<img src="${profilePic}" alt="${displayName}" />`
-                  : `<span class="avatar-initials-small">${userInitials}</span>`
+                ${
+                  profilePic
+                    ? `<img src="${profilePic}" alt="${displayName}" />`
+                    : `<span class="avatar-initials-small">${userInitials}</span>`
                 }
               </div>
               <svg class="chevron" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
@@ -294,9 +345,10 @@ function renderPage(title, body, extraHead = "", isLoggedIn = false, userEmail =
             <div class="user-dropdown-menu" id="dropdownMenu">
               <div class="dropdown-header">
                 <div class="dropdown-avatar">
-                  ${profilePic
-                    ? `<img src="${profilePic}" alt="${displayName}" />`
-                    : `<span class="avatar-initials">${userInitials}</span>`
+                  ${
+                    profilePic
+                      ? `<img src="${profilePic}" alt="${displayName}" />`
+                      : `<span class="avatar-initials">${userInitials}</span>`
                   }
                 </div>
                 <div class="dropdown-user-info">
@@ -341,10 +393,12 @@ function renderPage(title, body, extraHead = "", isLoggedIn = false, userEmail =
               </form>
             </div>
           </div>
-        ` : `
+        `
+            : `
           <a href="/login" class="nav-link">${t(lang, "login")}</a>
           <a href="/register" class="nav-btn-primary">${t(lang, "register")}</a>
-        `}
+        `
+        }
 
         <!-- Theme Toggle -->
         <button class="theme-toggle" id="themeToggle" title="${lang === "es" ? "Cambiar tema" : "Toggle theme"}">
@@ -401,7 +455,9 @@ function renderPage(title, body, extraHead = "", isLoggedIn = false, userEmail =
     <main class="main-content">
     ${body}
     </main>
-    ${isLoggedIn ? `
+    ${
+      isLoggedIn
+        ? `
     <script>
       (function() {
         const dropdown = document.querySelector('.user-dropdown');
@@ -435,7 +491,9 @@ function renderPage(title, body, extraHead = "", isLoggedIn = false, userEmail =
         }
       })();
     </script>
-    ` : ''}
+    `
+        : ""
+    }
     <script>
       // Header scroll effect
       (function() {
@@ -556,17 +614,16 @@ function renderPage(title, body, extraHead = "", isLoggedIn = false, userEmail =
 }
 
 function createToken(user) {
-  return jwt.sign(
-    { id: user.id, email: user.email },
-    JWT_SECRET,
-    { expiresIn: "7d" }
-  );
+  return jwt.sign({ id: user.id, email: user.email }, JWT_SECRET, {
+    expiresIn: "7d",
+  });
 }
 
 function setAuthCookie(res, token) {
   // Detect if running in production (Render sets NODE_ENV)
   const isProduction = process.env.NODE_ENV === "production";
-  const isLocalhost = !isProduction && (process.env.APP_BASE_URL || "").includes("localhost");
+  const isLocalhost =
+    !isProduction && (process.env.APP_BASE_URL || "").includes("localhost");
 
   const cookieOptions = {
     httpOnly: true,
@@ -576,7 +633,11 @@ function setAuthCookie(res, token) {
     path: "/",
   };
 
-  console.log("[Cookie] Setting auth cookie (secure:", cookieOptions.secure, ")");
+  console.log(
+    "[Cookie] Setting auth cookie (secure:",
+    cookieOptions.secure,
+    ")",
+  );
   res.cookie("token", token, cookieOptions);
 }
 
@@ -598,7 +659,13 @@ function setLangCookie(res, lang) {
 }
 
 // Dribbble-style split-screen auth page renderer
-function renderAuthPage(title, formContent, extraScript = "", lang = "en", illustrationText = {}) {
+function renderAuthPage(
+  title,
+  formContent,
+  extraScript = "",
+  lang = "en",
+  illustrationText = {},
+) {
   const otherLang = lang === "en" ? "es" : "en";
 
   return `<!doctype html>
@@ -668,19 +735,19 @@ function authRequired(req, res, next) {
  */
 function sendVerificationEmail(email, verificationLink, onSuccess, onError) {
   console.log(`\n[Verification Email] Sending to: ${email}`);
-  
+
   // Simulate email sending (in real app, this would be async)
   setTimeout(() => {
     try {
       // In development, just log to console
       console.log(`Verify your account: ${verificationLink}\n`);
-      
+
       // Call the success callback
       if (onSuccess) {
         onSuccess({
           email: email,
           sentAt: new Date().toISOString(),
-          linkExpires: "24 hours"
+          linkExpires: "24 hours",
         });
       }
     } catch (error) {
@@ -699,7 +766,7 @@ function sendVerificationEmail(email, verificationLink, onSuccess, onError) {
 function logAction(action, details, callback) {
   const timestamp = new Date().toISOString();
   console.log(`[${timestamp}] ${action}:`, details);
-  
+
   // Execute callback after logging
   if (callback && typeof callback === "function") {
     callback();
@@ -771,7 +838,9 @@ function getInitials(str) {
 function buildSearchParams(baseUrl, params) {
   // Handle relative URLs by using a dummy base
   const isRelative = baseUrl.startsWith("/");
-  const url = isRelative ? new URL(baseUrl, "http://localhost") : new URL(baseUrl);
+  const url = isRelative
+    ? new URL(baseUrl, "http://localhost")
+    : new URL(baseUrl);
 
   Object.entries(params).forEach(([key, value]) => {
     if (value === undefined || value === null || value === "") {
@@ -781,7 +850,7 @@ function buildSearchParams(baseUrl, params) {
   });
 
   // Return just the path + search for relative URLs
-  return isRelative ? (url.pathname + url.search) : url.toString();
+  return isRelative ? url.pathname + url.search : url.toString();
 }
 
 function parseNumber(value, fallback) {
@@ -798,10 +867,12 @@ function getMockProducts() {
     {
       id: "MLM-001",
       title: "iPhone 15 Pro Max 256GB - Titanio Natural",
-      description: "El iPhone más avanzado con chip A17 Pro, cámara de 48MP y Dynamic Island.",
+      description:
+        "El iPhone más avanzado con chip A17 Pro, cámara de 48MP y Dynamic Island.",
       price: 28999,
       currency_id: "MXN",
-      thumbnail: "https://http2.mlstatic.com/D_NQ_NP_2X_600741-MLA54876949912_042023-F.webp",
+      thumbnail:
+        "https://http2.mlstatic.com/D_NQ_NP_2X_600741-MLA54876949912_042023-F.webp",
       permalink: "https://www.mercadolibre.com.mx/",
       condition: "new",
       available_quantity: 50,
@@ -810,10 +881,12 @@ function getMockProducts() {
     {
       id: "MLM-002",
       title: "Samsung Galaxy S24 Ultra 256GB Negro",
-      description: "Smartphone con Galaxy AI, cámara de 200MP y S Pen incluido.",
+      description:
+        "Smartphone con Galaxy AI, cámara de 200MP y S Pen incluido.",
       price: 24999,
       currency_id: "MXN",
-      thumbnail: "https://http2.mlstatic.com/D_NQ_NP_2X_896939-MLM72661707718_112023-F.webp",
+      thumbnail:
+        "https://http2.mlstatic.com/D_NQ_NP_2X_896939-MLM72661707718_112023-F.webp",
       permalink: "https://www.mercadolibre.com.mx/",
       condition: "new",
       available_quantity: 35,
@@ -821,11 +894,13 @@ function getMockProducts() {
     },
     {
       id: "MLM-003",
-      title: "MacBook Air M3 13\" 256GB - Medianoche",
-      description: "Laptop ultraligera con chip M3, 18 horas de batería y pantalla Liquid Retina.",
+      title: 'MacBook Air M3 13" 256GB - Medianoche',
+      description:
+        "Laptop ultraligera con chip M3, 18 horas de batería y pantalla Liquid Retina.",
       price: 26999,
       currency_id: "MXN",
-      thumbnail: "https://http2.mlstatic.com/D_NQ_NP_2X_854712-MLA74601558556_022024-F.webp",
+      thumbnail:
+        "https://http2.mlstatic.com/D_NQ_NP_2X_854712-MLA74601558556_022024-F.webp",
       permalink: "https://www.mercadolibre.com.mx/",
       condition: "new",
       available_quantity: 20,
@@ -834,10 +909,12 @@ function getMockProducts() {
     {
       id: "MLM-004",
       title: "PlayStation 5 Slim 1TB Digital Edition",
-      description: "Consola de nueva generación con SSD ultrarrápido y DualSense.",
+      description:
+        "Consola de nueva generación con SSD ultrarrápido y DualSense.",
       price: 9499,
       currency_id: "MXN",
-      thumbnail: "https://http2.mlstatic.com/D_NQ_NP_2X_691344-MLM74174576447_012024-F.webp",
+      thumbnail:
+        "https://http2.mlstatic.com/D_NQ_NP_2X_691344-MLM74174576447_012024-F.webp",
       permalink: "https://www.mercadolibre.com.mx/",
       condition: "new",
       available_quantity: 15,
@@ -846,10 +923,12 @@ function getMockProducts() {
     {
       id: "MLM-005",
       title: "Audífonos Sony WH-1000XM5 Bluetooth Negro",
-      description: "Los mejores audífonos con cancelación de ruido y 30 horas de batería.",
+      description:
+        "Los mejores audífonos con cancelación de ruido y 30 horas de batería.",
       price: 6499,
       currency_id: "MXN",
-      thumbnail: "https://http2.mlstatic.com/D_NQ_NP_2X_673653-MLA51543508498_092022-F.webp",
+      thumbnail:
+        "https://http2.mlstatic.com/D_NQ_NP_2X_673653-MLA51543508498_092022-F.webp",
       permalink: "https://www.mercadolibre.com.mx/",
       condition: "new",
       available_quantity: 45,
@@ -857,11 +936,13 @@ function getMockProducts() {
     },
     {
       id: "MLM-006",
-      title: "iPad Pro M4 11\" 256GB WiFi Space Black",
-      description: "La tablet más potente con chip M4, pantalla Ultra Retina XDR y Apple Pencil Pro.",
+      title: 'iPad Pro M4 11" 256GB WiFi Space Black',
+      description:
+        "La tablet más potente con chip M4, pantalla Ultra Retina XDR y Apple Pencil Pro.",
       price: 21999,
       currency_id: "MXN",
-      thumbnail: "https://http2.mlstatic.com/D_NQ_NP_2X_929429-MLA75879827421_042024-F.webp",
+      thumbnail:
+        "https://http2.mlstatic.com/D_NQ_NP_2X_929429-MLA75879827421_042024-F.webp",
       permalink: "https://www.mercadolibre.com.mx/",
       condition: "new",
       available_quantity: 25,
@@ -870,10 +951,12 @@ function getMockProducts() {
     {
       id: "MLM-007",
       title: "Nintendo Switch OLED Edición Zelda",
-      description: "Consola portátil con pantalla OLED de 7 pulgadas, edición especial.",
+      description:
+        "Consola portátil con pantalla OLED de 7 pulgadas, edición especial.",
       price: 7999,
       currency_id: "MXN",
-      thumbnail: "https://http2.mlstatic.com/D_NQ_NP_2X_943597-MLM73034589839_112023-F.webp",
+      thumbnail:
+        "https://http2.mlstatic.com/D_NQ_NP_2X_943597-MLM73034589839_112023-F.webp",
       permalink: "https://www.mercadolibre.com.mx/",
       condition: "new",
       available_quantity: 30,
@@ -882,10 +965,12 @@ function getMockProducts() {
     {
       id: "MLM-008",
       title: "AirPods Pro 2 con USB-C",
-      description: "Audífonos con cancelación activa de ruido, audio espacial y estuche MagSafe.",
+      description:
+        "Audífonos con cancelación activa de ruido, audio espacial y estuche MagSafe.",
       price: 4499,
       currency_id: "MXN",
-      thumbnail: "https://http2.mlstatic.com/D_NQ_NP_2X_756250-MLA73970988653_012024-F.webp",
+      thumbnail:
+        "https://http2.mlstatic.com/D_NQ_NP_2X_756250-MLA73970988653_012024-F.webp",
       permalink: "https://www.mercadolibre.com.mx/",
       condition: "new",
       available_quantity: 60,
@@ -893,11 +978,13 @@ function getMockProducts() {
     },
     {
       id: "MLM-009",
-      title: "Smart TV Samsung 55\" Crystal UHD 4K",
-      description: "Televisor inteligente con Tizen, Gaming Hub y diseño AirSlim.",
+      title: 'Smart TV Samsung 55" Crystal UHD 4K',
+      description:
+        "Televisor inteligente con Tizen, Gaming Hub y diseño AirSlim.",
       price: 8999,
       currency_id: "MXN",
-      thumbnail: "https://http2.mlstatic.com/D_NQ_NP_2X_600741-MLA54876949912_042023-F.webp",
+      thumbnail:
+        "https://http2.mlstatic.com/D_NQ_NP_2X_600741-MLA54876949912_042023-F.webp",
       permalink: "https://www.mercadolibre.com.mx/",
       condition: "new",
       available_quantity: 18,
@@ -909,7 +996,8 @@ function getMockProducts() {
       description: "La consola Xbox más rápida con 4K a 120fps y Quick Resume.",
       price: 12999,
       currency_id: "MXN",
-      thumbnail: "https://http2.mlstatic.com/D_NQ_NP_2X_709115-MLA45629061694_042021-F.webp",
+      thumbnail:
+        "https://http2.mlstatic.com/D_NQ_NP_2X_709115-MLA45629061694_042021-F.webp",
       permalink: "https://www.mercadolibre.com.mx/",
       condition: "new",
       available_quantity: 22,
@@ -918,10 +1006,12 @@ function getMockProducts() {
     {
       id: "MLM-011",
       title: "Aspiradora Dyson V15 Detect Absolute",
-      description: "Aspiradora inalámbrica con láser para detectar polvo microscópico.",
+      description:
+        "Aspiradora inalámbrica con láser para detectar polvo microscópico.",
       price: 14999,
       currency_id: "MXN",
-      thumbnail: "https://http2.mlstatic.com/D_NQ_NP_2X_672464-MLA50401987399_062022-F.webp",
+      thumbnail:
+        "https://http2.mlstatic.com/D_NQ_NP_2X_672464-MLA50401987399_062022-F.webp",
       permalink: "https://www.mercadolibre.com.mx/",
       condition: "new",
       available_quantity: 12,
@@ -930,10 +1020,12 @@ function getMockProducts() {
     {
       id: "MLM-012",
       title: "Apple Watch Series 9 GPS 45mm Aluminio",
-      description: "Reloj inteligente con chip S9, doble toque y pantalla siempre activa.",
+      description:
+        "Reloj inteligente con chip S9, doble toque y pantalla siempre activa.",
       price: 8999,
       currency_id: "MXN",
-      thumbnail: "https://http2.mlstatic.com/D_NQ_NP_2X_667508-MLA73458044571_122023-F.webp",
+      thumbnail:
+        "https://http2.mlstatic.com/D_NQ_NP_2X_667508-MLA73458044571_122023-F.webp",
       permalink: "https://www.mercadolibre.com.mx/",
       condition: "new",
       available_quantity: 40,
@@ -946,7 +1038,14 @@ function getMockProductById(id) {
   return getMockProducts().find((product) => product.id === id) || null;
 }
 
-function searchMockProducts({ query, minPrice, maxPrice, sort, page, pageSize }) {
+function searchMockProducts({
+  query,
+  minPrice,
+  maxPrice,
+  sort,
+  page,
+  pageSize,
+}) {
   const normalizedQuery = query.toLowerCase();
   let results = getMockProducts().filter((product) => {
     const matchesQuery = product.title.toLowerCase().includes(normalizedQuery);
@@ -970,85 +1069,126 @@ function searchMockProducts({ query, minPrice, maxPrice, sort, page, pageSize })
   return { products: results, total, totalPages };
 }
 
-async function fetchMLProducts({ query, minPrice, maxPrice, sort, page, pageSize }) {
-  // Try to use real Mercado Libre API if configured
-  const token = await getMLAccessToken();
+async function fetchMLProducts({
+  query,
+  minPrice,
+  maxPrice,
+  sort,
+  page,
+  pageSize,
+}) {
+  try {
+    // Build search URL with filters
+    const sortMap = {
+      price_asc: "price_asc",
+      price_desc: "price_desc",
+    };
 
-  if (token) {
-    try {
-      // Build search URL with filters
-      const sortMap = {
-        price_asc: "price_asc",
-        price_desc: "price_desc",
-      };
+    const searchUrl = new URL(
+      `https://api.mercadolibre.com/sites/${ML_SITE}/search`,
+    );
+    searchUrl.searchParams.set("q", query);
+    searchUrl.searchParams.set("offset", String((page - 1) * pageSize));
+    searchUrl.searchParams.set("limit", String(pageSize));
 
-      const searchUrl = new URL(`https://api.mercadolibre.com/sites/${ML_SITE}/search`);
-      searchUrl.searchParams.set("q", query);
-      searchUrl.searchParams.set("offset", String((page - 1) * pageSize));
-      searchUrl.searchParams.set("limit", String(pageSize));
-
-      if (Number.isFinite(minPrice)) {
-        searchUrl.searchParams.set("price", `${minPrice}-${maxPrice || "*"}`);
-      }
-      if (sort && sortMap[sort]) {
-        searchUrl.searchParams.set("sort", sortMap[sort]);
-      }
-
-      const response = await fetch(searchUrl.toString(), {
-        headers: { Authorization: `Bearer ${token}` },
-      });
-
-      if (response.ok) {
-        const data = await response.json();
-        return {
-          products: data.results || [],
-          total: data.paging?.total || 0,
-          totalPages: Math.ceil((data.paging?.total || 0) / pageSize),
-          error: "",
-        };
-      }
-
-      // If API returns forbidden, fall back to mock data
-      console.log("ML Search API restricted, using demo data");
-    } catch (error) {
-      console.error("ML API error:", error);
+    if (Number.isFinite(minPrice)) {
+      searchUrl.searchParams.set("price", `${minPrice}-${maxPrice || "*"}`);
     }
+    if (sort && sortMap[sort]) {
+      searchUrl.searchParams.set("sort", sortMap[sort]);
+    }
+
+    // First try: Use PUBLIC API (no authentication required for search)
+    console.log(`[ML API] Searching for: ${query}`);
+    let response = await fetch(searchUrl.toString());
+
+    // If public API fails, try with authentication
+    if (!response.ok && ML_CLIENT_ID && ML_CLIENT_SECRET) {
+      console.log("[ML API] Public API failed, trying with authentication...");
+      const token = await getMLAccessToken();
+      if (token) {
+        response = await fetch(searchUrl.toString(), {
+          headers: { Authorization: `Bearer ${token}` },
+        });
+      }
+    }
+
+    if (response.ok) {
+      const data = await response.json();
+      console.log(`[ML API] Found ${data.paging?.total || 0} results`);
+      return {
+        products: data.results || [],
+        total: data.paging?.total || 0,
+        totalPages: Math.ceil((data.paging?.total || 0) / pageSize),
+        error: "",
+        isRealData: true,
+      };
+    }
+
+    const errorText = await response.text();
+    console.log(`[ML API] Search failed (${response.status}):`, errorText);
+  } catch (error) {
+    console.error("[ML API] Exception:", error.message);
   }
 
   // Fallback to mock data
-  const mockResults = searchMockProducts({ query, minPrice, maxPrice, sort, page, pageSize });
+  console.log("[ML API] Using mock data fallback");
+  const mockResults = searchMockProducts({
+    query,
+    minPrice,
+    maxPrice,
+    sort,
+    page,
+    pageSize,
+  });
   return {
     ...mockResults,
-    notice: "",
+    notice:
+      "Demo mode: Using sample data. Configure Mercado Libre API for real products.",
     error: "",
+    isRealData: false,
   };
 }
 
 async function fetchMLProductById(id) {
-  const token = await getMLAccessToken();
+  try {
+    // First try: Use PUBLIC API (no authentication required)
+    console.log(`[ML API] Fetching product: ${id}`);
+    let response = await fetch(`https://api.mercadolibre.com/items/${id}`);
 
-  if (token) {
-    try {
-      const response = await fetch(`https://api.mercadolibre.com/items/${id}`, {
-        headers: { Authorization: `Bearer ${token}` },
-      });
-
-      if (response.ok) {
-        const product = await response.json();
-        return { product, notice: "", error: "" };
+    // If public API fails, try with authentication
+    if (!response.ok && ML_CLIENT_ID && ML_CLIENT_SECRET) {
+      console.log("[ML API] Public API failed, trying with authentication...");
+      const token = await getMLAccessToken();
+      if (token) {
+        response = await fetch(`https://api.mercadolibre.com/items/${id}`, {
+          headers: { Authorization: `Bearer ${token}` },
+        });
       }
-
-      console.log("ML Items API restricted, using demo data");
-    } catch (error) {
-      console.error("ML API error:", error);
     }
+
+    if (response.ok) {
+      const product = await response.json();
+      console.log(`[ML API] Product found: ${product.title}`);
+      return { product, notice: "", error: "", isRealData: true };
+    }
+
+    const errorText = await response.text();
+    console.log(
+      `[ML API] Product fetch failed (${response.status}):`,
+      errorText,
+    );
+  } catch (error) {
+    console.error("[ML API] Exception:", error.message);
   }
 
   // Fallback to mock data
+  console.log("[ML API] Using mock product data");
   return {
     product: getMockProductById(id),
-    notice: "",
-    error: ""
+    notice: "Demo mode: This is sample data.",
+    error: "",
+    isRealData: false,
   };
 }
 
@@ -1058,9 +1198,12 @@ async function fetchMLCategories() {
 
   if (token) {
     try {
-      const response = await fetch(`https://api.mercadolibre.com/sites/${ML_SITE}/categories`, {
-        headers: { Authorization: `Bearer ${token}` },
-      });
+      const response = await fetch(
+        `https://api.mercadolibre.com/sites/${ML_SITE}/categories`,
+        {
+          headers: { Authorization: `Bearer ${token}` },
+        },
+      );
 
       if (response.ok) {
         return await response.json();
@@ -1087,7 +1230,14 @@ async function fetchMLCategories() {
 /**
  * Create AWS Signature Version 4 for Amazon PA-API
  */
-function createAmazonSignature(method, uri, queryString, headers, payload, timestamp) {
+function createAmazonSignature(
+  method,
+  uri,
+  queryString,
+  headers,
+  payload,
+  timestamp,
+) {
   const dateStamp = timestamp.substring(0, 8);
   const amzDate = timestamp;
   const service = "ProductAdvertisingAPI";
@@ -1096,23 +1246,43 @@ function createAmazonSignature(method, uri, queryString, headers, payload, times
   // Create canonical request
   const sortedHeaders = Object.keys(headers).sort();
   const signedHeaders = sortedHeaders.join(";");
-  const canonicalHeaders = sortedHeaders.map(h => `${h}:${headers[h]}\n`).join("");
+  const canonicalHeaders = sortedHeaders
+    .map((h) => `${h}:${headers[h]}\n`)
+    .join("");
 
-  const payloadHash = crypto.createHash("sha256").update(payload || "").digest("hex");
+  const payloadHash = crypto
+    .createHash("sha256")
+    .update(payload || "")
+    .digest("hex");
   const canonicalRequest = `${method}\n${uri}\n${queryString}\n${canonicalHeaders}\n${signedHeaders}\n${payloadHash}`;
 
   // Create string to sign
   const algorithm = "AWS4-HMAC-SHA256";
   const credentialScope = `${dateStamp}/${region}/${service}/aws4_request`;
-  const canonicalRequestHash = crypto.createHash("sha256").update(canonicalRequest).digest("hex");
+  const canonicalRequestHash = crypto
+    .createHash("sha256")
+    .update(canonicalRequest)
+    .digest("hex");
   const stringToSign = `${algorithm}\n${amzDate}\n${credentialScope}\n${canonicalRequestHash}`;
 
   // Calculate signature
-  const kDate = crypto.createHmac("sha256", `AWS4${AMAZON_SECRET_KEY}`).update(dateStamp).digest();
+  const kDate = crypto
+    .createHmac("sha256", `AWS4${AMAZON_SECRET_KEY}`)
+    .update(dateStamp)
+    .digest();
   const kRegion = crypto.createHmac("sha256", kDate).update(region).digest();
-  const kService = crypto.createHmac("sha256", kRegion).update(service).digest();
-  const kSigning = crypto.createHmac("sha256", kService).update("aws4_request").digest();
-  const signature = crypto.createHmac("sha256", kSigning).update(stringToSign).digest("hex");
+  const kService = crypto
+    .createHmac("sha256", kRegion)
+    .update(service)
+    .digest();
+  const kSigning = crypto
+    .createHmac("sha256", kService)
+    .update("aws4_request")
+    .digest();
+  const signature = crypto
+    .createHmac("sha256", kSigning)
+    .update(stringToSign)
+    .digest("hex");
 
   return {
     signature,
@@ -1125,10 +1295,23 @@ function createAmazonSignature(method, uri, queryString, headers, payload, times
 /**
  * Search products on Amazon using PA-API 5.0
  */
-async function fetchAmazonProducts({ query, minPrice, maxPrice, sort, page, pageSize }) {
+async function fetchAmazonProducts({
+  query,
+  minPrice,
+  maxPrice,
+  sort,
+  page,
+  pageSize,
+}) {
   if (!HAS_AMAZON_API) {
     console.log("[Amazon] PA-API not configured, skipping");
-    return { products: [], total: 0, totalPages: 0, error: "", source: "amazon" };
+    return {
+      products: [],
+      total: 0,
+      totalPages: 0,
+      error: "",
+      source: "amazon",
+    };
   }
 
   try {
@@ -1149,24 +1332,29 @@ async function fetchAmazonProducts({ query, minPrice, maxPrice, sort, page, page
         "Offers.Listings.Price",
         "Offers.Listings.Condition",
         "Offers.Listings.Availability.Message",
-        "Offers.Listings.MerchantInfo"
+        "Offers.Listings.MerchantInfo",
       ],
       ...(minPrice > 0 && { MinPrice: minPrice * 100 }), // Amazon uses cents
       ...(maxPrice < 50000 && { MaxPrice: maxPrice * 100 }),
-      SortBy: sort === "price_asc" ? "Price:LowToHigh" : sort === "price_desc" ? "Price:HighToLow" : "Relevance"
+      SortBy:
+        sort === "price_asc"
+          ? "Price:LowToHigh"
+          : sort === "price_desc"
+            ? "Price:HighToLow"
+            : "Relevance",
     });
 
     const headers = {
       "content-encoding": "amz-1.0",
       "content-type": "application/json; charset=utf-8",
-      "host": AMAZON_HOST,
+      host: AMAZON_HOST,
       "x-amz-date": timestamp,
-      "x-amz-target": "com.amazon.paapi5.v1.ProductAdvertisingAPIv1.SearchItems"
+      "x-amz-target":
+        "com.amazon.paapi5.v1.ProductAdvertisingAPIv1.SearchItems",
     };
 
-    const { signature, signedHeaders, credentialScope, algorithm } = createAmazonSignature(
-      "POST", uri, "", headers, payload, timestamp
-    );
+    const { signature, signedHeaders, credentialScope, algorithm } =
+      createAmazonSignature("POST", uri, "", headers, payload, timestamp);
 
     const authHeader = `${algorithm} Credential=${AMAZON_ACCESS_KEY}/${credentialScope}, SignedHeaders=${signedHeaders}, Signature=${signature}`;
 
@@ -1174,9 +1362,9 @@ async function fetchAmazonProducts({ query, minPrice, maxPrice, sort, page, page
       method: "POST",
       headers: {
         ...headers,
-        "Authorization": authHeader
+        Authorization: authHeader,
       },
-      body: payload
+      body: payload,
     });
 
     if (response.ok) {
@@ -1184,7 +1372,7 @@ async function fetchAmazonProducts({ query, minPrice, maxPrice, sort, page, page
       const items = data.SearchResult?.Items || [];
 
       // Transform Amazon items to match our product format
-      const products = items.map(item => ({
+      const products = items.map((item) => ({
         id: `AMZN-${item.ASIN}`,
         asin: item.ASIN,
         title: item.ItemInfo?.Title?.DisplayValue || "Amazon Product",
@@ -1192,29 +1380,45 @@ async function fetchAmazonProducts({ query, minPrice, maxPrice, sort, page, page
         currency_id: item.Offers?.Listings?.[0]?.Price?.Currency || "USD",
         thumbnail: item.Images?.Primary?.Large?.URL || "",
         condition: item.Offers?.Listings?.[0]?.Condition?.Value || "New",
-        available_quantity: item.Offers?.Listings?.[0]?.Availability?.Message ? 1 : 0,
+        available_quantity: item.Offers?.Listings?.[0]?.Availability?.Message
+          ? 1
+          : 0,
         permalink: `https://www.amazon.com/dp/${item.ASIN}?tag=${AMAZON_PARTNER_TAG}`,
         seller: {
-          nickname: item.Offers?.Listings?.[0]?.MerchantInfo?.Name || "Amazon"
+          nickname: item.Offers?.Listings?.[0]?.MerchantInfo?.Name || "Amazon",
         },
-        source: "amazon"
+        source: "amazon",
       }));
 
       return {
         products,
         total: data.SearchResult?.TotalResultCount || products.length,
-        totalPages: Math.ceil((data.SearchResult?.TotalResultCount || products.length) / pageSize),
+        totalPages: Math.ceil(
+          (data.SearchResult?.TotalResultCount || products.length) / pageSize,
+        ),
         error: "",
-        source: "amazon"
+        source: "amazon",
       };
     } else {
       const errorText = await response.text();
       console.error("[Amazon] PA-API error:", response.status, errorText);
-      return { products: [], total: 0, totalPages: 0, error: `Amazon API error: ${response.status}`, source: "amazon" };
+      return {
+        products: [],
+        total: 0,
+        totalPages: 0,
+        error: `Amazon API error: ${response.status}`,
+        source: "amazon",
+      };
     }
   } catch (error) {
     console.error("[Amazon] PA-API exception:", error.message);
-    return { products: [], total: 0, totalPages: 0, error: error.message, source: "amazon" };
+    return {
+      products: [],
+      total: 0,
+      totalPages: 0,
+      error: error.message,
+      source: "amazon",
+    };
   }
 }
 
@@ -1223,7 +1427,11 @@ async function fetchAmazonProducts({ query, minPrice, maxPrice, sort, page, page
  */
 async function fetchAmazonProductById(asin) {
   if (!HAS_AMAZON_API) {
-    return { product: null, error: "Amazon PA-API not configured", source: "amazon" };
+    return {
+      product: null,
+      error: "Amazon PA-API not configured",
+      source: "amazon",
+    };
   }
 
   // Remove AMZN- prefix if present
@@ -1248,21 +1456,20 @@ async function fetchAmazonProductById(asin) {
         "Offers.Listings.Condition",
         "Offers.Listings.Availability.Message",
         "Offers.Listings.MerchantInfo",
-        "Offers.Summaries.LowestPrice"
-      ]
+        "Offers.Summaries.LowestPrice",
+      ],
     });
 
     const headers = {
       "content-encoding": "amz-1.0",
       "content-type": "application/json; charset=utf-8",
-      "host": AMAZON_HOST,
+      host: AMAZON_HOST,
       "x-amz-date": timestamp,
-      "x-amz-target": "com.amazon.paapi5.v1.ProductAdvertisingAPIv1.GetItems"
+      "x-amz-target": "com.amazon.paapi5.v1.ProductAdvertisingAPIv1.GetItems",
     };
 
-    const { signature, signedHeaders, credentialScope, algorithm } = createAmazonSignature(
-      "POST", uri, "", headers, payload, timestamp
-    );
+    const { signature, signedHeaders, credentialScope, algorithm } =
+      createAmazonSignature("POST", uri, "", headers, payload, timestamp);
 
     const authHeader = `${algorithm} Credential=${AMAZON_ACCESS_KEY}/${credentialScope}, SignedHeaders=${signedHeaders}, Signature=${signature}`;
 
@@ -1270,9 +1477,9 @@ async function fetchAmazonProductById(asin) {
       method: "POST",
       headers: {
         ...headers,
-        "Authorization": authHeader
+        Authorization: authHeader,
       },
-      body: payload
+      body: payload,
     });
 
     if (response.ok) {
@@ -1287,26 +1494,36 @@ async function fetchAmazonProductById(asin) {
         id: `AMZN-${item.ASIN}`,
         asin: item.ASIN,
         title: item.ItemInfo?.Title?.DisplayValue || "Amazon Product",
-        price: item.Offers?.Listings?.[0]?.Price?.Amount || item.Offers?.Summaries?.[0]?.LowestPrice?.Amount || 0,
+        price:
+          item.Offers?.Listings?.[0]?.Price?.Amount ||
+          item.Offers?.Summaries?.[0]?.LowestPrice?.Amount ||
+          0,
         currency_id: item.Offers?.Listings?.[0]?.Price?.Currency || "USD",
         thumbnail: item.Images?.Primary?.Large?.URL || "",
-        pictures: item.Images?.Variants?.map(v => ({ url: v.Large?.URL })) || [],
+        pictures:
+          item.Images?.Variants?.map((v) => ({ url: v.Large?.URL })) || [],
         condition: item.Offers?.Listings?.[0]?.Condition?.Value || "New",
-        available_quantity: item.Offers?.Listings?.[0]?.Availability?.Message ? 1 : 0,
+        available_quantity: item.Offers?.Listings?.[0]?.Availability?.Message
+          ? 1
+          : 0,
         permalink: `https://www.amazon.com/dp/${item.ASIN}?tag=${AMAZON_PARTNER_TAG}`,
         description: item.ItemInfo?.Features?.DisplayValues?.join("\n") || "",
         seller: {
-          nickname: item.Offers?.Listings?.[0]?.MerchantInfo?.Name || "Amazon"
+          nickname: item.Offers?.Listings?.[0]?.MerchantInfo?.Name || "Amazon",
         },
         brand: item.ItemInfo?.ByLineInfo?.Brand?.DisplayValue || "",
-        source: "amazon"
+        source: "amazon",
       };
 
       return { product, error: "", source: "amazon" };
     } else {
       const errorText = await response.text();
       console.error("[Amazon] GetItems error:", response.status, errorText);
-      return { product: null, error: `Amazon API error: ${response.status}`, source: "amazon" };
+      return {
+        product: null,
+        error: `Amazon API error: ${response.status}`,
+        source: "amazon",
+      };
     }
   } catch (error) {
     console.error("[Amazon] GetItems exception:", error.message);
@@ -1317,8 +1534,22 @@ async function fetchAmazonProductById(asin) {
 /**
  * Combined search from multiple sources (Mercado Libre + Amazon)
  */
-async function fetchAllProducts({ query, minPrice, maxPrice, sort, page, pageSize, source = "all" }) {
-  const results = { products: [], total: 0, totalPages: 0, error: "", notices: [] };
+async function fetchAllProducts({
+  query,
+  minPrice,
+  maxPrice,
+  sort,
+  page,
+  pageSize,
+  source = "all",
+}) {
+  const results = {
+    products: [],
+    total: 0,
+    totalPages: 0,
+    error: "",
+    notices: [],
+  };
 
   // Determine which sources to query
   const queryML = source === "all" || source === "mercadolibre";
@@ -1330,15 +1561,33 @@ async function fetchAllProducts({ query, minPrice, maxPrice, sort, page, pageSiz
   if (queryML) {
     promises.push(
       fetchMLProducts({ query, minPrice, maxPrice, sort, page, pageSize })
-        .then(r => ({ ...r, source: "mercadolibre" }))
-        .catch(e => ({ products: [], total: 0, totalPages: 0, error: e.message, source: "mercadolibre" }))
+        .then((r) => ({ ...r, source: "mercadolibre" }))
+        .catch((e) => ({
+          products: [],
+          total: 0,
+          totalPages: 0,
+          error: e.message,
+          source: "mercadolibre",
+        })),
     );
   }
 
   if (queryAmazon && HAS_AMAZON_API) {
     promises.push(
-      fetchAmazonProducts({ query, minPrice, maxPrice, sort, page, pageSize })
-        .catch(e => ({ products: [], total: 0, totalPages: 0, error: e.message, source: "amazon" }))
+      fetchAmazonProducts({
+        query,
+        minPrice,
+        maxPrice,
+        sort,
+        page,
+        pageSize,
+      }).catch((e) => ({
+        products: [],
+        total: 0,
+        totalPages: 0,
+        error: e.message,
+        source: "amazon",
+      })),
     );
   }
 
@@ -1347,9 +1596,9 @@ async function fetchAllProducts({ query, minPrice, maxPrice, sort, page, pageSiz
   // Combine results
   for (const res of responses) {
     // Add source to each product if not already set
-    const productsWithSource = res.products.map(p => ({
+    const productsWithSource = res.products.map((p) => ({
       ...p,
-      source: p.source || res.source
+      source: p.source || res.source,
     }));
 
     results.products.push(...productsWithSource);
@@ -1409,13 +1658,15 @@ async function start() {
       console.error("\n" + "=".repeat(60));
       console.error("⚠️  SUPABASE TABLES NOT FOUND - FALLING BACK TO SQLITE");
       console.error("=".repeat(60));
-      console.error("To use Supabase, run this SQL in your Supabase SQL Editor:");
+      console.error(
+        "To use Supabase, run this SQL in your Supabase SQL Editor:",
+      );
       console.error("File: supabase/migrations/001_create_tables.sql");
       console.error("=".repeat(60) + "\n");
       useSupabaseDb = false;
     } else {
       // Create demo accounts in Supabase
-      await supabaseDb.createDemoAccounts().catch(err => {
+      await supabaseDb.createDemoAccounts().catch((err) => {
         console.log("[Supabase] Demo accounts may already exist:", err.message);
       });
     }
@@ -1423,7 +1674,10 @@ async function start() {
 
   // Use Supabase or SQLite based on configuration AND table availability
   const db = useSupabaseDb ? supabaseDb.createDbInterface() : localDb;
-  console.log("[Database] Using:", useSupabaseDb ? "Supabase (cloud)" : "SQLite (local)");
+  console.log(
+    "[Database] Using:",
+    useSupabaseDb ? "Supabase (cloud)" : "SQLite (local)",
+  );
 
   // Helper functions that work with both databases
   const recordLoginAttempt = useSupabaseDb
@@ -1453,7 +1707,9 @@ async function start() {
       });
     }
   } else {
-    console.log("[Queue] Redis not configured - background price updates disabled");
+    console.log(
+      "[Queue] Redis not configured - background price updates disabled",
+    );
   }
 
   const app = express();
@@ -1465,10 +1721,12 @@ async function start() {
   // Prevent caching of dynamic pages to ensure auth state updates in UI
   app.use((req, res, next) => {
     // Don't cache HTML pages (allow caching of static assets)
-    if (!req.path.match(/\.(js|css|png|jpg|jpeg|gif|ico|svg|woff|woff2|ttf|eot)$/)) {
-      res.set('Cache-Control', 'no-store, no-cache, must-revalidate, private');
-      res.set('Pragma', 'no-cache');
-      res.set('Expires', '0');
+    if (
+      !req.path.match(/\.(js|css|png|jpg|jpeg|gif|ico|svg|woff|woff2|ttf|eot)$/)
+    ) {
+      res.set("Cache-Control", "no-store, no-cache, must-revalidate, private");
+      res.set("Pragma", "no-cache");
+      res.set("Expires", "0");
     }
     next();
   });
@@ -1496,7 +1754,10 @@ async function start() {
 
     // DEBUG: Log all cookies and token status
     console.log("[Home Route] =========== REQUEST DEBUG ===========");
-    console.log("[Home Route] Cookies received:", Object.keys(req.cookies || {}));
+    console.log(
+      "[Home Route] Cookies received:",
+      Object.keys(req.cookies || {}),
+    );
     console.log("[Home Route] Token cookie exists:", !!req.cookies?.token);
     console.log("[Home Route] hasToken:", hasToken);
 
@@ -1506,7 +1767,10 @@ async function start() {
       try {
         const payload = jwt.verify(req.cookies.token, JWT_SECRET);
         console.log(`[Home] Token valid for user ID: ${payload.id}`);
-        const user = await db.get("SELECT * FROM users WHERE id = ?", payload.id);
+        const user = await db.get(
+          "SELECT * FROM users WHERE id = ?",
+          payload.id,
+        );
         userEmail = user?.email || "";
         userData = user;
         console.log(`[Home] User found: ${userEmail || "NO"}`);
@@ -1522,7 +1786,13 @@ async function start() {
     const page = Math.max(parseNumber(req.query.page, 1), 1);
     const pageSize = 20;
 
-    let results = { products: [], total: 0, totalPages: 0, error: "", notices: [] };
+    let results = {
+      products: [],
+      total: 0,
+      totalPages: 0,
+      error: "",
+      notices: [],
+    };
     let isFeatured = false;
 
     if (query) {
@@ -1579,26 +1849,37 @@ async function start() {
       </div>
     `;
 
-    const resultsHtml = (query || isFeatured) && results.products.length ? `
+    const resultsHtml =
+      (query || isFeatured) && results.products.length
+        ? `
       <div class="results-section">
         ${isFeatured ? `<h2 class="section-title">${lang === "es" ? "Ofertas Destacadas" : "Featured Deals"}</h2>` : ""}
-        ${results.notices?.length ? results.notices.map(n => `<div class="notice">${n}</div>`).join("") : ""}
+        ${results.notices?.length ? results.notices.map((n) => `<div class="notice">${n}</div>`).join("") : ""}
         ${results.error ? `<div class="notice">${results.error}</div>` : ""}
         ${!results.error && results.products.length === 0 ? `<p class="muted">${t(lang, "noResults")}</p>` : ""}
-        ${results.products.length ? `
+        ${
+          results.products.length
+            ? `
           <div class="product-grid">
             ${results.products.map(renderProductCard).join("")}
           </div>
-          ${query ? `
+          ${
+            query
+              ? `
             <div class="pagination">
               ${page > 1 ? `<a href="${buildSearchParams("/", { q: query, minPrice, maxPrice, sort, source, page: page - 1 })}">${t(lang, "previous")}</a>` : ""}
               <span>${t(lang, "page")} ${page} ${t(lang, "of")} ${results.totalPages || 1}</span>
               ${page < results.totalPages ? `<a href="${buildSearchParams("/", { q: query, minPrice, maxPrice, sort, source, page: page + 1 })}">${t(lang, "next")}</a>` : ""}
             </div>
-          ` : ""}
-        ` : ""}
+          `
+              : ""
+          }
+        `
+            : ""
+        }
       </div>
-    ` : "";
+    `
+        : "";
 
     const searchSection = `
       <form class="search-form" method="get" action="/">
@@ -1647,9 +1928,11 @@ async function start() {
             ${lang === "es" ? "La herramienta #1 de ahorro en México" : "#1 Price Tracking Tool in Mexico"}
           </div>
           <h1 class="hero-title" data-reveal="fade-up" data-reveal-delay="200">${lang === "es" ? "Nunca Pagues de Más" : "Never Overpay Again"}</h1>
-          <p class="hero-subtitle" data-reveal="fade-up" data-reveal-delay="300">${lang === "es"
-            ? "Rastrea precios de Mercado Libre, recibe alertas instantáneas cuando bajen y ahorra hasta un 40% en tus compras. Completamente gratis."
-            : "Track prices from Mercado Libre, get instant alerts when they drop, and save up to 40% on your purchases. Completely free."}</p>
+          <p class="hero-subtitle" data-reveal="fade-up" data-reveal-delay="300">${
+            lang === "es"
+              ? "Rastrea precios de Mercado Libre, recibe alertas instantáneas cuando bajen y ahorra hasta un 40% en tus compras. Completamente gratis."
+              : "Track prices from Mercado Libre, get instant alerts when they drop, and save up to 40% on your purchases. Completely free."
+          }</p>
           <div class="hero-cta" data-reveal="fade-up" data-reveal-delay="400">
             <a href="/register" class="btn-primary">
               <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
@@ -1690,9 +1973,11 @@ async function start() {
         <div class="section-header" data-reveal="fade-up">
           <span class="section-label">${lang === "es" ? "Explora por Categoría" : "Browse by Category"}</span>
           <h2 class="section-title">${lang === "es" ? "Encuentra Ofertas en Todo lo que Necesitas" : "Find Deals on Everything You Need"}</h2>
-          <p class="section-subtitle">${lang === "es"
-            ? "Rastrea precios en miles de productos de las categorías más populares."
-            : "Track prices on thousands of products across the most popular categories."}</p>
+          <p class="section-subtitle">${
+            lang === "es"
+              ? "Rastrea precios en miles de productos de las categorías más populares."
+              : "Track prices on thousands of products across the most popular categories."
+          }</p>
         </div>
         <div class="category-showcase-grid" data-reveal-stagger>
           <a href="/register" class="category-showcase-card" data-reveal="fade-up">
@@ -1752,54 +2037,74 @@ async function start() {
         <div class="section-header" data-reveal="fade-up">
           <span class="section-label">${lang === "es" ? "Cómo Funciona" : "How It Works"}</span>
           <h2 class="section-title">${lang === "es" ? "Ahorra Dinero en 4 Simples Pasos" : "Save Money in 4 Simple Steps"}</h2>
-          <p class="section-subtitle">${lang === "es"
-            ? "No más verificar precios manualmente. Nosotros hacemos el trabajo por ti."
-            : "No more manually checking prices. We do the work for you."}</p>
+          <p class="section-subtitle">${
+            lang === "es"
+              ? "No más verificar precios manualmente. Nosotros hacemos el trabajo por ti."
+              : "No more manually checking prices. We do the work for you."
+          }</p>
         </div>
         <div class="features-grid" data-reveal-stagger>
           <div class="feature-card" data-reveal="fade-up">
             <div class="feature-icon">🔍</div>
             <h3>${lang === "es" ? "Busca Productos" : "Search Products"}</h3>
-            <p>${lang === "es"
-              ? "Encuentra cualquier producto de Mercado Libre usando nuestra búsqueda inteligente."
-              : "Find any product from Mercado Libre using our smart search."}</p>
+            <p>${
+              lang === "es"
+                ? "Encuentra cualquier producto de Mercado Libre usando nuestra búsqueda inteligente."
+                : "Find any product from Mercado Libre using our smart search."
+            }</p>
           </div>
           <div class="feature-card" data-reveal="fade-up">
             <div class="feature-icon">📊</div>
             <h3>${lang === "es" ? "Rastrea Precios" : "Track Prices"}</h3>
-            <p>${lang === "es"
-              ? "Ve el historial completo de precios y tendencias de cada producto."
-              : "See complete price history and trends for each product."}</p>
+            <p>${
+              lang === "es"
+                ? "Ve el historial completo de precios y tendencias de cada producto."
+                : "See complete price history and trends for each product."
+            }</p>
           </div>
           <div class="feature-card" data-reveal="fade-up">
             <div class="feature-icon">🔔</div>
             <h3>${lang === "es" ? "Recibe Alertas" : "Get Alerts"}</h3>
-            <p>${lang === "es"
-              ? "Te notificamos al instante por email cuando el precio baje."
-              : "We notify you instantly by email when the price drops."}</p>
+            <p>${
+              lang === "es"
+                ? "Te notificamos al instante por email cuando el precio baje."
+                : "We notify you instantly by email when the price drops."
+            }</p>
           </div>
           <div class="feature-card" data-reveal="fade-up">
             <div class="feature-icon">💰</div>
             <h3>${lang === "es" ? "Ahorra Dinero" : "Save Money"}</h3>
-            <p>${lang === "es"
-              ? "Compra siempre al mejor precio posible. Usuarios ahorran en promedio 25%."
-              : "Always buy at the best possible price. Users save 25% on average."}</p>
+            <p>${
+              lang === "es"
+                ? "Compra siempre al mejor precio posible. Usuarios ahorran en promedio 25%."
+                : "Always buy at the best possible price. Users save 25% on average."
+            }</p>
           </div>
         </div>
       </section>
 
       <!-- Featured Deals -->
-      ${results.products.length ? `
+      ${
+        results.products.length
+          ? `
         <section class="deals-section" data-reveal="fade-up">
           <div class="section-header" data-reveal="fade-up">
             <span class="section-label">🔥 ${lang === "es" ? "En Tendencia" : "Trending Now"}</span>
             <h2 class="section-title">${lang === "es" ? "Ofertas Destacadas de Hoy" : "Today's Featured Deals"}</h2>
-            <p class="section-subtitle">${lang === "es"
-              ? "Productos populares con los mejores descuentos del momento."
-              : "Popular products with the best discounts right now."}</p>
+            <p class="section-subtitle">${
+              lang === "es"
+                ? "Productos populares con los mejores descuentos del momento."
+                : "Popular products with the best discounts right now."
+            }</p>
           </div>
           <div class="product-grid" data-reveal-stagger>
-            ${results.products.slice(0, 8).map((product, index) => `<div data-reveal="fade-up">${renderProductCard(product)}</div>`).join("")}
+            ${results.products
+              .slice(0, 8)
+              .map(
+                (product, index) =>
+                  `<div data-reveal="fade-up">${renderProductCard(product)}</div>`,
+              )
+              .join("")}
           </div>
           <div class="section-cta" data-reveal="fade-up">
             <a href="/register" class="btn-primary">
@@ -1811,7 +2116,9 @@ async function start() {
             </a>
           </div>
         </section>
-      ` : ""}
+      `
+          : ""
+      }
 
       <!-- Stats Section -->
       <section class="stats-section" data-reveal="fade-up">
@@ -1839,9 +2146,11 @@ async function start() {
       <section class="cta-section" data-reveal="scale">
         <div class="section-content" data-reveal="fade-up">
           <h2>${lang === "es" ? "¿Listo para Empezar a Ahorrar?" : "Ready to Start Saving?"}</h2>
-          <p>${lang === "es"
-            ? "Únete a más de 50,000 usuarios mexicanos que ya están ahorrando dinero en sus compras en línea. Sin costos, sin compromisos."
-            : "Join over 50,000 Mexican users who are already saving money on their online purchases. No costs, no commitments."}</p>
+          <p>${
+            lang === "es"
+              ? "Únete a más de 50,000 usuarios mexicanos que ya están ahorrando dinero en sus compras en línea. Sin costos, sin compromisos."
+              : "Join over 50,000 Mexican users who are already saving money on their online purchases. No costs, no commitments."
+          }</p>
           <a href="/register" class="btn-primary btn-large">
             ${lang === "es" ? "Comenzar Ahora — Es Gratis" : "Start Now — It's Free"}
           </a>
@@ -1853,9 +2162,11 @@ async function start() {
         <div class="footer-grid" data-reveal-stagger>
           <div class="footer-col" data-reveal="fade-up">
             <h4>${lang === "es" ? "Sobre OfertaRadar" : "About OfertaRadar"}</h4>
-            <p>${lang === "es"
-              ? "Somos la plataforma líder de rastreo de precios en México. Nuestra misión es ayudarte a encontrar las mejores ofertas y nunca pagar de más."
-              : "We are the leading price tracking platform in Mexico. Our mission is to help you find the best deals and never overpay."}</p>
+            <p>${
+              lang === "es"
+                ? "Somos la plataforma líder de rastreo de precios en México. Nuestra misión es ayudarte a encontrar las mejores ofertas y nunca pagar de más."
+                : "We are the leading price tracking platform in Mexico. Our mission is to help you find the best deals and never overpay."
+            }</p>
           </div>
           <div class="footer-col" data-reveal="fade-up">
             <h4>${lang === "es" ? "Características" : "Features"}</h4>
@@ -1886,77 +2197,384 @@ async function start() {
     let topPriceDrops = [];
     let categoryDiscounts = [];
 
-    console.log("[Home Debug] hasToken:", hasToken, "USE_SUPABASE:", USE_SUPABASE);
+    console.log(
+      "[Home Debug] hasToken:",
+      hasToken,
+      "USE_SUPABASE:",
+      USE_SUPABASE,
+    );
 
     // ALWAYS try to fetch deals data (not just for logged-in users)
     // This ensures sections show for testing
     if (USE_SUPABASE) {
       try {
-        [highlightedDeals, popularProducts, topPriceDrops, categoryDiscounts] = await Promise.all([
-          supabaseDb.getHighlightedDeals(12),
-          supabaseDb.getPopularProducts({ limit: 8 }),
-          supabaseDb.getTopPriceDrops({ period: "recent", limit: 8 }),
-          supabaseDb.getDiscountsByCategory()
+        [highlightedDeals, popularProducts, topPriceDrops, categoryDiscounts] =
+          await Promise.all([
+            supabaseDb.getHighlightedDeals(12),
+            supabaseDb.getPopularProducts({ limit: 8 }),
+            supabaseDb.getTopPriceDrops({ period: "recent", limit: 8 }),
+            supabaseDb.getDiscountsByCategory(),
           ]);
-        } catch (err) {
-          console.error("[Home] Error fetching deals data:", err.message);
-        }
+      } catch (err) {
+        console.error("[Home] Error fetching deals data:", err.message);
       }
+    }
 
-      // Show demo data when no tracked products exist (ALWAYS show for testing)
-      // Demo Highlighted Deals - Using reliable Unsplash images
-      if (highlightedDeals.length === 0) {
-        highlightedDeals = [
-          { product_id: "MLM-demo-1", product_title: "Smart TV Samsung 55\" Crystal UHD 4K", current_price: 8999, avgPrice: 12499, isBestPrice: true, isGoodDeal: true, savingsPercent: 28, savingsAmount: 3500, source: "mercadolibre", thumbnail: "https://images.unsplash.com/photo-1593359677879-a4bb92f829d1?w=300&h=300&fit=crop" },
-          { product_id: "MLM-demo-2", product_title: "iPhone 15 Pro Max 256GB", current_price: 24999, avgPrice: 28999, isBestPrice: false, isGoodDeal: true, savingsPercent: 14, savingsAmount: 4000, source: "mercadolibre", thumbnail: "https://images.unsplash.com/photo-1592750475338-74b7b21085ab?w=300&h=300&fit=crop" },
-          { product_id: "MLM-demo-3", product_title: "Laptop ASUS VivoBook 15.6\" Ryzen 5", current_price: 12999, avgPrice: 15999, isBestPrice: true, isGoodDeal: true, savingsPercent: 19, savingsAmount: 3000, source: "mercadolibre", thumbnail: "https://images.unsplash.com/photo-1496181133206-80ce9b88a853?w=300&h=300&fit=crop" },
-          { product_id: "MLM-demo-4", product_title: "Audífonos Sony WH-1000XM5", current_price: 6499, avgPrice: 8499, isBestPrice: false, isGoodDeal: true, savingsPercent: 24, savingsAmount: 2000, source: "mercadolibre", thumbnail: "https://images.unsplash.com/photo-1505740420928-5e560c06d30e?w=300&h=300&fit=crop" },
-          { product_id: "MLM-demo-5", product_title: "Consola PlayStation 5 Slim", current_price: 11999, avgPrice: 14999, isBestPrice: true, isGoodDeal: true, savingsPercent: 20, savingsAmount: 3000, source: "mercadolibre", thumbnail: "https://images.unsplash.com/photo-1606144042614-b2417e99c4e3?w=300&h=300&fit=crop" },
-          { product_id: "MLM-demo-6", product_title: "Robot Aspiradora iRobot Roomba", current_price: 7999, avgPrice: 9999, isBestPrice: false, isGoodDeal: true, savingsPercent: 20, savingsAmount: 2000, source: "mercadolibre", thumbnail: "https://images.unsplash.com/photo-1558618666-fcd25c85cd64?w=300&h=300&fit=crop" },
-        ];
-      }
+    // Show demo data when no tracked products exist (ALWAYS show for testing)
+    // Demo Highlighted Deals - Using reliable Unsplash images
+    if (highlightedDeals.length === 0) {
+      highlightedDeals = [
+        {
+          product_id: "MLM-demo-1",
+          product_title: 'Smart TV Samsung 55" Crystal UHD 4K',
+          current_price: 8999,
+          avgPrice: 12499,
+          isBestPrice: true,
+          isGoodDeal: true,
+          savingsPercent: 28,
+          savingsAmount: 3500,
+          source: "mercadolibre",
+          thumbnail:
+            "https://images.unsplash.com/photo-1593359677879-a4bb92f829d1?w=300&h=300&fit=crop",
+        },
+        {
+          product_id: "MLM-demo-2",
+          product_title: "iPhone 15 Pro Max 256GB",
+          current_price: 24999,
+          avgPrice: 28999,
+          isBestPrice: false,
+          isGoodDeal: true,
+          savingsPercent: 14,
+          savingsAmount: 4000,
+          source: "mercadolibre",
+          thumbnail:
+            "https://images.unsplash.com/photo-1592750475338-74b7b21085ab?w=300&h=300&fit=crop",
+        },
+        {
+          product_id: "MLM-demo-3",
+          product_title: 'Laptop ASUS VivoBook 15.6" Ryzen 5',
+          current_price: 12999,
+          avgPrice: 15999,
+          isBestPrice: true,
+          isGoodDeal: true,
+          savingsPercent: 19,
+          savingsAmount: 3000,
+          source: "mercadolibre",
+          thumbnail:
+            "https://images.unsplash.com/photo-1496181133206-80ce9b88a853?w=300&h=300&fit=crop",
+        },
+        {
+          product_id: "MLM-demo-4",
+          product_title: "Audífonos Sony WH-1000XM5",
+          current_price: 6499,
+          avgPrice: 8499,
+          isBestPrice: false,
+          isGoodDeal: true,
+          savingsPercent: 24,
+          savingsAmount: 2000,
+          source: "mercadolibre",
+          thumbnail:
+            "https://images.unsplash.com/photo-1505740420928-5e560c06d30e?w=300&h=300&fit=crop",
+        },
+        {
+          product_id: "MLM-demo-5",
+          product_title: "Consola PlayStation 5 Slim",
+          current_price: 11999,
+          avgPrice: 14999,
+          isBestPrice: true,
+          isGoodDeal: true,
+          savingsPercent: 20,
+          savingsAmount: 3000,
+          source: "mercadolibre",
+          thumbnail:
+            "https://images.unsplash.com/photo-1606144042614-b2417e99c4e3?w=300&h=300&fit=crop",
+        },
+        {
+          product_id: "MLM-demo-6",
+          product_title: "Robot Aspiradora iRobot Roomba",
+          current_price: 7999,
+          avgPrice: 9999,
+          isBestPrice: false,
+          isGoodDeal: true,
+          savingsPercent: 20,
+          savingsAmount: 2000,
+          source: "mercadolibre",
+          thumbnail:
+            "https://images.unsplash.com/photo-1558618666-fcd25c85cd64?w=300&h=300&fit=crop",
+        },
+      ];
+    }
 
-      // Demo Popular Products - Using reliable Unsplash images
-      if (popularProducts.length === 0) {
-        popularProducts = [
-          { product_id: "MLM-pop-1", product_title: "AirPods Pro 2da Generación", current_price: 4499, avgPrice: 5499, isBestPrice: false, isGoodDeal: true, savingsPercent: 18, source: "mercadolibre", thumbnail: "https://images.unsplash.com/photo-1606220588913-b3aacb4d2f46?w=300&h=300&fit=crop" },
-          { product_id: "MLM-pop-2", product_title: "Nintendo Switch OLED", current_price: 6999, avgPrice: 7999, isBestPrice: true, isGoodDeal: true, savingsPercent: 13, source: "mercadolibre", thumbnail: "https://images.unsplash.com/photo-1578303512597-81e6cc155b3e?w=300&h=300&fit=crop" },
-          { product_id: "MLM-pop-3", product_title: "Samsung Galaxy S24 Ultra 256GB", current_price: 22999, avgPrice: 27999, isBestPrice: false, isGoodDeal: true, savingsPercent: 18, source: "mercadolibre", thumbnail: "https://images.unsplash.com/photo-1610945265064-0e34e5519bbf?w=300&h=300&fit=crop" },
-          { product_id: "MLM-pop-4", product_title: "MacBook Air M2 256GB", current_price: 19999, avgPrice: 24999, isBestPrice: true, isGoodDeal: true, savingsPercent: 20, source: "mercadolibre", thumbnail: "https://images.unsplash.com/photo-1517336714731-489689fd1ca8?w=300&h=300&fit=crop" },
-          { product_id: "MLM-pop-5", product_title: "Dyson V15 Detect Aspiradora", current_price: 14999, avgPrice: 17999, isBestPrice: false, isGoodDeal: true, savingsPercent: 17, source: "mercadolibre", thumbnail: "https://images.unsplash.com/photo-1558317374-067fb5f30001?w=300&h=300&fit=crop" },
-          { product_id: "MLM-pop-6", product_title: "Xbox Series X 1TB", current_price: 11499, avgPrice: 13999, isBestPrice: true, isGoodDeal: true, savingsPercent: 18, source: "mercadolibre", thumbnail: "https://images.unsplash.com/photo-1621259182978-fbf93132d53d?w=300&h=300&fit=crop" },
-          { product_id: "MLM-pop-7", product_title: "Monitor LG UltraGear 27\" 144Hz", current_price: 4999, avgPrice: 6499, isBestPrice: false, isGoodDeal: true, savingsPercent: 23, source: "mercadolibre", thumbnail: "https://images.unsplash.com/photo-1527443224154-c4a3942d3acf?w=300&h=300&fit=crop" },
-          { product_id: "MLM-pop-8", product_title: "Kindle Paperwhite 16GB", current_price: 2999, avgPrice: 3499, isBestPrice: true, isGoodDeal: true, savingsPercent: 14, source: "mercadolibre", thumbnail: "https://images.unsplash.com/photo-1611532736597-de2d4265fba3?w=300&h=300&fit=crop" },
-        ];
-      }
+    // Demo Popular Products - Using reliable Unsplash images
+    if (popularProducts.length === 0) {
+      popularProducts = [
+        {
+          product_id: "MLM-pop-1",
+          product_title: "AirPods Pro 2da Generación",
+          current_price: 4499,
+          avgPrice: 5499,
+          isBestPrice: false,
+          isGoodDeal: true,
+          savingsPercent: 18,
+          source: "mercadolibre",
+          thumbnail:
+            "https://images.unsplash.com/photo-1606220588913-b3aacb4d2f46?w=300&h=300&fit=crop",
+        },
+        {
+          product_id: "MLM-pop-2",
+          product_title: "Nintendo Switch OLED",
+          current_price: 6999,
+          avgPrice: 7999,
+          isBestPrice: true,
+          isGoodDeal: true,
+          savingsPercent: 13,
+          source: "mercadolibre",
+          thumbnail:
+            "https://images.unsplash.com/photo-1578303512597-81e6cc155b3e?w=300&h=300&fit=crop",
+        },
+        {
+          product_id: "MLM-pop-3",
+          product_title: "Samsung Galaxy S24 Ultra 256GB",
+          current_price: 22999,
+          avgPrice: 27999,
+          isBestPrice: false,
+          isGoodDeal: true,
+          savingsPercent: 18,
+          source: "mercadolibre",
+          thumbnail:
+            "https://images.unsplash.com/photo-1610945265064-0e34e5519bbf?w=300&h=300&fit=crop",
+        },
+        {
+          product_id: "MLM-pop-4",
+          product_title: "MacBook Air M2 256GB",
+          current_price: 19999,
+          avgPrice: 24999,
+          isBestPrice: true,
+          isGoodDeal: true,
+          savingsPercent: 20,
+          source: "mercadolibre",
+          thumbnail:
+            "https://images.unsplash.com/photo-1517336714731-489689fd1ca8?w=300&h=300&fit=crop",
+        },
+        {
+          product_id: "MLM-pop-5",
+          product_title: "Dyson V15 Detect Aspiradora",
+          current_price: 14999,
+          avgPrice: 17999,
+          isBestPrice: false,
+          isGoodDeal: true,
+          savingsPercent: 17,
+          source: "mercadolibre",
+          thumbnail:
+            "https://images.unsplash.com/photo-1558317374-067fb5f30001?w=300&h=300&fit=crop",
+        },
+        {
+          product_id: "MLM-pop-6",
+          product_title: "Xbox Series X 1TB",
+          current_price: 11499,
+          avgPrice: 13999,
+          isBestPrice: true,
+          isGoodDeal: true,
+          savingsPercent: 18,
+          source: "mercadolibre",
+          thumbnail:
+            "https://images.unsplash.com/photo-1621259182978-fbf93132d53d?w=300&h=300&fit=crop",
+        },
+        {
+          product_id: "MLM-pop-7",
+          product_title: 'Monitor LG UltraGear 27" 144Hz',
+          current_price: 4999,
+          avgPrice: 6499,
+          isBestPrice: false,
+          isGoodDeal: true,
+          savingsPercent: 23,
+          source: "mercadolibre",
+          thumbnail:
+            "https://images.unsplash.com/photo-1527443224154-c4a3942d3acf?w=300&h=300&fit=crop",
+        },
+        {
+          product_id: "MLM-pop-8",
+          product_title: "Kindle Paperwhite 16GB",
+          current_price: 2999,
+          avgPrice: 3499,
+          isBestPrice: true,
+          isGoodDeal: true,
+          savingsPercent: 14,
+          source: "mercadolibre",
+          thumbnail:
+            "https://images.unsplash.com/photo-1611532736597-de2d4265fba3?w=300&h=300&fit=crop",
+        },
+      ];
+    }
 
-      // Demo Top Price Drops - Using reliable Unsplash images
-      if (topPriceDrops.length === 0) {
-        topPriceDrops = [
-          { product_id: "MLM-drop-1", product_title: "Cámara Canon EOS R50 Kit", current_price: 18999, previousPrice: 24999, dropPercent: 24, dropAmount: 6000, isBestPrice: true, source: "mercadolibre", thumbnail: "https://images.unsplash.com/photo-1516035069371-29a1b244cc32?w=300&h=300&fit=crop" },
-          { product_id: "MLM-drop-2", product_title: "Refrigerador Samsung French Door", current_price: 29999, previousPrice: 39999, dropPercent: 25, dropAmount: 10000, isBestPrice: false, isGoodDeal: true, source: "mercadolibre", thumbnail: "https://images.unsplash.com/photo-1571175443880-49e1d25b2bc5?w=300&h=300&fit=crop" },
-          { product_id: "MLM-drop-3", product_title: "Apple Watch Series 9 GPS 45mm", current_price: 8499, previousPrice: 10999, dropPercent: 23, dropAmount: 2500, isBestPrice: true, source: "mercadolibre", thumbnail: "https://images.unsplash.com/photo-1546868871-7041f2a55e12?w=300&h=300&fit=crop" },
-          { product_id: "MLM-drop-4", product_title: "Bose QuietComfort Ultra", current_price: 7999, previousPrice: 9999, dropPercent: 20, dropAmount: 2000, isBestPrice: false, isGoodDeal: true, source: "mercadolibre", thumbnail: "https://images.unsplash.com/photo-1583394838336-acd977736f90?w=300&h=300&fit=crop" },
-          { product_id: "MLM-drop-5", product_title: "GoPro Hero 12 Black", current_price: 8499, previousPrice: 10999, dropPercent: 23, dropAmount: 2500, isBestPrice: true, source: "mercadolibre", thumbnail: "https://images.unsplash.com/photo-1564466809058-bf4114d55352?w=300&h=300&fit=crop" },
-          { product_id: "MLM-drop-6", product_title: "Lavadora LG TurboWash 22kg", current_price: 16999, previousPrice: 21999, dropPercent: 23, dropAmount: 5000, isBestPrice: false, isGoodDeal: true, source: "mercadolibre", thumbnail: "https://images.unsplash.com/photo-1626806787461-102c1bfaaea1?w=300&h=300&fit=crop" },
-          { product_id: "MLM-drop-7", product_title: "iPad Air M1 256GB WiFi", current_price: 12999, previousPrice: 16999, dropPercent: 24, dropAmount: 4000, isBestPrice: true, source: "mercadolibre", thumbnail: "https://images.unsplash.com/photo-1544244015-0df4b3ffc6b0?w=300&h=300&fit=crop" },
-          { product_id: "MLM-drop-8", product_title: "Silla Gamer Secretlab Titan", current_price: 9999, previousPrice: 12999, dropPercent: 23, dropAmount: 3000, isBestPrice: false, isGoodDeal: true, source: "mercadolibre", thumbnail: "https://images.unsplash.com/photo-1598550476439-6847785fcea6?w=300&h=300&fit=crop" },
-        ];
-      }
+    // Demo Top Price Drops - Using reliable Unsplash images
+    if (topPriceDrops.length === 0) {
+      topPriceDrops = [
+        {
+          product_id: "MLM-drop-1",
+          product_title: "Cámara Canon EOS R50 Kit",
+          current_price: 18999,
+          previousPrice: 24999,
+          dropPercent: 24,
+          dropAmount: 6000,
+          isBestPrice: true,
+          source: "mercadolibre",
+          thumbnail:
+            "https://images.unsplash.com/photo-1516035069371-29a1b244cc32?w=300&h=300&fit=crop",
+        },
+        {
+          product_id: "MLM-drop-2",
+          product_title: "Refrigerador Samsung French Door",
+          current_price: 29999,
+          previousPrice: 39999,
+          dropPercent: 25,
+          dropAmount: 10000,
+          isBestPrice: false,
+          isGoodDeal: true,
+          source: "mercadolibre",
+          thumbnail:
+            "https://images.unsplash.com/photo-1571175443880-49e1d25b2bc5?w=300&h=300&fit=crop",
+        },
+        {
+          product_id: "MLM-drop-3",
+          product_title: "Apple Watch Series 9 GPS 45mm",
+          current_price: 8499,
+          previousPrice: 10999,
+          dropPercent: 23,
+          dropAmount: 2500,
+          isBestPrice: true,
+          source: "mercadolibre",
+          thumbnail:
+            "https://images.unsplash.com/photo-1546868871-7041f2a55e12?w=300&h=300&fit=crop",
+        },
+        {
+          product_id: "MLM-drop-4",
+          product_title: "Bose QuietComfort Ultra",
+          current_price: 7999,
+          previousPrice: 9999,
+          dropPercent: 20,
+          dropAmount: 2000,
+          isBestPrice: false,
+          isGoodDeal: true,
+          source: "mercadolibre",
+          thumbnail:
+            "https://images.unsplash.com/photo-1583394838336-acd977736f90?w=300&h=300&fit=crop",
+        },
+        {
+          product_id: "MLM-drop-5",
+          product_title: "GoPro Hero 12 Black",
+          current_price: 8499,
+          previousPrice: 10999,
+          dropPercent: 23,
+          dropAmount: 2500,
+          isBestPrice: true,
+          source: "mercadolibre",
+          thumbnail:
+            "https://images.unsplash.com/photo-1564466809058-bf4114d55352?w=300&h=300&fit=crop",
+        },
+        {
+          product_id: "MLM-drop-6",
+          product_title: "Lavadora LG TurboWash 22kg",
+          current_price: 16999,
+          previousPrice: 21999,
+          dropPercent: 23,
+          dropAmount: 5000,
+          isBestPrice: false,
+          isGoodDeal: true,
+          source: "mercadolibre",
+          thumbnail:
+            "https://images.unsplash.com/photo-1626806787461-102c1bfaaea1?w=300&h=300&fit=crop",
+        },
+        {
+          product_id: "MLM-drop-7",
+          product_title: "iPad Air M1 256GB WiFi",
+          current_price: 12999,
+          previousPrice: 16999,
+          dropPercent: 24,
+          dropAmount: 4000,
+          isBestPrice: true,
+          source: "mercadolibre",
+          thumbnail:
+            "https://images.unsplash.com/photo-1544244015-0df4b3ffc6b0?w=300&h=300&fit=crop",
+        },
+        {
+          product_id: "MLM-drop-8",
+          product_title: "Silla Gamer Secretlab Titan",
+          current_price: 9999,
+          previousPrice: 12999,
+          dropPercent: 23,
+          dropAmount: 3000,
+          isBestPrice: false,
+          isGoodDeal: true,
+          source: "mercadolibre",
+          thumbnail:
+            "https://images.unsplash.com/photo-1598550476439-6847785fcea6?w=300&h=300&fit=crop",
+        },
+      ];
+    }
 
-      // Demo category discounts
-      if (categoryDiscounts.length === 0) {
-        categoryDiscounts = [
-          { key: "electronics", icon: "📱", nameEn: "Electronics", nameEs: "Electrónica", maxDiscount: 25, productCount: 156 },
-          { key: "home", icon: "🏠", nameEn: "Home & Kitchen", nameEs: "Hogar y Cocina", maxDiscount: 30, productCount: 89 },
-          { key: "fashion", icon: "👗", nameEn: "Fashion", nameEs: "Moda", maxDiscount: 40, productCount: 234 },
-          { key: "sports", icon: "⚽", nameEn: "Sports & Outdoors", nameEs: "Deportes", maxDiscount: 35, productCount: 67 },
-          { key: "beauty", icon: "💄", nameEn: "Beauty", nameEs: "Belleza", maxDiscount: 28, productCount: 112 },
-          { key: "toys", icon: "🎮", nameEn: "Toys & Games", nameEs: "Juguetes", maxDiscount: 32, productCount: 78 },
-        ];
-      }
+    // Demo category discounts
+    if (categoryDiscounts.length === 0) {
+      categoryDiscounts = [
+        {
+          key: "electronics",
+          icon: "📱",
+          nameEn: "Electronics",
+          nameEs: "Electrónica",
+          maxDiscount: 25,
+          productCount: 156,
+        },
+        {
+          key: "home",
+          icon: "🏠",
+          nameEn: "Home & Kitchen",
+          nameEs: "Hogar y Cocina",
+          maxDiscount: 30,
+          productCount: 89,
+        },
+        {
+          key: "fashion",
+          icon: "👗",
+          nameEn: "Fashion",
+          nameEs: "Moda",
+          maxDiscount: 40,
+          productCount: 234,
+        },
+        {
+          key: "sports",
+          icon: "⚽",
+          nameEn: "Sports & Outdoors",
+          nameEs: "Deportes",
+          maxDiscount: 35,
+          productCount: 67,
+        },
+        {
+          key: "beauty",
+          icon: "💄",
+          nameEn: "Beauty",
+          nameEs: "Belleza",
+          maxDiscount: 28,
+          productCount: 112,
+        },
+        {
+          key: "toys",
+          icon: "🎮",
+          nameEn: "Toys & Games",
+          nameEs: "Juguetes",
+          maxDiscount: 32,
+          productCount: 78,
+        },
+      ];
+    }
 
-    console.log("[Home Debug] After demo data - highlightedDeals:", highlightedDeals.length, "popularProducts:", popularProducts.length, "topPriceDrops:", topPriceDrops.length);
+    console.log(
+      "[Home Debug] After demo data - highlightedDeals:",
+      highlightedDeals.length,
+      "popularProducts:",
+      popularProducts.length,
+      "topPriceDrops:",
+      topPriceDrops.length,
+    );
 
     // Helper to render deal card for carousel (CamelCamelCamel style)
     const renderDealCard = (deal) => {
@@ -1969,9 +2587,11 @@ async function start() {
       }
 
       // Use thumbnail if available, otherwise construct from product_id
-      const imageUrl = deal.thumbnail || (deal.product_url?.includes("amazon")
-        ? "/images/product-placeholder.svg"
-        : `https://http2.mlstatic.com/D_NQ_NP_${deal.product_id?.split("-")[1] || ""}-O.webp`);
+      const imageUrl =
+        deal.thumbnail ||
+        (deal.product_url?.includes("amazon")
+          ? "/images/product-placeholder.svg"
+          : `https://http2.mlstatic.com/D_NQ_NP_${deal.product_id?.split("-")[1] || ""}-O.webp`);
 
       return `
         <div class="deal-card-ccc">
@@ -1988,12 +2608,16 @@ async function start() {
               <span class="deal-card-price">${formatPrice(deal.current_price, "MXN")}</span>
               ${deal.avgPrice ? `<span class="deal-card-avg">Avg: ${formatPrice(deal.avgPrice, "MXN")}</span>` : ""}
             </div>
-            ${deal.savingsPercent > 0 ? `
+            ${
+              deal.savingsPercent > 0
+                ? `
               <div class="deal-card-savings">
                 Save ${Math.round(deal.savingsPercent)}% (${formatPrice(deal.savingsAmount || 0, "MXN")})
               </div>
-            ` : ""}
-            <a href="/product/${encodeURIComponent(deal.product_id)}?source=${deal.source || 'mercadolibre'}" class="deal-card-btn">
+            `
+                : ""
+            }
+            <a href="/product/${encodeURIComponent(deal.product_id)}?source=${deal.source || "mercadolibre"}" class="deal-card-btn">
               ${lang === "es" ? "Ver en Mercado Libre" : "View on Mercado Libre"}
             </a>
           </div>
@@ -2011,16 +2635,19 @@ async function start() {
       }
 
       // Use thumbnail if available
-      const imageUrl = product.thumbnail || (product.product_url?.includes("amazon")
-        ? "/images/product-placeholder.svg"
-        : `https://http2.mlstatic.com/D_NQ_NP_${product.product_id?.split("-")[1] || ""}-O.webp`);
+      const imageUrl =
+        product.thumbnail ||
+        (product.product_url?.includes("amazon")
+          ? "/images/product-placeholder.svg"
+          : `https://http2.mlstatic.com/D_NQ_NP_${product.product_id?.split("-")[1] || ""}-O.webp`);
 
       const avgOrPrevPrice = product.previousPrice || product.avgPrice;
-      const savingsText = showDrop && product.dropPercent
-        ? `Save ${Math.round(product.dropPercent)}% (${formatPrice(product.dropAmount || 0, "MXN")})`
-        : product.savingsPercent
-          ? `Save ${Math.round(product.savingsPercent)}%`
-          : "";
+      const savingsText =
+        showDrop && product.dropPercent
+          ? `Save ${Math.round(product.dropPercent)}% (${formatPrice(product.dropAmount || 0, "MXN")})`
+          : product.savingsPercent
+            ? `Save ${Math.round(product.savingsPercent)}%`
+            : "";
 
       return `
         <div class="product-card-ccc">
@@ -2038,7 +2665,7 @@ async function start() {
               ${avgOrPrevPrice ? `<span class="product-card-avg">Avg: ${formatPrice(avgOrPrevPrice, "MXN")}</span>` : ""}
             </div>
             ${savingsText ? `<div class="product-card-savings">${savingsText}</div>` : ""}
-            <a href="/product/${encodeURIComponent(product.product_id)}?source=${product.source || 'mercadolibre'}" class="product-card-btn">
+            <a href="/product/${encodeURIComponent(product.product_id)}?source=${product.source || "mercadolibre"}" class="product-card-btn">
               ${lang === "es" ? "Ver en Mercado Libre" : "View on Mercado Libre"}
             </a>
           </div>
@@ -2047,7 +2674,9 @@ async function start() {
     };
 
     // Highlighted Deals Section (CamelCamelCamel style with carousel)
-    const highlightedDealsSection = highlightedDeals.length > 0 ? `
+    const highlightedDealsSection =
+      highlightedDeals.length > 0
+        ? `
       <section class="ccc-section" id="highlighted-deals">
         <div class="ccc-section-header">
           <div class="ccc-section-title-row">
@@ -2057,24 +2686,31 @@ async function start() {
               <button class="carousel-nav-btn" data-carousel="deals-carousel" data-dir="next" aria-label="Next" title="Next">›</button>
             </div>
           </div>
-          <p class="ccc-section-desc">${lang === "es"
-            ? "Estas son ofertas excepcionales que encontramos y vale la pena compartir. Revisa seguido, estas se actualizan frecuentemente."
-            : "These are outstanding deals we've found and feel are worth sharing. Check back often as these are frequently updated."}</p>
+          <p class="ccc-section-desc">${
+            lang === "es"
+              ? "Estas son ofertas excepcionales que encontramos y vale la pena compartir. Revisa seguido, estas se actualizan frecuentemente."
+              : "These are outstanding deals we've found and feel are worth sharing. Check back often as these are frequently updated."
+          }</p>
         </div>
         <div class="ccc-carousel" id="deals-carousel">
           ${highlightedDeals.map(renderDealCard).join("")}
         </div>
       </section>
-    ` : "";
+    `
+        : "";
 
     // Popular Products Section (CamelCamelCamel style)
-    const popularProductsSection = popularProducts.length > 0 ? `
+    const popularProductsSection =
+      popularProducts.length > 0
+        ? `
       <section class="ccc-section" id="popular-products">
         <div class="ccc-section-header">
           <h2 class="ccc-section-title">Popular Products →</h2>
-          <p class="ccc-section-desc">${lang === "es"
-            ? "Mira estas ofertas populares recientes. Ve lo que otros usuarios de OfertaRadar han estado comprando últimamente."
-            : "Check out these recently popular deals. See what OfertaRadar users have been buying lately."}</p>
+          <p class="ccc-section-desc">${
+            lang === "es"
+              ? "Mira estas ofertas populares recientes. Ve lo que otros usuarios de OfertaRadar han estado comprando últimamente."
+              : "Check out these recently popular deals. See what OfertaRadar users have been buying lately."
+          }</p>
           <div class="ccc-filter-row">
             <div class="ccc-filter-tabs" data-filter-target="popular-grid">
               <button class="ccc-filter-tab active" data-filter="all">All Products</button>
@@ -2096,19 +2732,24 @@ async function start() {
           </div>
         </div>
         <div class="ccc-product-grid" id="popular-grid">
-          ${popularProducts.map(p => renderHomeProductCard(p, false)).join("")}
+          ${popularProducts.map((p) => renderHomeProductCard(p, false)).join("")}
         </div>
       </section>
-    ` : "";
+    `
+        : "";
 
     // Top Mercado Libre Price Drops Section (CamelCamelCamel style)
-    const priceDropsSection = topPriceDrops.length > 0 ? `
+    const priceDropsSection =
+      topPriceDrops.length > 0
+        ? `
       <section class="ccc-section" id="price-drops">
         <div class="ccc-section-header">
           <h2 class="ccc-section-title">Top Mercado Libre Price Drops →</h2>
-          <p class="ccc-section-desc">${lang === "es"
-            ? "Grandes bajas de precio. Los productos abajo fueron seleccionados de categorías que rastrean frecuentemente y han tenido grandes bajas de precio desde la última actualización."
-            : "Big price drops! The products below are selected from categories that you frequently track products in and have had large price drops since the last price update."}</p>
+          <p class="ccc-section-desc">${
+            lang === "es"
+              ? "Grandes bajas de precio. Los productos abajo fueron seleccionados de categorías que rastrean frecuentemente y han tenido grandes bajas de precio desde la última actualización."
+              : "Big price drops! The products below are selected from categories that you frequently track products in and have had large price drops since the last price update."
+          }</p>
           <div class="ccc-filter-row">
             <div class="ccc-filter-tabs" data-filter-target="drops-grid">
               <button class="ccc-filter-tab active" data-filter="recent">Most Recent</button>
@@ -2131,13 +2772,16 @@ async function start() {
           </div>
         </div>
         <div class="ccc-product-grid" id="drops-grid">
-          ${topPriceDrops.map(p => renderHomeProductCard(p, true)).join("")}
+          ${topPriceDrops.map((p) => renderHomeProductCard(p, true)).join("")}
         </div>
       </section>
-    ` : "";
+    `
+        : "";
 
     // Discounts by Category Section
-    const categorySection = categoryDiscounts.length > 0 ? `
+    const categorySection =
+      categoryDiscounts.length > 0
+        ? `
       <section class="home-section" id="category-discounts">
         <div class="home-section-header">
           <h2 class="home-section-title">
@@ -2146,7 +2790,9 @@ async function start() {
           </h2>
         </div>
         <div class="category-grid">
-          ${categoryDiscounts.map(cat => `
+          ${categoryDiscounts
+            .map(
+              (cat) => `
             <a href="/?q=${encodeURIComponent(lang === "es" ? cat.nameEs : cat.nameEn)}" class="category-discount-card">
               <span class="category-discount-icon">${cat.icon}</span>
               <div class="category-discount-name">${lang === "es" ? cat.nameEs : cat.nameEn}</div>
@@ -2155,20 +2801,30 @@ async function start() {
               </div>
               <div class="category-discount-count">${cat.productCount} ${lang === "es" ? "productos" : "products"}</div>
             </a>
-          `).join("")}
+          `,
+            )
+            .join("")}
         </div>
       </section>
-    ` : "";
+    `
+        : "";
 
     // Empty state if no deals data
-    const emptyDealsSection = (highlightedDeals.length === 0 && popularProducts.length === 0 && topPriceDrops.length === 0) && hasToken ? `
+    const emptyDealsSection =
+      highlightedDeals.length === 0 &&
+      popularProducts.length === 0 &&
+      topPriceDrops.length === 0 &&
+      hasToken
+        ? `
       <section class="home-section">
         <div class="home-section-empty">
           <span class="home-section-empty-icon">📊</span>
           <p class="home-section-empty-text">
-            ${lang === "es"
-              ? "Aún no hay datos de ofertas. ¡Empieza a rastrear productos para ver ofertas personalizadas!"
-              : "No deals data yet. Start tracking products to see personalized deals!"}
+            ${
+              lang === "es"
+                ? "Aún no hay datos de ofertas. ¡Empieza a rastrear productos para ver ofertas personalizadas!"
+                : "No deals data yet. Start tracking products to see personalized deals!"
+            }
           </p>
           <a href="/?q=ofertas" class="home-section-empty-cta">
             ${lang === "es" ? "Explorar Productos" : "Explore Products"}
@@ -2178,15 +2834,28 @@ async function start() {
           </a>
         </div>
       </section>
-    ` : "";
+    `
+        : "";
 
     // DEBUG: Log section generation
     console.log("[Home Route] =========== SECTIONS DEBUG ===========");
-    console.log("[Home Route] highlightedDealsSection length:", highlightedDealsSection.length);
-    console.log("[Home Route] popularProductsSection length:", popularProductsSection.length);
-    console.log("[Home Route] priceDropsSection length:", priceDropsSection.length);
+    console.log(
+      "[Home Route] highlightedDealsSection length:",
+      highlightedDealsSection.length,
+    );
+    console.log(
+      "[Home Route] popularProductsSection length:",
+      popularProductsSection.length,
+    );
+    console.log(
+      "[Home Route] priceDropsSection length:",
+      priceDropsSection.length,
+    );
     console.log("[Home Route] categorySection length:", categorySection.length);
-    console.log("[Home Route] Will show:", hasToken ? "searchPage (logged in)" : "landingPage (guest)");
+    console.log(
+      "[Home Route] Will show:",
+      hasToken ? "searchPage (logged in)" : "landingPage (guest)",
+    );
 
     // Search page for logged-in users with CamelCamelCamel-style sections
     const searchPage = `
@@ -2206,10 +2875,11 @@ async function start() {
     // Show landing page for guests, search page for logged-in users
     const pageContent = hasToken ? searchPage : landingPage;
 
-    res.send(renderPage(
-      t(lang, "priceTracker"),
-      pageContent,
-      `
+    res.send(
+      renderPage(
+        t(lang, "priceTracker"),
+        pageContent,
+        `
         <style>
           .tagline { color: var(--text-muted); margin-bottom: 24px; font-size: 1.1rem; }
           .search-wrapper { max-width: 900px; margin: 0 auto; }
@@ -2368,11 +3038,12 @@ async function start() {
           })();
         </script>
       `,
-      hasToken,
-      userEmail,
-      lang,
-      userData
-    ));
+        hasToken,
+        userEmail,
+        lang,
+        userData,
+      ),
+    );
   });
 
   app.get("/register", (req, res) => {
@@ -2416,8 +3087,8 @@ async function start() {
       <script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2"></script>
       <script>
         document.addEventListener('DOMContentLoaded', function() {
-          const SUPABASE_URL = '${process.env.SUPABASE_URL || ''}';
-          const SUPABASE_ANON_KEY = '${process.env.SUPABASE_ANON_KEY || ''}';
+          const SUPABASE_URL = '${process.env.SUPABASE_URL || ""}';
+          const SUPABASE_ANON_KEY = '${process.env.SUPABASE_ANON_KEY || ""}';
           const REDIRECT_URL = '${APP_BASE_URL}/auth/supabase-callback';
 
           if (!SUPABASE_URL || !SUPABASE_ANON_KEY) {
@@ -2462,26 +3133,46 @@ async function start() {
       </script>
     `;
 
-    res.send(renderAuthPage(t(lang, "register"), formContent, extraScript, lang, {
-      title: lang === "es" ? "Únete a OfertaRadar" : "Join OfertaRadar",
-      subtitle: lang === "es" ? "Miles de usuarios ya están ahorrando con nosotros" : "Thousands of users are already saving with us"
-    }));
+    res.send(
+      renderAuthPage(t(lang, "register"), formContent, extraScript, lang, {
+        title: lang === "es" ? "Únete a OfertaRadar" : "Join OfertaRadar",
+        subtitle:
+          lang === "es"
+            ? "Miles de usuarios ya están ahorrando con nosotros"
+            : "Thousands of users are already saving with us",
+      }),
+    );
   });
 
   app.post("/register", async (req, res) => {
-    const email = String(req.body.email || "").trim().toLowerCase();
+    const email = String(req.body.email || "")
+      .trim()
+      .toLowerCase();
     const password = String(req.body.password || "");
 
     if (!email || !password) {
-      return res.send(renderPage("Register", `<p class="error">Email and password are required.</p>`));
+      return res.send(
+        renderPage(
+          "Register",
+          `<p class="error">Email and password are required.</p>`,
+        ),
+      );
     }
 
-    const existing = await db.get("SELECT id, verified FROM users WHERE email = ?", email);
+    const existing = await db.get(
+      "SELECT id, verified FROM users WHERE email = ?",
+      email,
+    );
     if (existing) {
-      return res.send(renderPage("Register", `
+      return res.send(
+        renderPage(
+          "Register",
+          `
         <p class="error">Account already exists.</p>
         <p><a href="/login">Go to login</a></p>
-      `));
+      `,
+        ),
+      );
     }
 
     const passwordHash = await bcrypt.hash(password, 10);
@@ -2493,55 +3184,82 @@ async function start() {
       email,
       passwordHash,
       verificationToken,
-      createdAt
+      createdAt,
     );
 
     const verificationLink = `${APP_BASE_URL}/verify?token=${verificationToken}`;
-    
+
     // CALLBACK EXAMPLE: Using callbacks for email sending
     sendVerificationEmail(
       email,
       verificationLink,
       // Success callback
       (info) => {
-        logAction("Email Sent", `Verification email sent to ${info.email}`, () => {
-          console.log("✓ Email logging complete");
-        });
+        logAction(
+          "Email Sent",
+          `Verification email sent to ${info.email}`,
+          () => {
+            console.log("✓ Email logging complete");
+          },
+        );
       },
       // Error callback
       (error) => {
         console.error("✗ Failed to send email:", error);
-      }
+      },
     );
 
-    res.send(renderPage("Verify Email", `
+    res.send(
+      renderPage(
+        "Verify Email",
+        `
       <h1>Verify your email</h1>
       <p>We sent a verification link to <strong>${email}</strong>.</p>
       <p class="muted">In development, the verification link is printed in the server console.</p>
-    `));
+    `,
+      ),
+    );
   });
 
   app.get("/verify", async (req, res) => {
     const token = String(req.query.token || "");
     if (!token) {
-      return res.send(renderPage("Verify Email", `<p class="error">Invalid verification token.</p>`));
+      return res.send(
+        renderPage(
+          "Verify Email",
+          `<p class="error">Invalid verification token.</p>`,
+        ),
+      );
     }
 
-    const user = await db.get("SELECT id FROM users WHERE verification_token = ?", token);
+    const user = await db.get(
+      "SELECT id FROM users WHERE verification_token = ?",
+      token,
+    );
     if (!user) {
-      return res.send(renderPage("Verify Email", `<p class="error">Verification token not found.</p>`));
+      return res.send(
+        renderPage(
+          "Verify Email",
+          `<p class="error">Verification token not found.</p>`,
+        ),
+      );
     }
 
     await db.run(
       "UPDATE users SET verified = 1, verification_token = NULL WHERE id = ?",
-      user.id
+      user.id,
     );
 
-    res.send(renderPage("Verified", `
+    res.send(
+      renderPage(
+        "Verified",
+        `
       <h1>Email verified</h1>
       <p>Your account is now verified.</p>
       <p><a href="/login">Continue to login</a></p>
-    `));
+    `,
+      ),
+    );
   });
 
   app.get("/login", (req, res) => {
@@ -2588,8 +3306,8 @@ async function start() {
       <script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2"></script>
       <script>
         document.addEventListener('DOMContentLoaded', function() {
-          const SUPABASE_URL = '${process.env.SUPABASE_URL || ''}';
-          const SUPABASE_ANON_KEY = '${process.env.SUPABASE_ANON_KEY || ''}';
+          const SUPABASE_URL = '${process.env.SUPABASE_URL || ""}';
+          const SUPABASE_ANON_KEY = '${process.env.SUPABASE_ANON_KEY || ""}';
           const REDIRECT_URL = '${APP_BASE_URL}/auth/supabase-callback';
 
           if (!SUPABASE_URL || !SUPABASE_ANON_KEY) {
@@ -2634,15 +3352,22 @@ async function start() {
       </script>
     `;
 
-    res.send(renderAuthPage(t(lang, "login"), formContent, extraScript, lang, {
-      title: lang === "es" ? "Bienvenido de nuevo" : "Welcome back",
-      subtitle: lang === "es" ? "Rastrea precios y encuentra las mejores ofertas en México" : "Track prices and find the best deals in Mexico"
-    }));
+    res.send(
+      renderAuthPage(t(lang, "login"), formContent, extraScript, lang, {
+        title: lang === "es" ? "Bienvenido de nuevo" : "Welcome back",
+        subtitle:
+          lang === "es"
+            ? "Rastrea precios y encuentra las mejores ofertas en México"
+            : "Track prices and find the best deals in Mexico",
+      }),
+    );
   });
 
   app.post("/login", async (req, res) => {
     const lang = getLang(req);
-    const email = String(req.body.email || "").trim().toLowerCase();
+    const email = String(req.body.email || "")
+      .trim()
+      .toLowerCase();
     const password = String(req.body.password || "");
     const ipAddress = req.ip || req.connection.remoteAddress;
     const userAgent = req.get("User-Agent") || "";
@@ -2656,9 +3381,12 @@ async function start() {
         success: false,
         ipAddress,
         userAgent,
-        authMethod: "local"
+        authMethod: "local",
       });
-      return res.send(renderPage(t(lang, "login"), `
+      return res.send(
+        renderPage(
+          t(lang, "login"),
+          `
         <h1>${t(lang, "login")}</h1>
         <p class="error">${t(lang, "invalidCredentials")}</p>
         <form method="post" action="/login">
@@ -2669,7 +3397,13 @@ async function start() {
           <button type="submit">${t(lang, "login")}</button>
         </form>
         <p class="muted">${t(lang, "newHere")} <a href="/register">${t(lang, "register")}</a></p>
-      `, "", false, "", lang));
+      `,
+          "",
+          false,
+          "",
+          lang,
+        ),
+      );
     }
 
     const isValid = await bcrypt.compare(password, user.password_hash);
@@ -2681,9 +3415,12 @@ async function start() {
         success: false,
         ipAddress,
         userAgent,
-        authMethod: "local"
+        authMethod: "local",
       });
-      return res.send(renderPage(t(lang, "login"), `
+      return res.send(
+        renderPage(
+          t(lang, "login"),
+          `
         <h1>${t(lang, "login")}</h1>
         <p class="error">${t(lang, "invalidCredentials")}</p>
         <form method="post" action="/login">
@@ -2694,11 +3431,20 @@ async function start() {
           <button type="submit">${t(lang, "login")}</button>
         </form>
         <p class="muted">${t(lang, "newHere")} <a href="/register">${t(lang, "register")}</a></p>
-      `, "", false, "", lang));
+      `,
+          "",
+          false,
+          "",
+          lang,
+        ),
+      );
     }
 
     if (!user.verified) {
-      return res.send(renderPage(t(lang, "login"), `
+      return res.send(
+        renderPage(
+          t(lang, "login"),
+          `
         <h1>${t(lang, "login")}</h1>
         <p class="error">Please verify your email before logging in.</p>
         <p class="muted">Check your email for the verification link.</p>
@@ -2709,7 +3455,13 @@ async function start() {
           <input name="password" type="password" required />
           <button type="submit">${t(lang, "login")}</button>
         </form>
-      `, "", false, "", lang));
+      `,
+          "",
+          false,
+          "",
+          lang,
+        ),
+      );
     }
 
     // Record successful login
@@ -2719,34 +3471,39 @@ async function start() {
       success: true,
       ipAddress,
       userAgent,
-      authMethod: "local"
+      authMethod: "local",
     });
 
     console.log(`[Login] User logged in: ${email} (ID: ${user.id})`);
 
     const token = createToken(user);
     setAuthCookie(res, token);
-    return res.redirect("/");  // Redirect to home after login
+    return res.redirect("/"); // Redirect to home after login
   });
 
   app.post("/logout", (req, res) => {
     clearAuthCookie(res);
-    res.redirect("/");  // Redirect to home after logout
+    res.redirect("/"); // Redirect to home after logout
   });
 
   // Diagnostic endpoint to check Supabase configuration
   app.get("/debug/supabase-config", (req, res) => {
     const hasSupabaseUrl = Boolean(process.env.SUPABASE_URL);
     const hasSupabaseKey = Boolean(process.env.SUPABASE_ANON_KEY);
-    
-    res.send(renderPage("Supabase Configuration", `
+
+    res.send(
+      renderPage(
+        "Supabase Configuration",
+        `
       <h1>Supabase Configuration Status</h1>
-      <p><strong>SUPABASE_URL:</strong> ${hasSupabaseUrl ? '✅ Configured' : '❌ Not configured'}</p>
-      ${hasSupabaseUrl ? `<p class="muted">URL: ${process.env.SUPABASE_URL}</p>` : ''}
-      <p><strong>SUPABASE_ANON_KEY:</strong> ${hasSupabaseKey ? '✅ Configured' : '❌ Not configured'}</p>
-      ${hasSupabaseKey ? `<p class="muted">Key: ${process.env.SUPABASE_ANON_KEY.substring(0, 20)}...</p>` : ''}
-      
-      ${!hasSupabaseUrl || !hasSupabaseKey ? `
+      <p><strong>SUPABASE_URL:</strong> ${hasSupabaseUrl ? "✅ Configured" : "❌ Not configured"}</p>
+      ${hasSupabaseUrl ? `<p class="muted">URL: ${process.env.SUPABASE_URL}</p>` : ""}
+      <p><strong>SUPABASE_ANON_KEY:</strong> ${hasSupabaseKey ? "✅ Configured" : "❌ Not configured"}</p>
+      ${hasSupabaseKey ? `<p class="muted">Key: ${process.env.SUPABASE_ANON_KEY.substring(0, 20)}...</p>` : ""}
+
+      ${
+        !hasSupabaseUrl || !hasSupabaseKey
+          ? `
         <div class="notice" style="margin-top: 20px;">
           <h3>⚠️ Configuration Required</h3>
           <p>To enable Google login, add these to your <code>.env</code> file:</p>
@@ -2755,15 +3512,19 @@ SUPABASE_URL=https://rcetefvuniellfuneejg.supabase.co
 SUPABASE_ANON_KEY=your_anon_key_from_supabase</pre>
           <p>Then restart the server: <code>npm run dev</code></p>
         </div>
-      ` : `
+      `
+          : `
         <div style="margin-top: 20px; padding: 12px; background: #e8f5e9; border-radius: 8px;">
           <p class="success">✅ Supabase is configured correctly!</p>
           <p><a href="/login">Go to login page</a></p>
         </div>
-      `}
-      
+      `
+      }
+
       <p style="margin-top: 24px;"><a href="/">Back to home</a></p>
-    `));
+    `,
+      ),
+    );
   });
 
   // ============================================
@@ -2786,21 +3547,31 @@ SUPABASE_ANON_KEY=your_anon_key_from_supabase</pre>
       // Check for errors from OAuth provider
       if (error) {
         console.error("OAuth Error:", error);
-        return res.send(renderPage("Authentication Failed", `
+        return res.send(
+          renderPage(
+            "Authentication Failed",
+            `
           <h1>Authentication Failed</h1>
           <p class="error">Error: ${error}</p>
           <p class="muted">There was a problem logging in with the external service.</p>
           <p><a href="/login">Back to login</a></p>
-        `));
+        `,
+          ),
+        );
       }
 
       // Verify we received an authorization code
       if (!code) {
-        return res.send(renderPage("Authentication Failed", `
+        return res.send(
+          renderPage(
+            "Authentication Failed",
+            `
           <h1>Authentication Failed</h1>
           <p class="error">No authorization code received.</p>
           <p><a href="/login">Back to login</a></p>
-        `));
+        `,
+          ),
+        );
       }
 
       console.log("\n[OAuth Callback] Received authorization code:", code);
@@ -2821,25 +3592,34 @@ SUPABASE_ANON_KEY=your_anon_key_from_supabase</pre>
       // });
 
       // For now, show success page
-      res.send(renderPage("Authentication Successful", `
+      res.send(
+        renderPage(
+          "Authentication Successful",
+          `
         <h1>OAuth Callback Received!</h1>
         <p class="success">✓ Authorization code received successfully</p>
         <div class="notice">
           <strong>Callback Data:</strong>
           <pre>Code: ${code}
-State: ${state || 'none'}</pre>
+State: ${state || "none"}</pre>
         </div>
         <p class="muted">Next step: Exchange this code for an access token to complete authentication.</p>
         <p><a href="/login">Back to login</a></p>
-      `));
-
+      `,
+        ),
+      );
     } catch (error) {
       console.error("Callback error:", error);
-      res.send(renderPage("Error", `
+      res.send(
+        renderPage(
+          "Error",
+          `
         <h1>Error</h1>
         <p class="error">An error occurred during authentication.</p>
         <p><a href="/login">Back to login</a></p>
-      `));
+      `,
+        ),
+      );
     }
   });
 
@@ -2883,8 +3663,8 @@ State: ${state || 'none'}</pre>
 
           <script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2"></script>
           <script>
-          const SUPABASE_URL = '${process.env.SUPABASE_URL || ''}';
-          const SUPABASE_ANON_KEY = '${process.env.SUPABASE_ANON_KEY || ''}';
+          const SUPABASE_URL = '${process.env.SUPABASE_URL || ""}';
+          const SUPABASE_ANON_KEY = '${process.env.SUPABASE_ANON_KEY || ""}';
 
           if (!SUPABASE_URL || !SUPABASE_ANON_KEY) {
             document.body.innerHTML = '<h1>Configuration Error</h1><p class="error">Authentication not configured. Please contact support.</p>';
@@ -2934,11 +3714,16 @@ State: ${state || 'none'}</pre>
       `);
     } catch (error) {
       console.error("Supabase callback error:", error);
-      res.send(renderPage("Error", `
+      res.send(
+        renderPage(
+          "Error",
+          `
         <h1>Error</h1>
         <p class="error">An error occurred during authentication.</p>
         <p><a href="/login">Back to login</a></p>
-      `));
+      `,
+        ),
+      );
     }
   });
 
@@ -2950,7 +3735,7 @@ State: ${state || 'none'}</pre>
       const { user, access_token } = req.body;
 
       if (!user || !user.email) {
-        return res.json({ success: false, error: 'Invalid user data' });
+        return res.json({ success: false, error: "Invalid user data" });
       }
 
       const email = user.email.toLowerCase();
@@ -2960,26 +3745,32 @@ State: ${state || 'none'}</pre>
 
       if (!dbUser) {
         // Create new user (no password needed for OAuth users)
-        const randomPassword = crypto.randomBytes(32).toString('hex');
+        const randomPassword = crypto.randomBytes(32).toString("hex");
         const passwordHash = await bcrypt.hash(randomPassword, 10);
 
         await db.run(
           "INSERT INTO users (email, password_hash, verified, created_at, auth_provider) VALUES (?, ?, ?, ?, ?)",
-          [email, passwordHash, 1, new Date().toISOString(), "google"]
+          [email, passwordHash, 1, new Date().toISOString(), "google"],
         );
 
         dbUser = await db.get("SELECT * FROM users WHERE email = ?", [email]);
         console.log(`[OAuth] New user created: ${email}`);
       } else if (!dbUser.verified) {
         // Auto-verify existing user who logged in with OAuth
-        await db.run("UPDATE users SET verified = 1, auth_provider = 'google' WHERE id = ?", [dbUser.id]);
+        await db.run(
+          "UPDATE users SET verified = 1, auth_provider = 'google' WHERE id = ?",
+          [dbUser.id],
+        );
         dbUser.verified = 1;
       }
 
       // Verify we have a valid user
       if (!dbUser || !dbUser.id) {
         console.error("[OAuth] Failed to get/create user in database");
-        return res.json({ success: false, error: "Failed to create user account" });
+        return res.json({
+          success: false,
+          error: "Failed to create user account",
+        });
       }
 
       // Record successful OAuth login
@@ -2989,7 +3780,7 @@ State: ${state || 'none'}</pre>
         success: true,
         ipAddress: req.ip || req.connection.remoteAddress,
         userAgent: req.get("User-Agent") || "",
-        authMethod: "google"
+        authMethod: "google",
       });
 
       console.log(`[OAuth] ${email} logged in`);
@@ -3002,9 +3793,8 @@ State: ${state || 'none'}</pre>
 
       res.json({
         success: true,
-        user: { id: dbUser.id, email: dbUser.email }
+        user: { id: dbUser.id, email: dbUser.email },
       });
-
     } catch (error) {
       console.error("Supabase verify error:", error);
 
@@ -3012,22 +3802,37 @@ State: ${state || 'none'}</pre>
       let errorMessage = error.message;
       let errorHint = null;
 
-      if (error.message.includes("schema cache") || error.message.includes("relation") || error.message.includes("does not exist")) {
+      if (
+        error.message.includes("schema cache") ||
+        error.message.includes("relation") ||
+        error.message.includes("does not exist")
+      ) {
         errorMessage = "Database tables not configured";
-        errorHint = "Run the migration SQL in Supabase SQL Editor: supabase/migrations/001_create_tables.sql";
-      } else if (error.message.includes("JWT") || error.message.includes("token")) {
+        errorHint =
+          "Run the migration SQL in Supabase SQL Editor: supabase/migrations/001_create_tables.sql";
+      } else if (
+        error.message.includes("JWT") ||
+        error.message.includes("token")
+      ) {
         errorMessage = "Authentication token error";
         errorHint = "Check your SUPABASE_ANON_KEY in .env file";
-      } else if (error.message.includes("network") || error.message.includes("fetch")) {
+      } else if (
+        error.message.includes("network") ||
+        error.message.includes("fetch")
+      ) {
         errorMessage = "Cannot connect to database";
         errorHint = "Check your SUPABASE_URL and internet connection";
       }
 
-      console.error("[OAuth Error]", errorMessage, errorHint ? `- ${errorHint}` : "");
+      console.error(
+        "[OAuth Error]",
+        errorMessage,
+        errorHint ? `- ${errorHint}` : "",
+      );
       res.json({
         success: false,
         error: errorMessage,
-        hint: errorHint
+        hint: errorHint,
       });
     }
   });
@@ -3037,7 +3842,10 @@ State: ${state || 'none'}</pre>
   // ============================================
 
   app.get("/forgot-password", (req, res) => {
-    res.send(renderPage("Forgot Password", `
+    res.send(
+      renderPage(
+        "Forgot Password",
+        `
       <h1>Forgot Password</h1>
       <p>Enter your email address and we'll send you a link to reset your password.</p>
       <form method="post" action="/forgot-password">
@@ -3046,26 +3854,43 @@ State: ${state || 'none'}</pre>
         <button type="submit">Send Reset Link</button>
       </form>
       <p class="muted"><a href="/login">Back to login</a></p>
-    `));
+    `,
+      ),
+    );
   });
 
   app.post("/forgot-password", async (req, res) => {
-    const email = String(req.body.email || "").trim().toLowerCase();
+    const email = String(req.body.email || "")
+      .trim()
+      .toLowerCase();
 
     if (!email) {
-      return res.send(renderPage("Forgot Password", `<p class="error">Email is required.</p>`));
+      return res.send(
+        renderPage(
+          "Forgot Password",
+          `<p class="error">Email is required.</p>`,
+        ),
+      );
     }
 
-    const user = await db.get("SELECT id, email FROM users WHERE email = ?", email);
-    
+    const user = await db.get(
+      "SELECT id, email FROM users WHERE email = ?",
+      email,
+    );
+
     // Always show success message (security best practice - don't reveal if email exists)
     if (!user) {
-      return res.send(renderPage("Check Your Email", `
+      return res.send(
+        renderPage(
+          "Check Your Email",
+          `
         <h1>Check Your Email</h1>
         <p>If an account exists with <strong>${email}</strong>, you will receive a password reset link.</p>
         <p class="muted">The link will expire in 1 hour.</p>
         <p><a href="/login">Back to login</a></p>
-      `));
+      `,
+        ),
+      );
     }
 
     // Generate reset token
@@ -3076,56 +3901,81 @@ State: ${state || 'none'}</pre>
       "UPDATE users SET verification_token = ?, created_at = ? WHERE id = ?",
       resetToken,
       resetExpires,
-      user.id
+      user.id,
     );
 
     const resetLink = `${APP_BASE_URL}/reset-password?token=${resetToken}`;
-    
+
     // CALLBACK EXAMPLE: Send reset email with callbacks
     sendVerificationEmail(
       email,
       resetLink,
       // Success callback
-      function(info) {
-        logAction("Password Reset Email Sent", `Reset link sent to ${info.email}`, function() {
-          console.log("✓ Password reset email logged");
-        });
+      function (info) {
+        logAction(
+          "Password Reset Email Sent",
+          `Reset link sent to ${info.email}`,
+          function () {
+            console.log("✓ Password reset email logged");
+          },
+        );
       },
       // Error callback
-      function(error) {
+      function (error) {
         console.error("✗ Failed to send reset email:", error);
-      }
+      },
     );
 
-    res.send(renderPage("Check Your Email", `
+    res.send(
+      renderPage(
+        "Check Your Email",
+        `
       <h1>Check Your Email</h1>
       <p>We sent a password reset link to <strong>${email}</strong>.</p>
       <p class="muted">The link will expire in 1 hour.</p>
       <p class="muted">In development, the reset link is printed in the server console.</p>
       <p><a href="/login">Back to login</a></p>
-    `));
+    `,
+      ),
+    );
   });
 
   app.get("/reset-password", async (req, res) => {
     const token = String(req.query.token || "");
-    
+
     if (!token) {
-      return res.send(renderPage("Reset Password", `
+      return res.send(
+        renderPage(
+          "Reset Password",
+          `
         <p class="error">Invalid reset token.</p>
         <p><a href="/forgot-password">Request new reset link</a></p>
-      `));
+      `,
+        ),
+      );
     }
 
-    const user = await db.get("SELECT id, email FROM users WHERE verification_token = ?", token);
-    
+    const user = await db.get(
+      "SELECT id, email FROM users WHERE verification_token = ?",
+      token,
+    );
+
     if (!user) {
-      return res.send(renderPage("Reset Password", `
+      return res.send(
+        renderPage(
+          "Reset Password",
+          `
         <p class="error">Invalid or expired reset token.</p>
         <p><a href="/forgot-password">Request new reset link</a></p>
-      `));
+      `,
+        ),
+      );
     }
 
-    res.send(renderPage("Reset Password", `
+    res.send(
+      renderPage(
+        "Reset Password",
+        `
       <h1>Reset Password</h1>
       <p>Enter your new password for <strong>${user.email}</strong></p>
       <form method="post" action="/reset-password">
@@ -3137,7 +3987,9 @@ State: ${state || 'none'}</pre>
         <button type="submit">Reset Password</button>
       </form>
       <p class="muted"><a href="/login">Back to login</a></p>
-    `));
+    `,
+      ),
+    );
   });
 
   app.post("/reset-password", async (req, res) => {
@@ -3146,24 +3998,47 @@ State: ${state || 'none'}</pre>
     const confirmPassword = String(req.body.confirmPassword || "");
 
     if (!token || !password || !confirmPassword) {
-      return res.send(renderPage("Reset Password", `<p class="error">All fields are required.</p>`));
+      return res.send(
+        renderPage(
+          "Reset Password",
+          `<p class="error">All fields are required.</p>`,
+        ),
+      );
     }
 
     if (password !== confirmPassword) {
-      return res.send(renderPage("Reset Password", `<p class="error">Passwords do not match.</p>`));
+      return res.send(
+        renderPage(
+          "Reset Password",
+          `<p class="error">Passwords do not match.</p>`,
+        ),
+      );
     }
 
     if (password.length < 8) {
-      return res.send(renderPage("Reset Password", `<p class="error">Password must be at least 8 characters.</p>`));
+      return res.send(
+        renderPage(
+          "Reset Password",
+          `<p class="error">Password must be at least 8 characters.</p>`,
+        ),
+      );
     }
 
-    const user = await db.get("SELECT id, email FROM users WHERE verification_token = ?", token);
-    
+    const user = await db.get(
+      "SELECT id, email FROM users WHERE verification_token = ?",
+      token,
+    );
+
     if (!user) {
-      return res.send(renderPage("Reset Password", `
+      return res.send(
+        renderPage(
+          "Reset Password",
+          `
         <p class="error">Invalid or expired reset token.</p>
         <p><a href="/forgot-password">Request new reset link</a></p>
-      `));
+      `,
+        ),
+      );
     }
 
     // Hash new password
@@ -3173,20 +4048,29 @@ State: ${state || 'none'}</pre>
     await db.run(
       "UPDATE users SET password_hash = ?, verification_token = NULL, verified = 1 WHERE id = ?",
       passwordHash,
-      user.id
+      user.id,
     );
 
     // Log the password reset with callback
-    logAction("Password Reset", `Password updated for ${user.email}`, function() {
-      console.log("✓ Password reset completed");
-    });
+    logAction(
+      "Password Reset",
+      `Password updated for ${user.email}`,
+      function () {
+        console.log("✓ Password reset completed");
+      },
+    );
 
-    res.send(renderPage("Password Reset Successful", `
+    res.send(
+      renderPage(
+        "Password Reset Successful",
+        `
       <h1>Password Reset Successful</h1>
       <p class="success">Your password has been reset successfully!</p>
       <p>You can now log in with your new password.</p>
       <p><a href="/login">Go to login</a></p>
-    `));
+    `,
+      ),
+    );
   });
 
   app.get("/profile", authRequired, async (req, res) => {
@@ -3200,25 +4084,35 @@ State: ${state || 'none'}</pre>
     // Get login history for this user
     const loginHistory = await getLoginHistory(req.user.id, 5);
 
-    const loginHistoryHtml = loginHistory.length ? `
+    const loginHistoryHtml = loginHistory.length
+      ? `
       <h2 style="margin-top: 24px;">${lang === "es" ? "Historial de Inicios de Sesión" : "Login History"}</h2>
       <div class="login-history">
-        ${loginHistory.map(log => `
+        ${loginHistory
+          .map(
+            (log) => `
           <div class="login-entry ${log.success ? "success" : "failed"}">
             <span class="login-date">${new Date(log.created_at).toLocaleString(lang === "es" ? "es-MX" : "en-US")}</span>
             <span class="login-method">${log.auth_method === "google" ? "Google" : "Email/Password"}</span>
             <span class="login-status">${log.success ? "✓" : "✗"}</span>
           </div>
-        `).join("")}
+        `,
+          )
+          .join("")}
       </div>
-    ` : "";
+    `
+      : "";
 
-    res.send(renderPage(t(lang, "profile"), `
+    res.send(
+      renderPage(
+        t(lang, "profile"),
+        `
       <div class="profile-header">
         <div class="profile-avatar">
-          ${user.profile_picture_url
-            ? `<img src="${user.profile_picture_url}" alt="Profile" />`
-            : `<span class="avatar-initials">${getInitials(user.username || user.email)}</span>`
+          ${
+            user.profile_picture_url
+              ? `<img src="${user.profile_picture_url}" alt="Profile" />`
+              : `<span class="avatar-initials">${getInitials(user.username || user.email)}</span>`
           }
         </div>
         <div class="profile-info">
@@ -3241,7 +4135,8 @@ State: ${state || 'none'}</pre>
         <p><strong>${lang === "es" ? "Cuenta creada" : "Account created"}:</strong> ${new Date(user.created_at).toLocaleString(lang === "es" ? "es-MX" : "en-US")}</p>
       </div>
       ${loginHistoryHtml}
-    `, `
+    `,
+        `
       <style>
         .profile-header {
           display: flex;
@@ -3307,7 +4202,13 @@ State: ${state || 'none'}</pre>
         .login-entry.success .login-status { color: #3d7a5a; }
         .login-entry.failed .login-status { color: #c94a4a; }
       </style>
-    `, true, user.email, lang, user));
+    `,
+        true,
+        user.email,
+        lang,
+        user,
+      ),
+    );
   });
 
   // Profile settings page
@@ -3323,18 +4224,27 @@ State: ${state || 'none'}</pre>
     const error = req.query.error;
 
     // Debug logging
-    console.log("[Profile Settings GET] Loading page for user ID:", req.user.id);
-    console.log("[Profile Settings GET] User data from DB:", JSON.stringify(user, null, 2));
+    console.log(
+      "[Profile Settings GET] Loading page for user ID:",
+      req.user.id,
+    );
+    console.log(
+      "[Profile Settings GET] User data from DB:",
+      JSON.stringify(user, null, 2),
+    );
 
-    res.send(renderPage(lang === "es" ? "Configuración de Perfil" : "Profile Settings", `
+    res.send(
+      renderPage(
+        lang === "es" ? "Configuración de Perfil" : "Profile Settings",
+        `
       <h1>${lang === "es" ? "Configuración de Perfil" : "Profile Settings"}</h1>
 
       <!-- Debug Info (remove in production) -->
       <div style="background: #ffe0e0; padding: 12px; border-radius: 8px; margin-bottom: 16px; font-size: 12px; font-family: monospace;">
         <strong>DEBUG INFO:</strong><br>
         User ID: ${user.id}<br>
-        Username in DB: "${user.username || '(null)'}"<br>
-        Profile Pic URL: "${user.profile_picture_url || '(null)'}"<br>
+        Username in DB: "${user.username || "(null)"}"<br>
+        Profile Pic URL: "${user.profile_picture_url || "(null)"}"<br>
         Email: ${user.email}
       </div>
 
@@ -3345,9 +4255,10 @@ State: ${state || 'none'}</pre>
         <h2>${lang === "es" ? "Foto de Perfil" : "Profile Picture"}</h2>
         <div class="avatar-section">
           <div class="avatar-preview" id="avatarPreview">
-            ${user.profile_picture_url
-              ? `<img src="${user.profile_picture_url}" alt="Profile" />`
-              : `<span class="avatar-initials">${getInitials(user.username || user.email)}</span>`
+            ${
+              user.profile_picture_url
+                ? `<img src="${user.profile_picture_url}" alt="Profile" />`
+                : `<span class="avatar-initials">${getInitials(user.username || user.email)}</span>`
             }
           </div>
           <div class="avatar-actions">
@@ -3355,11 +4266,15 @@ State: ${state || 'none'}</pre>
             <button type="button" class="action-button secondary" onclick="document.getElementById('avatarInput').click()">
               ${lang === "es" ? "Cambiar Foto" : "Change Photo"}
             </button>
-            ${user.profile_picture_url ? `
+            ${
+              user.profile_picture_url
+                ? `
               <button type="button" class="action-button secondary" onclick="removeAvatar()">
                 ${lang === "es" ? "Eliminar" : "Remove"}
               </button>
-            ` : ""}
+            `
+                : ""
+            }
           </div>
         </div>
       </div>
@@ -3381,7 +4296,8 @@ State: ${state || 'none'}</pre>
       <div class="settings-section">
         <a href="/profile" class="action-button secondary">${lang === "es" ? "Volver al Perfil" : "Back to Profile"}</a>
       </div>
-    `, `
+    `,
+        `
       <style>
         .settings-section {
           background: var(--bg-secondary);
@@ -3554,7 +4470,13 @@ State: ${state || 'none'}</pre>
         console.log('[Profile Settings] Current username input value:', document.querySelector('input[name="username"]')?.value);
         console.log('[Profile Settings] Form found:', !!profileForm);
       </script>
-    `, true, user.email, lang, user));
+    `,
+        true,
+        user.email,
+        lang,
+        user,
+      ),
+    );
   });
 
   // Handle profile update
@@ -3566,23 +4488,43 @@ State: ${state || 'none'}</pre>
     console.log("[Profile Update] Body keys:", Object.keys(req.body || {}));
     console.log("[Profile Update] User from JWT:", req.user);
 
-    const username = String(req.body.username || "").trim().substring(0, 50);
+    const username = String(req.body.username || "")
+      .trim()
+      .substring(0, 50);
     console.log("[Profile Update] Parsed username:", `"${username}"`);
     console.log("[Profile Update] Username length:", username.length);
 
     // Get current user data before update
-    const beforeUser = await db.get("SELECT * FROM users WHERE id = ?", req.user.id);
-    console.log("[Profile Update] BEFORE update:", JSON.stringify(beforeUser, null, 2));
+    const beforeUser = await db.get(
+      "SELECT * FROM users WHERE id = ?",
+      req.user.id,
+    );
+    console.log(
+      "[Profile Update] BEFORE update:",
+      JSON.stringify(beforeUser, null, 2),
+    );
 
     try {
-      const result = await db.run("UPDATE users SET username = ? WHERE id = ?", [username || null, req.user.id]);
+      const result = await db.run(
+        "UPDATE users SET username = ? WHERE id = ?",
+        [username || null, req.user.id],
+      );
       console.log("[Profile Update] DB UPDATE result:", result);
       console.log("[Profile Update] Changes:", result?.changes);
 
       // Verify the update
-      const afterUser = await db.get("SELECT * FROM users WHERE id = ?", req.user.id);
-      console.log("[Profile Update] AFTER update:", JSON.stringify(afterUser, null, 2));
-      console.log("[Profile Update] Username changed?", beforeUser?.username !== afterUser?.username);
+      const afterUser = await db.get(
+        "SELECT * FROM users WHERE id = ?",
+        req.user.id,
+      );
+      console.log(
+        "[Profile Update] AFTER update:",
+        JSON.stringify(afterUser, null, 2),
+      );
+      console.log(
+        "[Profile Update] Username changed?",
+        beforeUser?.username !== afterUser?.username,
+      );
       console.log("========== END PROFILE UPDATE ==========\n");
 
       res.redirect("/profile/settings?success=1");
@@ -3590,51 +4532,82 @@ State: ${state || 'none'}</pre>
       console.error("[Profile Update] ERROR:", error);
       console.error("[Profile Update] Error stack:", error.stack);
       console.log("========== END PROFILE UPDATE (ERROR) ==========\n");
-      res.redirect("/profile/settings?error=" + encodeURIComponent("Failed to update profile: " + error.message));
+      res.redirect(
+        "/profile/settings?error=" +
+          encodeURIComponent("Failed to update profile: " + error.message),
+      );
     }
   });
 
   // Handle avatar URL update
-  app.post("/profile/settings/avatar", authRequired, express.json(), async (req, res) => {
-    const timestamp = new Date().toISOString();
-    console.log(`\n========== AVATAR UPDATE ${timestamp} ==========`);
-    console.log("[Avatar Update] Request body:", req.body);
-    console.log("[Avatar Update] Content-Type:", req.get("Content-Type"));
-    console.log("[Avatar Update] User ID:", req.user.id);
-    const { url } = req.body;
-    console.log("[Avatar Update] URL to save:", url);
-    console.log("[Avatar Update] URL length:", url?.length);
+  app.post(
+    "/profile/settings/avatar",
+    authRequired,
+    express.json(),
+    async (req, res) => {
+      const timestamp = new Date().toISOString();
+      console.log(`\n========== AVATAR UPDATE ${timestamp} ==========`);
+      console.log("[Avatar Update] Request body:", req.body);
+      console.log("[Avatar Update] Content-Type:", req.get("Content-Type"));
+      console.log("[Avatar Update] User ID:", req.user.id);
+      const { url } = req.body;
+      console.log("[Avatar Update] URL to save:", url);
+      console.log("[Avatar Update] URL length:", url?.length);
 
-    // Get current user data before update
-    const beforeUser = await db.get("SELECT * FROM users WHERE id = ?", req.user.id);
-    console.log("[Avatar Update] BEFORE update:", JSON.stringify(beforeUser, null, 2));
+      // Get current user data before update
+      const beforeUser = await db.get(
+        "SELECT * FROM users WHERE id = ?",
+        req.user.id,
+      );
+      console.log(
+        "[Avatar Update] BEFORE update:",
+        JSON.stringify(beforeUser, null, 2),
+      );
 
-    try {
-      const result = await db.run("UPDATE users SET profile_picture_url = ? WHERE id = ?", [url, req.user.id]);
-      console.log("[Avatar Update] DB UPDATE result:", result);
-      console.log("[Avatar Update] Changes:", result?.changes);
+      try {
+        const result = await db.run(
+          "UPDATE users SET profile_picture_url = ? WHERE id = ?",
+          [url, req.user.id],
+        );
+        console.log("[Avatar Update] DB UPDATE result:", result);
+        console.log("[Avatar Update] Changes:", result?.changes);
 
-      // Verify the update
-      const afterUser = await db.get("SELECT * FROM users WHERE id = ?", req.user.id);
-      console.log("[Avatar Update] AFTER update:", JSON.stringify(afterUser, null, 2));
-      console.log("[Avatar Update] Avatar changed?", beforeUser?.profile_picture_url !== afterUser?.profile_picture_url);
-      console.log("========== END AVATAR UPDATE ==========\n");
+        // Verify the update
+        const afterUser = await db.get(
+          "SELECT * FROM users WHERE id = ?",
+          req.user.id,
+        );
+        console.log(
+          "[Avatar Update] AFTER update:",
+          JSON.stringify(afterUser, null, 2),
+        );
+        console.log(
+          "[Avatar Update] Avatar changed?",
+          beforeUser?.profile_picture_url !== afterUser?.profile_picture_url,
+        );
+        console.log("========== END AVATAR UPDATE ==========\n");
 
-      res.json({ success: true, newUrl: afterUser?.profile_picture_url });
-    } catch (error) {
-      console.error("[Avatar Update] ERROR:", error);
-      console.error("[Avatar Update] Error stack:", error.stack);
-      console.log("========== END AVATAR UPDATE (ERROR) ==========\n");
-      res.status(500).json({ error: "Failed to update avatar: " + error.message });
-    }
-  });
+        res.json({ success: true, newUrl: afterUser?.profile_picture_url });
+      } catch (error) {
+        console.error("[Avatar Update] ERROR:", error);
+        console.error("[Avatar Update] Error stack:", error.stack);
+        console.log("========== END AVATAR UPDATE (ERROR) ==========\n");
+        res
+          .status(500)
+          .json({ error: "Failed to update avatar: " + error.message });
+      }
+    },
+  );
 
   // Handle avatar removal
   app.delete("/profile/settings/avatar", authRequired, async (req, res) => {
     console.log("[Avatar Remove] User ID:", req.user.id);
 
     try {
-      const result = await db.run("UPDATE users SET profile_picture_url = NULL WHERE id = ?", [req.user.id]);
+      const result = await db.run(
+        "UPDATE users SET profile_picture_url = NULL WHERE id = ?",
+        [req.user.id],
+      );
       console.log("[Avatar Remove] DB result:", result);
 
       res.json({ success: true });
@@ -3650,23 +4623,30 @@ State: ${state || 'none'}</pre>
   app.get("/dashboard", authRequired, async (req, res) => {
     const lang = getLang(req);
     const userEmail = req.user?.email || "";
-    const userData = await db.get("SELECT * FROM users WHERE id = ?", req.user.id);
+    const userData = await db.get(
+      "SELECT * FROM users WHERE id = ?",
+      req.user.id,
+    );
 
     // Get user's tracked products
     const trackedProducts = await supabaseDb.getTrackedProducts(req.user.id);
 
-    const noProductsMessage = lang === "es"
-      ? "Aún no estás rastreando ningún producto. Busca productos y haz clic en 'Rastrear Precio' para comenzar."
-      : "You're not tracking any products yet. Search for products and click 'Track Price' to get started.";
+    const noProductsMessage =
+      lang === "es"
+        ? "Aún no estás rastreando ningún producto. Busca productos y haz clic en 'Rastrear Precio' para comenzar."
+        : "You're not tracking any products yet. Search for products and click 'Track Price' to get started.";
 
-    const productsHtml = trackedProducts.length === 0
-      ? `<div class="empty-state">
+    const productsHtml =
+      trackedProducts.length === 0
+        ? `<div class="empty-state">
           <div class="empty-state-icon">📊</div>
           <h3>${lang === "es" ? "Sin productos rastreados" : "No Tracked Products"}</h3>
           <p>${noProductsMessage}</p>
           <a href="/" class="btn-primary">${lang === "es" ? "Buscar Productos" : "Search Products"}</a>
         </div>`
-      : trackedProducts.map((product, index) => `
+        : trackedProducts
+            .map(
+              (product, index) => `
         <div class="tracked-product-card" data-product-id="${product.id}">
           <div class="tracked-product-header">
             <div class="tracked-product-info">
@@ -3708,22 +4688,30 @@ State: ${state || 'none'}</pre>
             </div>
           </div>
         </div>
-      `).join("");
+      `,
+            )
+            .join("");
 
-    res.send(renderPage(lang === "es" ? "Mi Panel" : "My Dashboard", `
+    res.send(
+      renderPage(
+        lang === "es" ? "Mi Panel" : "My Dashboard",
+        `
       <div class="dashboard-container">
         <div class="dashboard-header">
           <h1>${lang === "es" ? "Mi Panel de Rastreo" : "My Tracking Dashboard"}</h1>
-          <p class="dashboard-subtitle">${lang === "es"
-            ? `Rastreando ${trackedProducts.length} producto${trackedProducts.length !== 1 ? "s" : ""}`
-            : `Tracking ${trackedProducts.length} product${trackedProducts.length !== 1 ? "s" : ""}`}</p>
+          <p class="dashboard-subtitle">${
+            lang === "es"
+              ? `Rastreando ${trackedProducts.length} producto${trackedProducts.length !== 1 ? "s" : ""}`
+              : `Tracking ${trackedProducts.length} product${trackedProducts.length !== 1 ? "s" : ""}`
+          }</p>
         </div>
 
         <div class="tracked-products-list">
           ${productsHtml}
         </div>
       </div>
-    `, `
+    `,
+        `
       <style>
         .dashboard-container {
           max-width: 1200px;
@@ -4457,13 +5445,22 @@ State: ${state || 'none'}</pre>
           setTimeout(() => toast.remove(), 3000);
         }
       </script>
-    `, true, userEmail, lang, userData));
+    `,
+        true,
+        userEmail,
+        lang,
+        userData,
+      ),
+    );
   });
 
   app.get("/product/:id", authRequired, async (req, res) => {
     const lang = getLang(req);
     const userEmail = req.user?.email || "";
-    const userData = await db.get("SELECT * FROM users WHERE id = ?", req.user.id);
+    const userData = await db.get(
+      "SELECT * FROM users WHERE id = ?",
+      req.user.id,
+    );
     const id = String(req.params.id || "");
     const query = String(req.query.q || "").trim();
     const minPrice = parseNumber(req.query.minPrice, 0);
@@ -4477,7 +5474,10 @@ State: ${state || 'none'}</pre>
     const product = result.product;
 
     if (!product) {
-      return res.send(renderPage(t(lang, "productNotFound"), `
+      return res.send(
+        renderPage(
+          t(lang, "productNotFound"),
+          `
         <div class="breadcrumb">
           <a href="/">${t(lang, "home")}</a>
           <span> / </span>
@@ -4487,11 +5487,23 @@ State: ${state || 'none'}</pre>
         <h1>${t(lang, "productNotFound")}</h1>
         ${result.error ? `<p class="error">${result.error}</p>` : ""}
         <p class="muted">${t(lang, "tryGoingBack")}</p>
-      `, "", true, userEmail, lang, userData));
+      `,
+          "",
+          true,
+          userEmail,
+          lang,
+          userData,
+        ),
+      );
     }
 
     const description = product.description || "";
-    const condition = product.condition === "new" || product.condition === "New" ? t(lang, "new") : product.condition === "used" || product.condition === "Used" ? t(lang, "used") : product.condition;
+    const condition =
+      product.condition === "new" || product.condition === "New"
+        ? t(lang, "new")
+        : product.condition === "used" || product.condition === "Used"
+          ? t(lang, "used")
+          : product.condition;
     const available = product.available_quantity || 0;
     const isAmazon = product.source === "amazon" || id.startsWith("AMZN-");
 
@@ -4509,10 +5521,13 @@ State: ${state || 'none'}</pre>
 
     try {
       const trackedProducts = await supabaseDb.getTrackedProducts(req.user.id);
-      trackedProduct = trackedProducts.find(tp => tp.product_id === id);
+      trackedProduct = trackedProducts.find((tp) => tp.product_id === id);
 
       if (trackedProduct) {
-        priceStats = await supabaseDb.getPriceStatistics(trackedProduct.id, "30d");
+        priceStats = await supabaseDb.getPriceStatistics(
+          trackedProduct.id,
+          "30d",
+        );
         isGoodDeal = priceStats?.isGoodDeal || false;
       }
     } catch (err) {
@@ -4520,7 +5535,8 @@ State: ${state || 'none'}</pre>
     }
 
     // Generate price statistics HTML
-    const priceStatsHtml = priceStats ? `
+    const priceStatsHtml = priceStats
+      ? `
       <div class="price-stats-section">
         <h3>${lang === "es" ? "Estadísticas de Precio (30 días)" : "Price Statistics (30 days)"}</h3>
         ${isGoodDeal ? `<div class="good-deal-badge good-deal-badge-large">${lang === "es" ? "Buen Precio" : "Good Deal"} - ${priceStats.savingsPercent.toFixed(1)}% ${lang === "es" ? "menos" : "off"}</div>` : ""}
@@ -4544,21 +5560,29 @@ State: ${state || 'none'}</pre>
         </div>
         <div class="price-change-section">
           <span>${lang === "es" ? "Cambio de precio:" : "Price change:"}</span>
-          <span class="price-change ${priceStats.priceChange > 0 ? 'up' : priceStats.priceChange < 0 ? 'down' : 'neutral'}">
-            <span class="price-change-arrow">${priceStats.priceChange > 0 ? '↑' : priceStats.priceChange < 0 ? '↓' : '→'}</span>
-            ${priceStats.priceChange > 0 ? '+' : ''}${priceStats.priceChangePercent.toFixed(1)}%
+          <span class="price-change ${priceStats.priceChange > 0 ? "up" : priceStats.priceChange < 0 ? "down" : "neutral"}">
+            <span class="price-change-arrow">${priceStats.priceChange > 0 ? "↑" : priceStats.priceChange < 0 ? "↓" : "→"}</span>
+            ${priceStats.priceChange > 0 ? "+" : ""}${priceStats.priceChangePercent.toFixed(1)}%
           </span>
         </div>
       </div>
-    ` : "";
+    `
+      : "";
 
     // Generate tracking button text based on status
     const trackButtonText = trackedProduct
-      ? (lang === "es" ? "Ya rastreando" : "Already Tracking")
+      ? lang === "es"
+        ? "Ya rastreando"
+        : "Already Tracking"
       : `📊 ${t(lang, "trackPrice")}`;
-    const trackButtonClass = trackedProduct ? "action-button secondary tracked" : "action-button secondary";
+    const trackButtonClass = trackedProduct
+      ? "action-button secondary tracked"
+      : "action-button secondary";
 
-    res.send(renderPage(product.title || t(lang, "product"), `
+    res.send(
+      renderPage(
+        product.title || t(lang, "product"),
+        `
       <div class="breadcrumb">
         <a href="/">${t(lang, "home")}</a>
         <span> / </span>
@@ -4576,12 +5600,16 @@ State: ${state || 'none'}</pre>
           ${retailerBadge}
           <div class="product-price-section">
             <div class="product-price">${formatPrice(product.price, product.currency_id || (isAmazon ? "USD" : "MXN"))}</div>
-            ${priceStats && priceStats.avgPrice > product.price ? `
+            ${
+              priceStats && priceStats.avgPrice > product.price
+                ? `
               <div class="product-price-comparison">
                 <span class="avg-label">${lang === "es" ? "Promedio:" : "Avg:"}</span>
                 <span class="avg-value">${formatPrice(priceStats.avgPrice, "MXN")}</span>
               </div>
-            ` : ""}
+            `
+                : ""
+            }
           </div>
           <div class="product-meta">
             <span class="condition">${condition}</span>
@@ -4595,14 +5623,16 @@ State: ${state || 'none'}</pre>
           <p>${description}</p>
           <div class="product-actions">
             ${product.permalink ? `<a class="action-button ${isAmazon ? "amazon-btn" : ""}" href="${product.permalink}" target="_blank" rel="noreferrer">${viewButtonText}</a>` : ""}
-            ${trackedProduct
-              ? `<a href="/dashboard" class="action-button secondary tracked">✓ ${lang === "es" ? "Ver en Panel" : "View in Dashboard"}</a>`
-              : `<button class="action-button secondary" id="trackPriceBtn">📊 ${t(lang, "trackPrice")}</button>`
+            ${
+              trackedProduct
+                ? `<a href="/dashboard" class="action-button secondary tracked">✓ ${lang === "es" ? "Ver en Panel" : "View in Dashboard"}</a>`
+                : `<button class="action-button secondary" id="trackPriceBtn">📊 ${t(lang, "trackPrice")}</button>`
             }
           </div>
         </div>
       </div>
-    `, `
+    `,
+        `
       <style>
         .product-detail {
           display: grid;
@@ -4730,11 +5760,20 @@ State: ${state || 'none'}</pre>
           }
         });
       </script>
-    `, true, userEmail, lang, userData));
+    `,
+        true,
+        userEmail,
+        lang,
+        userData,
+      ),
+    );
   });
 
   app.get("/api/me", authRequired, async (req, res) => {
-    const user = await db.get("SELECT email FROM users WHERE id = ?", req.user.id);
+    const user = await db.get(
+      "SELECT email FROM users WHERE id = ?",
+      req.user.id,
+    );
     if (!user) {
       return res.status(401).json({ error: "Unauthorized" });
     }
@@ -4755,7 +5794,8 @@ State: ${state || 'none'}</pre>
     console.log("[Track API] Request body:", JSON.stringify(req.body, null, 2));
 
     try {
-      const { productId, productTitle, productUrl, source, currentPrice } = req.body;
+      const { productId, productTitle, productUrl, source, currentPrice } =
+        req.body;
       const userId = req.user.id;
 
       console.log("[Track API] Extracted fields:");
@@ -4767,7 +5807,9 @@ State: ${state || 'none'}</pre>
 
       if (!productId || !source) {
         console.log("[Track API] Missing required fields");
-        return res.status(400).json({ success: false, error: "Missing required fields" });
+        return res
+          .status(400)
+          .json({ success: false, error: "Missing required fields" });
       }
 
       console.log("[Track API] Calling addTrackedProduct...");
@@ -4781,7 +5823,10 @@ State: ${state || 'none'}</pre>
         currentPrice: currentPrice || 0,
       });
 
-      console.log("[Track API] addTrackedProduct result:", JSON.stringify(tracked, null, 2));
+      console.log(
+        "[Track API] addTrackedProduct result:",
+        JSON.stringify(tracked, null, 2),
+      );
 
       if (tracked) {
         // Also record initial price in history
@@ -4818,7 +5863,10 @@ State: ${state || 'none'}</pre>
    */
   app.delete("/api/track/:id", authRequired, async (req, res) => {
     try {
-      const success = await supabaseDb.removeTrackedProduct(req.params.id, req.user.id);
+      const success = await supabaseDb.removeTrackedProduct(
+        req.params.id,
+        req.user.id,
+      );
       res.json({ success });
     } catch (error) {
       res.status(500).json({ success: false, error: error.message });
@@ -4838,11 +5886,15 @@ State: ${state || 'none'}</pre>
    * 2. Async operation callback: fetchMLProducts with then()
    * 3. Response callback: res.json() sends data to browser
    */
-  app.get("/api/products/search", function(req, res) {
+  app.get("/api/products/search", function (req, res) {
     // Log the API call
-    logAction("API Request", `/api/products/search?q=${req.query.q}`, function() {
-      console.log("  Request logged successfully");
-    });
+    logAction(
+      "API Request",
+      `/api/products/search?q=${req.query.q}`,
+      function () {
+        console.log("  Request logged successfully");
+      },
+    );
 
     const query = String(req.query.q || "").trim();
     const minPrice = parseNumber(req.query.minPrice, 0);
@@ -4855,13 +5907,14 @@ State: ${state || 'none'}</pre>
       return res.status(400).json({
         success: false,
         error: "Se requiere una consulta de búsqueda",
-        example: "/api/products/search?q=iphone"
+        example: "/api/products/search?q=iphone",
       });
     }
 
     // Async operation with callback pattern (using .then)
     fetchMLProducts({ query, minPrice, maxPrice, sort, page, pageSize })
-      .then(function(results) {  // ← SUCCESS CALLBACK
+      .then(function (results) {
+        // ← SUCCESS CALLBACK
         res.json({
           success: true,
           query: query,
@@ -4871,16 +5924,17 @@ State: ${state || 'none'}</pre>
             page: page,
             pageSize: pageSize,
             total: results.total,
-            totalPages: results.totalPages
+            totalPages: results.totalPages,
           },
           products: results.products,
-          notice: results.notice
+          notice: results.notice,
         });
       })
-      .catch(function(error) {  // ← ERROR CALLBACK
+      .catch(function (error) {
+        // ← ERROR CALLBACK
         res.status(500).json({
           success: false,
-          error: error.message || "Error al buscar productos"
+          error: error.message || "Error al buscar productos",
         });
       });
   });
@@ -4890,37 +5944,39 @@ State: ${state || 'none'}</pre>
    * URL: GET /api/products/:id
    * Example: GET /api/products/MLM-001
    */
-  app.get("/api/products/:id", function(req, res) {
+  app.get("/api/products/:id", function (req, res) {
     const id = String(req.params.id || "");
 
     if (!id) {
       return res.status(400).json({
         success: false,
-        error: "Se requiere el ID del producto"
+        error: "Se requiere el ID del producto",
       });
     }
 
     // Async operation with callback
     fetchMLProductById(id)
-      .then(function(result) {  // ← SUCCESS CALLBACK
+      .then(function (result) {
+        // ← SUCCESS CALLBACK
         if (!result.product) {
           return res.status(404).json({
             success: false,
             error: "Producto no encontrado",
-            id: id
+            id: id,
           });
         }
 
         res.json({
           success: true,
           product: result.product,
-          notice: result.notice
+          notice: result.notice,
         });
       })
-      .catch(function(error) {  // ← ERROR CALLBACK
+      .catch(function (error) {
+        // ← ERROR CALLBACK
         res.status(500).json({
           success: false,
-          error: error.message || "Error al obtener el producto"
+          error: error.message || "Error al obtener el producto",
         });
       });
   });
@@ -4929,24 +5985,25 @@ State: ${state || 'none'}</pre>
    * API: Get all demo products
    * URL: GET /api/products
    */
-  app.get("/api/products", function(req, res) {
+  app.get("/api/products", function (req, res) {
     try {
       const products = getMockProducts();
 
       // Simulate async operation with setTimeout
-      setTimeout(function() {  // ← CALLBACK after delay
+      setTimeout(function () {
+        // ← CALLBACK after delay
         res.json({
           success: true,
           count: products.length,
           products: products,
           site: ML_SITE,
-          note: ""
+          note: "",
         });
-      }, 100);  // Small delay to simulate network
+      }, 100); // Small delay to simulate network
     } catch (error) {
       res.status(500).json({
         success: false,
-        error: error.message
+        error: error.message,
       });
     }
   });
@@ -4955,18 +6012,18 @@ State: ${state || 'none'}</pre>
    * API: Get Mercado Libre categories
    * URL: GET /api/categories
    */
-  app.get("/api/categories", async function(req, res) {
+  app.get("/api/categories", async function (req, res) {
     try {
       const categories = await fetchMLCategories();
       res.json({
         success: true,
         site: ML_SITE,
-        categories: categories
+        categories: categories,
       });
     } catch (error) {
       res.status(500).json({
         success: false,
-        error: error.message || "Error al obtener categorías"
+        error: error.message || "Error al obtener categorías",
       });
     }
   });
@@ -4975,7 +6032,7 @@ State: ${state || 'none'}</pre>
    * API: Health check endpoint
    * URL: GET /api/health
    */
-  app.get("/api/health", async function(req, res) {
+  app.get("/api/health", async function (req, res) {
     const startTime = Date.now();
 
     // Check ML API connection
@@ -4983,14 +6040,14 @@ State: ${state || 'none'}</pre>
     const mlStatus = mlToken ? "connected" : "not configured";
 
     // Check database with callback
-    db.get("SELECT 1 as status", function(error, result) {
+    db.get("SELECT 1 as status", function (error, result) {
       const responseTime = Date.now() - startTime;
 
       if (error) {
         return res.status(500).json({
           success: false,
           status: "unhealthy",
-          error: "Database connection failed"
+          error: "Database connection failed",
         });
       }
 
@@ -5001,11 +6058,13 @@ State: ${state || 'none'}</pre>
         mercadoLibre: {
           status: mlStatus,
           site: ML_SITE,
-          clientId: ML_CLIENT_ID ? `${ML_CLIENT_ID.substring(0, 6)}...` : "not set"
+          clientId: ML_CLIENT_ID
+            ? `${ML_CLIENT_ID.substring(0, 6)}...`
+            : "not set",
         },
         responseTime: `${responseTime}ms`,
         https: HAS_TLS,
-        baseUrl: APP_BASE_URL
+        baseUrl: APP_BASE_URL,
       });
     });
   });
@@ -5018,7 +6077,7 @@ State: ${state || 'none'}</pre>
    * API: Get popular products with optional deals filter
    * URL: GET /api/deals/popular?dealsOnly=true&category=electronics
    */
-  app.get("/api/deals/popular", authRequired, async function(req, res) {
+  app.get("/api/deals/popular", authRequired, async function (req, res) {
     const lang = getLang(req);
     const dealsOnly = req.query.dealsOnly === "true";
     const category = req.query.category || "";
@@ -5027,21 +6086,26 @@ State: ${state || 'none'}</pre>
       const products = await supabaseDb.getPopularProducts({
         limit: 8,
         category,
-        dealsOnly
+        dealsOnly,
       });
 
       // Render product cards HTML
-      const html = products.map(product => {
-        const badges = [];
-        if (product.isBestPrice) {
-          badges.push(`<span class="badge-best-price">${lang === "es" ? "Mejor Precio" : "Best Price"}</span>`);
-        } else if (product.isGoodDeal) {
-          badges.push(`<span class="good-deal-badge">${lang === "es" ? "Buen Precio" : "Good Deal"}</span>`);
-        }
+      const html = products
+        .map((product) => {
+          const badges = [];
+          if (product.isBestPrice) {
+            badges.push(
+              `<span class="badge-best-price">${lang === "es" ? "Mejor Precio" : "Best Price"}</span>`,
+            );
+          } else if (product.isGoodDeal) {
+            badges.push(
+              `<span class="good-deal-badge">${lang === "es" ? "Buen Precio" : "Good Deal"}</span>`,
+            );
+          }
 
-        return `
+          return `
           <div class="home-product-card">
-            <a href="/product/${encodeURIComponent(product.product_id)}?source=${product.source || 'mercadolibre'}" class="home-product-card-link">
+            <a href="/product/${encodeURIComponent(product.product_id)}?source=${product.source || "mercadolibre"}" class="home-product-card-link">
               <div class="home-product-card-image">
                 ${badges.length > 0 ? `<div class="home-product-card-badges">${badges.join("")}</div>` : ""}
                 <img src="${product.product_url?.includes("amazon") ? "/images/product-placeholder.svg" : `https://http2.mlstatic.com/D_NQ_NP_${product.product_id?.split("-")[1] || ""}-O.webp`}"
@@ -5055,12 +6119,18 @@ State: ${state || 'none'}</pre>
                   <span class="home-product-card-price">${formatPrice(product.current_price, "MXN")}</span>
                   ${product.avgPrice ? `<span class="home-product-card-original">${formatPrice(product.avgPrice, "MXN")}</span>` : ""}
                 </div>
-                ${product.savingsPercent ? `
+                ${
+                  product.savingsPercent
+                    ? `
                   <div class="home-product-card-savings">
                     ${lang === "es" ? "Ahorras" : "Save"} ${Math.round(product.savingsPercent)}%
                   </div>
-                ` : ""}
-                ${product.trackCount ? `
+                `
+                    : ""
+                }
+                ${
+                  product.trackCount
+                    ? `
                   <div class="home-product-card-meta">
                     <span class="home-product-card-trackers">
                       <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
@@ -5070,17 +6140,27 @@ State: ${state || 'none'}</pre>
                       ${product.trackCount} ${lang === "es" ? "siguiendo" : "tracking"}
                     </span>
                   </div>
-                ` : ""}
+                `
+                    : ""
+                }
               </div>
             </a>
           </div>
         `;
-      }).join("");
+        })
+        .join("");
 
-      res.send(html || `<p class="muted">${lang === "es" ? "No hay productos" : "No products found"}</p>`);
+      res.send(
+        html ||
+          `<p class="muted">${lang === "es" ? "No hay productos" : "No products found"}</p>`,
+      );
     } catch (error) {
       console.error("[API] /api/deals/popular error:", error);
-      res.status(500).send(`<p class="error">${lang === "es" ? "Error al cargar productos" : "Error loading products"}</p>`);
+      res
+        .status(500)
+        .send(
+          `<p class="error">${lang === "es" ? "Error al cargar productos" : "Error loading products"}</p>`,
+        );
     }
   });
 
@@ -5088,7 +6168,7 @@ State: ${state || 'none'}</pre>
    * API: Get top price drops with period filter
    * URL: GET /api/deals/price-drops?period=daily&category=electronics
    */
-  app.get("/api/deals/price-drops", authRequired, async function(req, res) {
+  app.get("/api/deals/price-drops", authRequired, async function (req, res) {
     const lang = getLang(req);
     const period = req.query.period || "recent";
     const category = req.query.category || "";
@@ -5097,19 +6177,22 @@ State: ${state || 'none'}</pre>
       const products = await supabaseDb.getTopPriceDrops({
         period,
         category,
-        limit: 8
+        limit: 8,
       });
 
       // Render product cards HTML
-      const html = products.map(product => {
-        const badges = [];
-        if (product.dropPercent) {
-          badges.push(`<span class="drop-badge">${lang === "es" ? "Bajó" : "Down"} ${Math.round(product.dropPercent)}%</span>`);
-        }
+      const html = products
+        .map((product) => {
+          const badges = [];
+          if (product.dropPercent) {
+            badges.push(
+              `<span class="drop-badge">${lang === "es" ? "Bajó" : "Down"} ${Math.round(product.dropPercent)}%</span>`,
+            );
+          }
 
-        return `
+          return `
           <div class="home-product-card">
-            <a href="/product/${encodeURIComponent(product.product_id)}?source=${product.source || 'mercadolibre'}" class="home-product-card-link">
+            <a href="/product/${encodeURIComponent(product.product_id)}?source=${product.source || "mercadolibre"}" class="home-product-card-link">
               <div class="home-product-card-image">
                 ${badges.length > 0 ? `<div class="home-product-card-badges">${badges.join("")}</div>` : ""}
                 <img src="${product.product_url?.includes("amazon") ? "/images/product-placeholder.svg" : `https://http2.mlstatic.com/D_NQ_NP_${product.product_id?.split("-")[1] || ""}-O.webp`}"
@@ -5123,21 +6206,33 @@ State: ${state || 'none'}</pre>
                   <span class="home-product-card-price">${formatPrice(product.current_price, "MXN")}</span>
                   ${product.previousPrice ? `<span class="home-product-card-original">${formatPrice(product.previousPrice, "MXN")}</span>` : ""}
                 </div>
-                ${product.dropAmount ? `
+                ${
+                  product.dropAmount
+                    ? `
                   <div class="home-product-card-savings">
                     ${lang === "es" ? "Bajó" : "Down"} ${formatPrice(product.dropAmount, "MXN")}
                   </div>
-                ` : ""}
+                `
+                    : ""
+                }
               </div>
             </a>
           </div>
         `;
-      }).join("");
+        })
+        .join("");
 
-      res.send(html || `<p class="muted">${lang === "es" ? "No hay bajas de precio" : "No price drops found"}</p>`);
+      res.send(
+        html ||
+          `<p class="muted">${lang === "es" ? "No hay bajas de precio" : "No price drops found"}</p>`,
+      );
     } catch (error) {
       console.error("[API] /api/deals/price-drops error:", error);
-      res.status(500).send(`<p class="error">${lang === "es" ? "Error al cargar productos" : "Error loading products"}</p>`);
+      res
+        .status(500)
+        .send(
+          `<p class="error">${lang === "es" ? "Error al cargar productos" : "Error loading products"}</p>`,
+        );
     }
   });
 
@@ -5152,7 +6247,9 @@ State: ${state || 'none'}</pre>
   function requireAdmin(req, res, next) {
     const token = req.cookies.token;
     if (!token) {
-      return res.status(401).json({ success: false, error: "Authentication required" });
+      return res
+        .status(401)
+        .json({ success: false, error: "Authentication required" });
     }
 
     try {
@@ -5169,27 +6266,31 @@ State: ${state || 'none'}</pre>
    * API: Trigger manual price update
    * URL: POST /api/admin/trigger-price-update
    */
-  app.post("/api/admin/trigger-price-update", requireAdmin, async function(req, res) {
-    try {
-      const job = await triggerPriceUpdate();
-      res.json({
-        success: true,
-        message: "Price update job queued",
-        jobId: job.id,
-      });
-    } catch (error) {
-      res.status(500).json({
-        success: false,
-        error: error.message,
-      });
-    }
-  });
+  app.post(
+    "/api/admin/trigger-price-update",
+    requireAdmin,
+    async function (req, res) {
+      try {
+        const job = await triggerPriceUpdate();
+        res.json({
+          success: true,
+          message: "Price update job queued",
+          jobId: job.id,
+        });
+      } catch (error) {
+        res.status(500).json({
+          success: false,
+          error: error.message,
+        });
+      }
+    },
+  );
 
   /**
    * API: Get queue status
    * URL: GET /api/admin/queue-status
    */
-  app.get("/api/admin/queue-status", requireAdmin, async function(req, res) {
+  app.get("/api/admin/queue-status", requireAdmin, async function (req, res) {
     try {
       const status = await getQueueStatus();
       const recentJobs = await getRecentJobs(10);
@@ -5215,7 +6316,7 @@ State: ${state || 'none'}</pre>
    *   - limit: max number of records (default: 100)
    *   - noCache: set to 'true' to bypass cache
    */
-  app.get("/api/tracked/:id/history", authRequired, async function(req, res) {
+  app.get("/api/tracked/:id/history", authRequired, async function (req, res) {
     try {
       const { id } = req.params;
       const period = req.query.period || "30d";
@@ -5232,7 +6333,11 @@ State: ${state || 'none'}</pre>
       }
 
       // Try to get from cache first (unless noCache is set)
-      const { getCache, setCache, priceHistoryCacheKey } = require("./config/redis");
+      const {
+        getCache,
+        setCache,
+        priceHistoryCacheKey,
+      } = require("./config/redis");
       const cacheKey = priceHistoryCacheKey(id, period);
 
       if (!noCache) {
@@ -5255,14 +6360,16 @@ State: ${state || 'none'}</pre>
         period,
         history,
         statistics,
-        goodDeal: statistics ? {
-          isGoodDeal: statistics.isGoodDeal,
-          message: statistics.isGoodDeal
-            ? `Great deal! ${statistics.savingsPercent.toFixed(1)}% below average price`
-            : "Price is at or above average",
-          savingsFromAvg: statistics.savingsFromAvg,
-          savingsPercent: statistics.savingsPercent,
-        } : null,
+        goodDeal: statistics
+          ? {
+              isGoodDeal: statistics.isGoodDeal,
+              message: statistics.isGoodDeal
+                ? `Great deal! ${statistics.savingsPercent.toFixed(1)}% below average price`
+                : "Price is at or above average",
+              savingsFromAvg: statistics.savingsFromAvg,
+              savingsPercent: statistics.savingsPercent,
+            }
+          : null,
       };
 
       // Cache the response (30 minutes TTL)
@@ -5284,7 +6391,7 @@ State: ${state || 'none'}</pre>
    * API: Get price statistics only (lightweight endpoint)
    * URL: GET /api/tracked/:id/stats
    */
-  app.get("/api/tracked/:id/stats", authRequired, async function(req, res) {
+  app.get("/api/tracked/:id/stats", authRequired, async function (req, res) {
     try {
       const { id } = req.params;
       const period = req.query.period || "30d";
@@ -5331,7 +6438,7 @@ State: ${state || 'none'}</pre>
 
   if (HAS_TLS) {
     let tlsOptions;
-    
+
     // Use PFX if available (Windows self-signed cert)
     if (SSL_PFX_PATH && fs.existsSync(SSL_PFX_PATH)) {
       tlsOptions = {
