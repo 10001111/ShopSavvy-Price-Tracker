@@ -8,14 +8,22 @@ const Queue = require("bull");
 const supabaseDb = require("../supabase-db");
 
 // Initialize Bull queue for price check jobs
-const REDIS_URL = process.env.REDIS_URL ||
-  `redis://${process.env.REDIS_HOST || 'localhost'}:${process.env.REDIS_PORT || 6379}`;
+const REDIS_URL =
+  process.env.REDIS_URL ||
+  `redis://${process.env.REDIS_HOST || "localhost"}:${process.env.REDIS_PORT || 6379}`;
+
+// When using REDIS_URL with auth, don't pass additional config
+const queueConfig = process.env.REDIS_URL
+  ? {} // Let Bull parse the URL
+  : {
+      redis: {
+        password: process.env.REDIS_PASSWORD || undefined,
+        db: parseInt(process.env.REDIS_DB) || 0,
+      },
+    };
 
 const priceCheckQueue = new Queue("price-check", REDIS_URL, {
-  redis: {
-    password: process.env.REDIS_PASSWORD || undefined,
-    db: parseInt(process.env.REDIS_DB) || 0,
-  },
+  ...queueConfig,
   defaultJobOptions: {
     attempts: parseInt(process.env.PRICE_CHECK_MAX_RETRIES) || 3,
     backoff: {
@@ -38,7 +46,7 @@ async function fetchMLPrice(productId) {
         headers: {
           Accept: "application/json",
         },
-      }
+      },
     );
 
     if (!response.ok) {
@@ -52,7 +60,10 @@ async function fetchMLPrice(productId) {
     const data = await response.json();
     return parseFloat(data.price);
   } catch (error) {
-    console.error(`[PriceChecker] Error fetching ML price for ${productId}:`, error.message);
+    console.error(
+      `[PriceChecker] Error fetching ML price for ${productId}:`,
+      error.message,
+    );
     throw error;
   }
 }
@@ -64,7 +75,9 @@ async function fetchMLPrice(productId) {
 async function fetchAmazonPrice(asin) {
   // TODO: Implement Amazon PA-API 5.0 price fetch
   // For now, return null (Amazon integration not fully implemented)
-  console.log(`[PriceChecker] Amazon price fetch not yet implemented for ${asin}`);
+  console.log(
+    `[PriceChecker] Amazon price fetch not yet implemented for ${asin}`,
+  );
   return null;
 }
 
@@ -77,7 +90,7 @@ priceCheckQueue.process(
     const { trackedProductId, productId, source } = job.data;
 
     console.log(
-      `[PriceChecker] Checking price for ${productId} (source: ${source})`
+      `[PriceChecker] Checking price for ${productId} (source: ${source})`,
     );
 
     try {
@@ -92,19 +105,22 @@ priceCheckQueue.process(
 
       if (currentPrice === null) {
         console.log(
-          `[PriceChecker] Could not fetch price for ${productId}, skipping`
+          `[PriceChecker] Could not fetch price for ${productId}, skipping`,
         );
         return { status: "skipped", reason: "price_fetch_failed" };
       }
 
       // Update tracked product with new price
-      await supabaseDb.updateTrackedProductPrice(trackedProductId, currentPrice);
+      await supabaseDb.updateTrackedProductPrice(
+        trackedProductId,
+        currentPrice,
+      );
 
       // Add price history entry
       await supabaseDb.addPriceHistory(trackedProductId, currentPrice);
 
       console.log(
-        `[PriceChecker] ✓ Updated price for ${productId}: $${currentPrice}`
+        `[PriceChecker] ✓ Updated price for ${productId}: $${currentPrice}`,
       );
 
       return {
@@ -116,11 +132,11 @@ priceCheckQueue.process(
     } catch (error) {
       console.error(
         `[PriceChecker] Error processing ${productId}:`,
-        error.message
+        error.message,
       );
       throw error; // Let Bull handle retry logic
     }
-  }
+  },
 );
 
 /**
@@ -128,7 +144,9 @@ priceCheckQueue.process(
  */
 async function scheduleAllPriceChecks() {
   try {
-    console.log("[PriceChecker] Scheduling price checks for all tracked products...");
+    console.log(
+      "[PriceChecker] Scheduling price checks for all tracked products...",
+    );
 
     // Get all tracked products from database
     const products = await supabaseDb.getAllTrackedProducts();
@@ -151,7 +169,7 @@ async function scheduleAllPriceChecks() {
 
         if (minutesSinceCheck < 30) {
           console.log(
-            `[PriceChecker] Skipping ${product.product_id} (checked ${Math.round(minutesSinceCheck)} min ago)`
+            `[PriceChecker] Skipping ${product.product_id} (checked ${Math.round(minutesSinceCheck)} min ago)`,
           );
           continue;
         }
@@ -167,7 +185,7 @@ async function scheduleAllPriceChecks() {
         {
           delay: scheduled * 2000, // 2 second delay between checks
           jobId: `price-check-${product.id}-${Date.now()}`, // Unique job ID
-        }
+        },
       );
 
       scheduled++;
@@ -187,7 +205,9 @@ async function scheduleAllPriceChecks() {
  */
 async function startPriceChecker() {
   if (process.env.ENABLE_PRICE_WORKER !== "true") {
-    console.log("[PriceChecker] Price worker disabled (set ENABLE_PRICE_WORKER=true to enable)");
+    console.log(
+      "[PriceChecker] Price worker disabled (set ENABLE_PRICE_WORKER=true to enable)",
+    );
     return;
   }
 
@@ -201,10 +221,13 @@ async function startPriceChecker() {
   }
 
   // Schedule recurring price checks
-  const intervalMinutes = parseInt(process.env.PRICE_CHECK_INTERVAL_MINUTES) || 60;
+  const intervalMinutes =
+    parseInt(process.env.PRICE_CHECK_INTERVAL_MINUTES) || 60;
   const intervalMs = intervalMinutes * 60 * 1000;
 
-  console.log(`[PriceChecker] Will check prices every ${intervalMinutes} minutes`);
+  console.log(
+    `[PriceChecker] Will check prices every ${intervalMinutes} minutes`,
+  );
 
   setInterval(async () => {
     try {
@@ -220,7 +243,7 @@ async function startPriceChecker() {
       `[PriceChecker] Job ${job.id} completed:`,
       result.status,
       result.productId,
-      result.price
+      result.price,
     );
   });
 
@@ -228,7 +251,7 @@ async function startPriceChecker() {
     console.error(
       `[PriceChecker] Job ${job.id} failed:`,
       job.data.productId,
-      err.message
+      err.message,
     );
   });
 
