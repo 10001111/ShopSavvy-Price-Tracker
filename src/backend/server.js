@@ -2449,6 +2449,7 @@ async function start() {
     // This ensures sections show for testing
     if (USE_SUPABASE) {
       try {
+        console.log("[Home] Fetching real data from Supabase...");
         [highlightedDeals, popularProducts, topPriceDrops, categoryDiscounts] =
           await Promise.all([
             supabaseDb.getHighlightedDeals(12),
@@ -2456,8 +2457,62 @@ async function start() {
             supabaseDb.getTopPriceDrops({ period: "recent", limit: 8 }),
             supabaseDb.getDiscountsByCategory(),
           ]);
+
+        console.log("[Home] Real data fetched:");
+        console.log("  - Highlighted Deals:", highlightedDeals.length);
+        console.log("  - Popular Products:", popularProducts.length);
+        console.log("  - Top Price Drops:", topPriceDrops.length);
+        console.log("  - Category Discounts:", categoryDiscounts.length);
+
+        // Transform data to match expected format for rendering
+        highlightedDeals = highlightedDeals.map((deal) => ({
+          product_id: deal.product_id,
+          product_title: deal.product_title,
+          current_price: parseFloat(deal.current_price),
+          avgPrice: deal.avgPrice,
+          isBestPrice: deal.isBestPrice || false,
+          isGoodDeal: deal.isGoodDeal || false,
+          savingsPercent: deal.savingsPercent || 0,
+          savingsAmount: deal.savingsAmount || 0,
+          source: deal.source || "mercadolibre",
+          product_url: deal.product_url,
+          thumbnail:
+            deal.thumbnail ||
+            "https://via.placeholder.com/300x300?text=No+Image",
+        }));
+
+        popularProducts = popularProducts.map((product) => ({
+          product_id: product.product_id,
+          product_title: product.product_title,
+          current_price: parseFloat(product.current_price),
+          avgPrice: product.avgPrice,
+          isBestPrice: product.isBestPrice || false,
+          isGoodDeal: product.isGoodDeal || false,
+          savingsPercent: product.savingsPercent || 0,
+          source: product.source || "mercadolibre",
+          product_url: product.product_url,
+          thumbnail:
+            product.thumbnail ||
+            "https://via.placeholder.com/300x300?text=No+Image",
+        }));
+
+        topPriceDrops = topPriceDrops.map((drop) => ({
+          product_id: drop.product_id,
+          product_title: drop.product_title,
+          current_price: parseFloat(drop.current_price),
+          previousPrice: drop.previousPrice,
+          dropAmount: drop.dropAmount,
+          dropPercent: drop.dropPercent,
+          source: drop.source || "mercadolibre",
+          product_url: drop.product_url,
+          thumbnail:
+            drop.thumbnail ||
+            "https://via.placeholder.com/300x300?text=No+Image",
+          dropDate: drop.periodStart,
+        }));
       } catch (err) {
         console.error("[Home] Error fetching deals data:", err.message);
+        console.error("[Home] Stack:", err.stack);
       }
     }
 
