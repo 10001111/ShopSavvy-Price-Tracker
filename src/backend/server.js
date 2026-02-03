@@ -1925,6 +1925,24 @@ async function start() {
     );
   }
 
+  // Initialize Price Checker Worker (if enabled and Supabase configured)
+  if (useSupabaseDb && process.env.ENABLE_PRICE_WORKER === "true") {
+    try {
+      const { startPriceChecker } = require("./workers/price-checker");
+      await startPriceChecker();
+      console.log("[Worker] ✓ Price checker worker initialized");
+    } catch (error) {
+      console.error("[Worker] Failed to start price checker:", error.message);
+      console.error("[Worker] Make sure Redis is running and configured");
+    }
+  } else if (!useSupabaseDb) {
+    console.log("[Worker] Price checker disabled - Supabase not configured");
+  } else if (process.env.ENABLE_PRICE_WORKER !== "true") {
+    console.log(
+      "[Worker] Price checker disabled - set ENABLE_PRICE_WORKER=true to enable",
+    );
+  }
+
   const app = express();
 
   app.use(express.urlencoded({ extended: false }));
