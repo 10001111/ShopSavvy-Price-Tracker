@@ -329,7 +329,7 @@ async function getAllLoginHistory(limit = 50) {
 /**
  * Add product to tracking
  */
-async function addTrackedProduct({ userId, productId, productTitle, productUrl, source, targetPrice, currentPrice }) {
+async function addTrackedProduct({ userId, productId, productTitle, productUrl, source, targetPrice, currentPrice, thumbnail, images, description, seller, rating, condition, currency }) {
   const { data, error } = await getSupabase()
     .from("tracked_products")
     .insert({
@@ -340,6 +340,14 @@ async function addTrackedProduct({ userId, productId, productTitle, productUrl, 
       source,
       target_price: targetPrice,
       current_price: currentPrice,
+      thumbnail: thumbnail || null,
+      images: images || [],
+      description: description || null,
+      seller: seller || null,
+      rating: rating || null,
+      condition: condition || "new",
+      currency: currency || "MXN",
+      scraped_at: new Date().toISOString(),
       created_at: new Date().toISOString()
     })
     .select()
@@ -348,6 +356,106 @@ async function addTrackedProduct({ userId, productId, productTitle, productUrl, 
   if (error) {
     console.error("[Supabase] addTrackedProduct error:", error);
   }
+  return data;
+}
+
+/**
+ * Upsert a scraped product into tracked_products.
+ * If a row with the same product_id + source already exists, update its
+ * price, images, description, and scraped_at. Otherwise insert.
+ * This is the main entry point for data coming from the Apify Actor.
+ * @param {Object} product - scraped product object from the Actor
+ * @returns {Promise<Object|null>}
+ */
+async function upsertScrapedProduct(product) {
+  // Base fields -- always exist on tracked_products
+  const base = {
+    product_id: product.id,
+    product_title: product.title,
+    product_url: product.url || null,
+    source: product.source,
+    current_price: parseFloat(product.price) || 0,
+  };
+
+  // Extended fields -- added by migration 004. Included only if migration has run.
+  const extended = {
+    thumbnail: product.thumbnail || (product.images && product.images[0]) || null,
+    images: product.images || [],
+    description: product.description || null,
+    seller: product.seller || null,
+    rating: product.rating || null,
+    condition: product.condition || "new",
+    currency: product.currency || "MXN",
+    scraped_at: new Date().toISOString(),
+  };
+
+  // Try to find existing row by product_id + source
+  const { data: existing } = await getSupabase()
+    .from("tracked_products")
+    .select("id, current_price")
+    .eq("product_id", base.product_id)
+    .eq("source", base.source)
+    .single();
+
+  if (existing) {
+    // Try update with extended fields first; fall back to base-only on column error
+    let { data, error } = await getSupabase()
+      .from("tracked_products")
+      .update({ product_title: base.product_title, product_url: base.product_url, current_price: base.current_price, last_checked: new Date().toISOString(), ...extended })
+      .eq("id", existing.id)
+      .select()
+      .single();
+
+    if (error && error.message && (error.message.includes("does not exist") || error.message.includes("Could not find"))) {
+      console.log("[Supabase] Migration 004 not yet applied -- using base fields only");
+      ({ data, error } = await getSupabase()
+        .from("tracked_products")
+        .update({ product_title: base.product_title, product_url: base.product_url, current_price: base.current_price, last_checked: new Date().toISOString() })
+        .eq("id", existing.id)
+        .select()
+        .single());
+    }
+
+    if (error) {
+      console.error("[Supabase] upsertScrapedProduct update error:", error);
+      return null;
+    }
+
+    // Record price history if price changed
+    if (parseFloat(existing.current_price) !== base.current_price) {
+      await addPriceHistory(existing.id, base.current_price);
+      console.log(`[Supabase] Price changed for ${base.product_id}: ${existing.current_price} -> ${base.current_price}`);
+    }
+
+    return data;
+  }
+
+  // Insert new -- user_id 1 = system/demo account used for scraper-sourced products
+  let { data, error } = await getSupabase()
+    .from("tracked_products")
+    .insert({ user_id: 1, ...base, ...extended, created_at: new Date().toISOString() })
+    .select()
+    .single();
+
+  if (error && error.message && (error.message.includes("does not exist") || error.message.includes("Could not find"))) {
+    console.log("[Supabase] Migration 004 not yet applied -- inserting base fields only");
+    ({ data, error } = await getSupabase()
+      .from("tracked_products")
+      .insert({ user_id: 1, ...base, created_at: new Date().toISOString() })
+      .select()
+      .single());
+  }
+
+  if (error) {
+    console.error("[Supabase] upsertScrapedProduct insert error:", error);
+    return null;
+  }
+
+  // Record initial price history
+  if (data) {
+    await addPriceHistory(data.id, base.current_price);
+  }
+
   return data;
 }
 
@@ -381,6 +489,37 @@ async function removeTrackedProduct(id, userId) {
     console.error("[Supabase] removeTrackedProduct error:", error);
   }
   return !error;
+}
+
+/**
+ * Search tracked products by keyword (case-insensitive title match).
+ * Used by the home-page search to surface already-scraped products
+ * alongside live ML API results.
+ * @param {string} query - search keyword
+ * @param {Object} [opts]
+ * @param {number} [opts.limit=20]
+ * @param {string} [opts.source] - filter by 'amazon' | 'mercadolibre'
+ * @returns {Promise<Array>}
+ */
+async function searchTrackedProducts(query, { limit = 20, source } = {}) {
+  if (!query || !query.trim()) return [];
+
+  let req = getSupabase()
+    .from("tracked_products")
+    .select("*")
+    .ilike("product_title", `%${query.trim()}%`)
+    .order("created_at", { ascending: false })
+    .limit(limit);
+
+  if (source && source !== "all") {
+    req = req.eq("source", source);
+  }
+
+  const { data, error } = await req;
+  if (error) {
+    console.error("[Supabase] searchTrackedProducts error:", error);
+  }
+  return data || [];
 }
 
 /**
@@ -580,7 +719,9 @@ async function getHighlightedDeals(limit = 10) {
     for (const product of productMap.values()) {
       const history = await getPriceHistory(product.id, { period: "30d", limit: 100 });
 
-      if (history && history.length > 0) {
+      // Need at least 2 data points to make a meaningful comparison;
+      // a single entry would trivially satisfy current <= min.
+      if (history && history.length >= 2) {
         const prices = history.map(h => parseFloat(h.price));
         const currentPrice = parseFloat(product.current_price);
         const minPrice = Math.min(...prices);
@@ -1124,6 +1265,106 @@ function createDbInterface() {
   };
 }
 
+// ============================================
+// SEARCH HISTORY OPERATIONS
+// ============================================
+
+/**
+ * Record a search performed by a logged-in user.
+ * Called every time the home-page search form is submitted with a non-empty query.
+ * @param {number} userId
+ * @param {string} query
+ * @param {string} [source] - 'amazon' | 'mercadolibre' | 'all'
+ * @param {number} [resultCount]
+ */
+async function recordSearch(userId, query, source = "all", resultCount = 0) {
+  if (!userId || !query || !query.trim()) return;
+  const { error } = await getSupabase()
+    .from("search_history")
+    .insert({
+      user_id: userId,
+      query: query.trim().toLowerCase(),
+      source: source || "all",
+      result_count: resultCount,
+      created_at: new Date().toISOString()
+    });
+  if (error) {
+    console.error("[Supabase] recordSearch error:", error.message);
+  }
+}
+
+/**
+ * Get the most recent search queries for a user (deduplicated).
+ * @param {number} userId
+ * @param {number} [limit=10]
+ * @returns {Promise<string[]>} unique query strings, most recent first
+ */
+async function getUserSearchHistory(userId, limit = 10) {
+  if (!userId) return [];
+  const { data, error } = await getSupabase()
+    .from("search_history")
+    .select("query")
+    .eq("user_id", userId)
+    .order("created_at", { ascending: false })
+    .limit(limit * 3); // fetch more so we can dedupe and still hit limit
+
+  if (error) {
+    console.error("[Supabase] getUserSearchHistory error:", error.message);
+    return [];
+  }
+
+  // Deduplicate while preserving order
+  const seen = new Set();
+  const unique = [];
+  for (const row of (data || [])) {
+    if (!seen.has(row.query)) {
+      seen.add(row.query);
+      unique.push(row.query);
+      if (unique.length >= limit) break;
+    }
+  }
+  return unique;
+}
+
+/**
+ * Get products from tracked_products that match any of the user's recent search terms.
+ * Used to personalise Popular Products for the logged-in user.
+ * @param {string[]} queries - recent search queries
+ * @param {number} [limit=12]
+ * @returns {Promise<Array>} tracked_products rows
+ */
+async function getProductsByUserInterests(queries, limit = 12) {
+  if (!queries || queries.length === 0) return [];
+
+  // Build OR filter: product_title ilike any of the queries
+  // Supabase JS client doesn't support OR filters natively on ilike,
+  // so we fetch per-query and merge with dedup.
+  const seen = new Set();
+  const results = [];
+
+  for (const q of queries) {
+    if (results.length >= limit) break;
+    const { data, error } = await getSupabase()
+      .from("tracked_products")
+      .select("*")
+      .ilike("product_title", `%${q}%`)
+      .not("current_price", "is", null)
+      .order("created_at", { ascending: false })
+      .limit(limit);
+
+    if (error) continue;
+    for (const row of (data || [])) {
+      if (!seen.has(row.product_id)) {
+        seen.add(row.product_id);
+        results.push(row);
+        if (results.length >= limit) break;
+      }
+    }
+  }
+
+  return results;
+}
+
 module.exports = {
   initSupabase,
   getSupabase,
@@ -1142,7 +1383,9 @@ module.exports = {
   getAllLoginHistory,
   // Tracked products
   addTrackedProduct,
+  upsertScrapedProduct,
   getTrackedProducts,
+  searchTrackedProducts,
   removeTrackedProduct,
   getAllTrackedProducts,
   updateTrackedProductPrice,
@@ -1157,6 +1400,10 @@ module.exports = {
   getDiscountsByCategory,
   getProductsByCategory,
   getProductCategories,
+  // Search history
+  recordSearch,
+  getUserSearchHistory,
+  getProductsByUserInterests,
   // Setup
   createDemoAccounts
 };

@@ -16,10 +16,6 @@ const { initDb } = require("./db");
 const supabaseDb = require("./supabase-db");
 const { isRedisConfigured } = require("./config/redis");
 const {
-  initQueue,
-  initWorker,
-  setupRecurringJobs,
-  triggerPriceUpdate,
   getQueueStatus,
   getRecentJobs,
 } = require("./queue");
@@ -1768,7 +1764,7 @@ async function fetchAllProducts({
   const queryML = source === "all" || source === "mercadolibre";
   const queryAmazon = source === "all" || source === "amazon";
 
-  // Fetch from sources in parallel
+  // Fetch from sources in parallel — ML API, Amazon API, and already-scraped Supabase products
   const promises = [];
 
   if (queryML) {
@@ -1804,17 +1800,47 @@ async function fetchAllProducts({
     );
   }
 
+  // Pull already-scraped products from Supabase (fed by Apify Actor)
+  if (USE_SUPABASE && query) {
+    promises.push(
+      supabaseDb.searchTrackedProducts(query, { limit: pageSize, source })
+        .then((rows) => ({
+          products: rows.map((r) => ({
+            id: r.product_id,
+            title: r.product_title,
+            price: parseFloat(r.current_price) || 0,
+            currency_id: r.currency || "MXN",
+            thumbnail: r.thumbnail || null,
+            seller: r.seller ? { nickname: r.seller } : null,
+            source: r.source,
+            permalink: r.product_url || null,
+            category: detectCategory(r.product_title || ""),
+            _fromSupabase: true,
+          })),
+          total: rows.length,
+          totalPages: 1,
+          source: "supabase",
+        }))
+        .catch(() => ({ products: [], total: 0, totalPages: 1, source: "supabase" })),
+    );
+  }
+
   const responses = await Promise.all(promises);
 
-  // Combine results
+  // Combine results, dedupe by id so the same product doesn't show twice
+  const seenIds = new Set();
   for (const res of responses) {
-    // Add source to each product if not already set
     const productsWithSource = res.products.map((p) => ({
       ...p,
       source: p.source || res.source,
     }));
 
-    results.products.push(...productsWithSource);
+    for (const p of productsWithSource) {
+      const key = String(p.id || p.product_id || "");
+      if (key && seenIds.has(key)) continue;
+      if (key) seenIds.add(key);
+      results.products.push(p);
+    }
     results.total += res.total || 0;
 
     if (res.error) {
@@ -1901,25 +1927,8 @@ async function start() {
     ? supabaseDb.getLoginHistory
     : require("./db").getLoginHistory.bind(null, localDb);
 
-  // Initialize Bull queue for background price updates (if Redis configured)
-  if (isRedisConfigured()) {
-    const queue = initQueue();
-    if (queue) {
-      // Initialize worker with dependencies
-      // Note: fetchMLProductById and fetchAmazonProductById are defined later in this file
-      // We pass them via a deferred initialization after they're defined
-      initWorker({
-        db: supabaseDb,
-        fetchMLProductById: async (id) => fetchMLProductById(id),
-        fetchAmazonProductById: async (asin) => fetchAmazonProductById(asin),
-      });
-
-      // Setup recurring jobs
-      setupRecurringJobs().catch((err) => {
-        console.error("[Queue] Failed to setup recurring jobs:", err.message);
-      });
-    }
-  } else {
+  // Bull queue for price-updates is retired — price-checker.js (Apify-based) handles all updates.
+  if (!isRedisConfigured()) {
     console.log(
       "[Queue] Redis not configured - background price updates disabled",
     );
@@ -1983,30 +1992,18 @@ async function start() {
     const lang = getLang(req);
     const hasToken = Boolean(req.cookies.token);
 
-    // DEBUG: Log all cookies and token status
-    console.log("[Home Route] =========== REQUEST DEBUG ===========");
-    console.log(
-      "[Home Route] Cookies received:",
-      Object.keys(req.cookies || {}),
-    );
-    console.log("[Home Route] Token cookie exists:", !!req.cookies?.token);
-    console.log("[Home Route] hasToken:", hasToken);
-
     let userEmail = "";
     let userData = null;
     if (hasToken) {
       try {
         const payload = jwt.verify(req.cookies.token, JWT_SECRET);
-        console.log(`[Home] Token valid for user ID: ${payload.id}`);
         const user = await db.get(
           "SELECT * FROM users WHERE id = ?",
           payload.id,
         );
         userEmail = user?.email || "";
         userData = user;
-        console.log(`[Home] User found: ${userEmail || "NO"}`);
       } catch (e) {
-        console.log(`[Home] Token invalid: ${e.message}`);
       }
     }
     const query = String(req.query.q || "").trim();
@@ -2037,6 +2034,11 @@ async function start() {
         pageSize,
         source,
       });
+
+      // Record the search for logged-in users (fire-and-forget)
+      if (query && userData?.id && USE_SUPABASE) {
+        supabaseDb.recordSearch(userData.id, query, source, results.total).catch(() => {});
+      }
 
       // Filter by category if specified
       if (category && CATEGORIES[category]) {
@@ -2084,7 +2086,7 @@ async function start() {
           <div class="product-card-content">
             <h3 class="product-card-title">${item.title || t(lang, "product")}</h3>
             <div class="product-card-price">${formatPrice(item.price, item.currency_id || "MXN")}</div>
-            ${item.seller?.nickname ? `<div class="product-card-seller">${item.seller.nickname}</div>` : ""}
+            ${(item.seller?.nickname || (typeof item.seller === "string" && item.seller)) ? `<div class="product-card-seller">${item.seller?.nickname || item.seller}</div>` : ""}
           </div>
         </a>
       </div>
@@ -2153,11 +2155,32 @@ async function start() {
           </div>
 
         </div>
-        <div class="full">
+        <div class="full" style="display:flex;gap:10px;">
           <button type="submit">${t(lang, "search")}</button>
+          <button type="button" id="scrapeBtn" class="btn-scrape" onclick="triggerScrape()" title="${lang === "es" ? "Buscar en Amazon y Mercado Libre con Apify" : "Scrape Amazon & Mercado Libre via Apify"}">
+            🔍 ${lang === "es" ? "Buscar con Apify" : "Scrape with Apify"}
+          </button>
         </div>
       </form>
     `;
+
+    // Fetch real stats for landing page counters
+    let statProducts = 0, statUsers = 0, statPriceChecks = 0;
+    if (USE_SUPABASE) {
+      try {
+        const db = supabaseDb.getSupabase();
+        const [prodRes, userRes, histRes] = await Promise.all([
+          db.from("tracked_products").select("id", { count: "exact", head: true }),
+          db.from("users").select("id", { count: "exact", head: true }),
+          db.from("price_history").select("id", { count: "exact", head: true }),
+        ]);
+        statProducts = prodRes.count || 0;
+        statUsers = userRes.count || 0;
+        statPriceChecks = histRes.count || 0;
+      } catch (_) { /* fall through to defaults */ }
+    }
+    // Format helpers for stats display
+    const fmtStat = (n) => n >= 1000 ? (n / 1000).toFixed(1).replace(/\.0$/, "") + "K" : String(n || 0);
 
     // Landing page for guests (Modern & Dynamic)
     const landingPage = `
@@ -2304,12 +2327,12 @@ async function start() {
             }</p>
           </div>
           <div class="feature-card" data-reveal="fade-up">
-            <div class="feature-icon">🔔</div>
-            <h3>${lang === "es" ? "Recibe Alertas" : "Get Alerts"}</h3>
+            <div class="feature-icon">📉</div>
+            <h3>${lang === "es" ? "Detecta Caídas de Precio" : "Spot Price Drops"}</h3>
             <p>${
               lang === "es"
-                ? "Te notificamos al instante por email cuando el precio baje."
-                : "We notify you instantly by email when the price drops."
+                ? "Ve en tu dashboard exactamente cuándo y cuánto bajó cada producto. Compra en el momento justo."
+                : "See on your dashboard exactly when and how much each product dropped. Buy at the right moment."
             }</p>
           </div>
           <div class="feature-card" data-reveal="fade-up">
@@ -2365,20 +2388,20 @@ async function start() {
       <section class="stats-section" data-reveal="fade-up">
         <div class="stats-grid" data-reveal-stagger>
           <div class="stat-card" data-reveal="fade-up">
-            <div class="stat-number">1M+</div>
+            <div class="stat-number">${fmtStat(statProducts)}</div>
             <div class="stat-label">${lang === "es" ? "Productos Rastreados" : "Products Tracked"}</div>
           </div>
           <div class="stat-card" data-reveal="fade-up">
-            <div class="stat-number">$500K+</div>
-            <div class="stat-label">${lang === "es" ? "Ahorros de Usuarios" : "User Savings"}</div>
+            <div class="stat-number">${fmtStat(statPriceChecks)}</div>
+            <div class="stat-label">${lang === "es" ? "Verificaciones de Precio" : "Price Checks"}</div>
           </div>
           <div class="stat-card" data-reveal="fade-up">
             <div class="stat-number">24/7</div>
             <div class="stat-label">${lang === "es" ? "Monitoreo Continuo" : "Continuous Monitoring"}</div>
           </div>
           <div class="stat-card" data-reveal="fade-up">
-            <div class="stat-number">50K+</div>
-            <div class="stat-label">${lang === "es" ? "Usuarios Activos" : "Active Users"}</div>
+            <div class="stat-number">${fmtStat(statUsers)}</div>
+            <div class="stat-label">${lang === "es" ? "Usuarios Registrados" : "Registered Users"}</div>
           </div>
         </div>
       </section>
@@ -2389,8 +2412,8 @@ async function start() {
           <h2>${lang === "es" ? "¿Listo para Empezar a Ahorrar?" : "Ready to Start Saving?"}</h2>
           <p>${
             lang === "es"
-              ? "Únete a más de 50,000 usuarios mexicanos que ya están ahorrando dinero en sus compras en línea. Sin costos, sin compromisos."
-              : "Join over 50,000 Mexican users who are already saving money on their online purchases. No costs, no commitments."
+              ? `Únete a los ${fmtStat(statUsers)} usuarios que ya están ahorrando dinero en sus compras en línea. Sin costos, sin compromisos.`
+              : `Join the ${fmtStat(statUsers)} users already saving money on their online purchases. No costs, no commitments.`
           }</p>
           <a href="/register" class="btn-primary btn-large">
             ${lang === "es" ? "Comenzar Ahora — Es Gratis" : "Start Now — It's Free"}
@@ -2413,7 +2436,7 @@ async function start() {
             <h4>${lang === "es" ? "Características" : "Features"}</h4>
             <ul>
               <li>📈 ${lang === "es" ? "Historial de precios" : "Price history"}</li>
-              <li>📧 ${lang === "es" ? "Alertas por email" : "Email alerts"}</li>
+              <li>📉 ${lang === "es" ? "Detección de caídas de precio" : "Price drop detection"}</li>
               <li>📊 ${lang === "es" ? "Comparación de precios" : "Price comparison"}</li>
               <li>✨ ${lang === "es" ? "100% gratis" : "100% free"}</li>
             </ul>
@@ -2438,33 +2461,29 @@ async function start() {
     let topPriceDrops = [];
     let categoryDiscounts = [];
 
-    console.log(
-      "[Home Debug] hasToken:",
-      hasToken,
-      "USE_SUPABASE:",
-      USE_SUPABASE,
-    );
+    // User's past search queries (populated below if logged in)
+    let userInterestProducts = [];
 
-    // ALWAYS try to fetch deals data (not just for logged-in users)
-    // This ensures sections show for testing
     if (USE_SUPABASE) {
       try {
-        console.log("[Home] Fetching real data from Supabase...");
-        [highlightedDeals, popularProducts, topPriceDrops, categoryDiscounts] =
+        // Fetch user search history in parallel with global deal data
+        let userQueries = [];
+        [highlightedDeals, popularProducts, topPriceDrops, categoryDiscounts, userQueries] =
           await Promise.all([
             supabaseDb.getHighlightedDeals(12),
             supabaseDb.getPopularProducts({ limit: 8 }),
             supabaseDb.getTopPriceDrops({ period: "recent", limit: 8 }),
             supabaseDb.getDiscountsByCategory(),
+            userData?.id ? supabaseDb.getUserSearchHistory(userData.id, 5) : Promise.resolve([]),
           ]);
 
-        console.log("[Home] Real data fetched:");
-        console.log("  - Highlighted Deals:", highlightedDeals.length);
-        console.log("  - Popular Products:", popularProducts.length);
-        console.log("  - Top Price Drops:", topPriceDrops.length);
-        console.log("  - Category Discounts:", categoryDiscounts.length);
+        // If the user has search history, fetch matching products
+        if (userQueries.length > 0) {
+          userInterestProducts = await supabaseDb.getProductsByUserInterests(userQueries, 12);
+        }
 
-        // Transform data to match expected format for rendering
+        // Transform data to match expected format for rendering.
+        // Thumbnail fallback: use local placeholder instead of external service.
         highlightedDeals = highlightedDeals.map((deal) => ({
           product_id: deal.product_id,
           product_title: deal.product_title,
@@ -2476,9 +2495,7 @@ async function start() {
           savingsAmount: deal.savingsAmount || 0,
           source: deal.source || "mercadolibre",
           product_url: deal.product_url,
-          thumbnail:
-            deal.thumbnail ||
-            "https://via.placeholder.com/300x300?text=No+Image",
+          thumbnail: deal.thumbnail || "/images/product-placeholder.svg",
         }));
 
         popularProducts = popularProducts.map((product) => ({
@@ -2491,9 +2508,7 @@ async function start() {
           savingsPercent: product.savingsPercent || 0,
           source: product.source || "mercadolibre",
           product_url: product.product_url,
-          thumbnail:
-            product.thumbnail ||
-            "https://via.placeholder.com/300x300?text=No+Image",
+          thumbnail: product.thumbnail || "/images/product-placeholder.svg",
         }));
 
         topPriceDrops = topPriceDrops.map((drop) => ({
@@ -2505,14 +2520,29 @@ async function start() {
           dropPercent: drop.dropPercent,
           source: drop.source || "mercadolibre",
           product_url: drop.product_url,
-          thumbnail:
-            drop.thumbnail ||
-            "https://via.placeholder.com/300x300?text=No+Image",
+          thumbnail: drop.thumbnail || "/images/product-placeholder.svg",
           dropDate: drop.periodStart,
         }));
+
+        // If we have interest-based products, merge them into Popular Products:
+        // user-interest products go first, then fill remaining slots with the
+        // global popular list (deduped by product_id).
+        if (userInterestProducts.length > 0) {
+          const interestMapped = userInterestProducts.map((p) => ({
+            product_id: p.product_id,
+            product_title: p.product_title,
+            current_price: parseFloat(p.current_price),
+            source: p.source || "mercadolibre",
+            product_url: p.product_url,
+            thumbnail: p.thumbnail || "/images/product-placeholder.svg",
+            trackCount: 1,
+          }));
+          const seenIds = new Set(interestMapped.map(p => p.product_id));
+          const remaining = popularProducts.filter(p => !seenIds.has(p.product_id));
+          popularProducts = [...interestMapped, ...remaining].slice(0, 8);
+        }
       } catch (err) {
         console.error("[Home] Error fetching deals data:", err.message);
-        console.error("[Home] Stack:", err.stack);
       }
     }
 
@@ -2852,14 +2882,7 @@ async function start() {
       categoryDiscounts = getCategoryStats(uniqueProducts, lang);
     }
 
-    console.log(
-      "[Home Debug] After demo data - highlightedDeals:",
-      highlightedDeals.length,
-      "popularProducts:",
-      popularProducts.length,
-      "topPriceDrops:",
-      topPriceDrops.length,
-    );
+
 
     // Helper to render deal card for carousel (CamelCamelCamel style)
     const renderDealCard = (deal) => {
@@ -2871,12 +2894,7 @@ async function start() {
         badges.push(`<span class="badge-good-deal">Good Deal</span>`);
       }
 
-      // Use thumbnail if available, otherwise construct from product_id
-      const imageUrl =
-        deal.thumbnail ||
-        (deal.product_url?.includes("amazon")
-          ? "/images/product-placeholder.svg"
-          : `https://http2.mlstatic.com/D_NQ_NP_${deal.product_id?.split("-")[1] || ""}-O.webp`);
+      const imageUrl = deal.thumbnail || "/images/product-placeholder.svg";
 
       return `
         <div class="deal-card-ccc" data-category="${deal.category || detectCategory(deal.product_title) || ""}" data-drop-date="${deal.dropDate || ""}">
@@ -2903,7 +2921,9 @@ async function start() {
                 : ""
             }
             <a href="/product/${encodeURIComponent(deal.product_id)}?source=${deal.source || "mercadolibre"}" class="deal-card-btn">
-              ${lang === "es" ? "Ver en Mercado Libre" : "View on Mercado Libre"}
+              ${deal.source === "amazon"
+                ? (lang === "es" ? "Ver en Amazon" : "View on Amazon")
+                : (lang === "es" ? "Ver en Mercado Libre" : "View on Mercado Libre")}
             </a>
           </div>
         </div>
@@ -2919,12 +2939,7 @@ async function start() {
         badges.push(`<span class="badge-good-deal">Good Deal</span>`);
       }
 
-      // Use thumbnail if available
-      const imageUrl =
-        product.thumbnail ||
-        (product.product_url?.includes("amazon")
-          ? "/images/product-placeholder.svg"
-          : `https://http2.mlstatic.com/D_NQ_NP_${product.product_id?.split("-")[1] || ""}-O.webp`);
+      const imageUrl = product.thumbnail || "/images/product-placeholder.svg";
 
       const avgOrPrevPrice = product.previousPrice || product.avgPrice;
       const savingsText =
@@ -2951,7 +2966,9 @@ async function start() {
             </div>
             ${savingsText ? `<div class="product-card-savings">${savingsText}</div>` : ""}
             <a href="/product/${encodeURIComponent(product.product_id)}?source=${product.source || "mercadolibre"}" class="product-card-btn">
-              ${lang === "es" ? "Ver en Mercado Libre" : "View on Mercado Libre"}
+              ${product.source === "amazon"
+                ? (lang === "es" ? "Ver en Amazon" : "View on Amazon")
+                : (lang === "es" ? "Ver en Mercado Libre" : "View on Mercado Libre")}
             </a>
           </div>
         </div>
@@ -2985,16 +3002,22 @@ async function start() {
         : "";
 
     // Popular Products Section (CamelCamelCamel style)
+    // Title and description change when the user has search history driving the list
+    const hasPersonalised = userInterestProducts.length > 0;
     const popularProductsSection =
       popularProducts.length > 0
         ? `
       <section class="ccc-section" id="popular-products">
         <div class="ccc-section-header">
-          <h2 class="ccc-section-title">Popular Products →</h2>
+          <h2 class="ccc-section-title">${hasPersonalised ? (lang === "es" ? "Basado en tus búsquedas →" : "Based on Your Searches →") : "Popular Products →"}</h2>
           <p class="ccc-section-desc">${
-            lang === "es"
-              ? "Mira estas ofertas populares recientes. Ve lo que otros usuarios de OfertaRadar han estado comprando últimamente."
-              : "Check out these recently popular deals. See what OfertaRadar users have been buying lately."
+            hasPersonalised
+              ? (lang === "es"
+                  ? "Productos que coinciden con lo que has buscado recientemente."
+                  : "Products matching what you've been searching for recently.")
+              : (lang === "es"
+                  ? "Mira estas ofertas populares recientes. Ve lo que otros usuarios de OfertaRadar han estado comprando últimamente."
+                  : "Check out these recently popular deals. See what OfertaRadar users have been buying lately.")
           }</p>
           <div class="ccc-filter-row">
             <div class="ccc-filter-tabs" data-filter-target="popular-grid">
@@ -3121,26 +3144,6 @@ async function start() {
       </section>
     `
         : "";
-
-    // DEBUG: Log section generation
-    console.log("[Home Route] =========== SECTIONS DEBUG ===========");
-    console.log(
-      "[Home Route] highlightedDealsSection length:",
-      highlightedDealsSection.length,
-    );
-    console.log(
-      "[Home Route] popularProductsSection length:",
-      popularProductsSection.length,
-    );
-    console.log(
-      "[Home Route] priceDropsSection length:",
-      priceDropsSection.length,
-    );
-    console.log("[Home Route] categorySection length:", categorySection.length);
-    console.log(
-      "[Home Route] Will show:",
-      hasToken ? "searchPage (logged in)" : "landingPage (guest)",
-    );
 
     // Determine if we should show deal sections
     // Only show deals on homepage (no search query, no category filter)
@@ -3363,6 +3366,92 @@ async function start() {
               });
             });
           })();
+
+          // Apify scrape button styles
+          (function() {
+            const style = document.createElement('style');
+            style.textContent = \`
+              .btn-scrape {
+                background: linear-gradient(135deg, #f5a623, #f7c948);
+                color: #222;
+                border: none;
+                padding: 10px 18px;
+                border-radius: 6px;
+                font-weight: 600;
+                cursor: pointer;
+                font-size: 0.95rem;
+                white-space: nowrap;
+                flex-shrink: 0;
+                transition: opacity 0.2s;
+              }
+              .btn-scrape:hover { opacity: 0.85; }
+              .btn-scrape:disabled { opacity: 0.5; cursor: not-allowed; }
+              #scrapeStatus {
+                display: none;
+                margin-top: 8px;
+                font-size: 0.9rem;
+                color: var(--text-muted);
+              }
+              #scrapeStatus.visible { display: block; }
+            \`;
+            document.head.appendChild(style);
+          })();
+
+          // Trigger Apify scrape, then reload with the query so results appear
+          async function triggerScrape() {
+            const input = document.querySelector('input[name="q"]');
+            const query = input ? input.value.trim() : '';
+            if (!query) {
+              alert('${lang === "es" ? "Escribe algo en la búsqueda primero." : "Type a search query first."}');
+              return;
+            }
+
+            const btn = document.getElementById('scrapeBtn');
+            btn.disabled = true;
+            btn.textContent = '${lang === "es" ? "⏳ Buscando…" : "⏳ Scraping…"}';
+
+            // Show status line
+            let statusEl = document.getElementById('scrapeStatus');
+            if (!statusEl) {
+              statusEl = document.createElement('div');
+              statusEl.id = 'scrapeStatus';
+              btn.parentElement.parentElement.appendChild(statusEl);
+            }
+            statusEl.className = 'visible';
+            statusEl.textContent = '${lang === "es" ? "Ejecutando Actor en Apify… esto puede tomar hasta 2 minutos." : "Running Apify Actor… this may take up to 2 minutes."}';
+
+            // Get source filter value
+            const sourceSelect = document.querySelector('select[name="source"]');
+            const source = sourceSelect ? sourceSelect.value : 'all';
+
+            try {
+              const res = await fetch('/api/scrape', {
+                method: 'POST',
+                headers: { 'Content-Type': 'application/json' },
+                body: JSON.stringify({ source, query, maxResults: 20 }),
+              });
+              const data = await res.json();
+
+              if (data.success) {
+                statusEl.textContent = '${lang === "es" ? "✓ Se encontraron" : "✓ Found"} ' + data.count + ' ${lang === "es" ? "productos. Recargando resultados…" : "products. Reloading results…"}';
+                // Small delay so user reads the message, then reload with query
+                setTimeout(() => {
+                  const url = new URL(window.location.href);
+                  url.searchParams.set('q', query);
+                  url.searchParams.set('source', source);
+                  window.location.href = url.toString();
+                }, 1200);
+              } else {
+                statusEl.textContent = '⚠ ' + (data.error || '${lang === "es" ? "Error desconocido" : "Unknown error"}');
+                btn.disabled = false;
+                btn.textContent = '🔍 ${lang === "es" ? "Buscar con Apify" : "Scrape with Apify"}';
+              }
+            } catch (err) {
+              statusEl.textContent = '⚠ ${lang === "es" ? "Error de red:" : "Network error:"} ' + err.message;
+              btn.disabled = false;
+              btn.textContent = '🔍 ${lang === "es" ? "Buscar con Apify" : "Scrape with Apify"}';
+            }
+          }
         </script>
       `,
         hasToken,
@@ -6532,6 +6621,93 @@ State: ${state || "none"}</pre>
         baseUrl: APP_BASE_URL,
       });
     });
+  });
+
+  // ============================================
+  // APIFY SCRAPE ENDPOINT
+  // ============================================
+
+  /**
+   * POST /api/scrape
+   * Triggers the Apify Actor to scrape products from Amazon / Mercado Libre.
+   * Stores results into Supabase tracked_products + price_history.
+   * Body: { source, query, maxResults }
+   *   source      - 'amazon' | 'mercadolibre' | 'all'
+   *   query       - search keyword
+   *   maxResults  - how many products per source (default 20)
+   */
+  app.post("/api/scrape", authRequired, async function (req, res) {
+    try {
+      const { source = "all", query = "", maxResults = 20 } = req.body;
+
+      if (!query || query.trim() === "") {
+        return res.status(400).json({ success: false, error: "query is required" });
+      }
+
+      const { scrapeProducts } = require("./apify");
+
+      console.log(`[Scrape] User ${req.user.id} triggered scrape: source=${source} query="${query}" max=${maxResults}`);
+
+      // Run the Apify Actor
+      const products = await scrapeProducts({
+        source,
+        query: query.trim(),
+        maxResults: Math.min(Math.max(parseInt(maxResults) || 20, 1), 100),
+      });
+
+      if (products.length === 0) {
+        return res.json({ success: true, count: 0, products: [], message: "No products found for this query." });
+      }
+
+      // Store each scraped product into Supabase
+      const stored = [];
+      for (const product of products) {
+        const row = await supabaseDb.upsertScrapedProduct(product);
+        if (row) stored.push(row);
+      }
+
+      console.log(`[Scrape] Stored ${stored.length} products into Supabase`);
+
+      res.json({
+        success: true,
+        count: stored.length,
+        products: stored.map((p) => ({
+          id: p.id,
+          product_id: p.product_id,
+          product_title: p.product_title,
+          current_price: p.current_price,
+          thumbnail: p.thumbnail,
+          source: p.source,
+        })),
+      });
+    } catch (error) {
+      console.error("[Scrape] Error:", error.message);
+      res.status(500).json({ success: false, error: error.message });
+    }
+  });
+
+  /**
+   * GET /api/scrape/status
+   * Returns info about the Apify Actor and recent scrape activity.
+   */
+  app.get("/api/scrape/status", authRequired, async function (req, res) {
+    try {
+      const apifyConfigured = Boolean(process.env.Apify_Token);
+      res.json({
+        success: true,
+        apify: {
+          configured: apifyConfigured,
+          actorId: "f5pjkmpD15S3cqunX",
+          actorName: "ShopSavvy-Price-Tracker",
+        },
+        tracking: {
+          periods: ["7d", "30d"],
+          checkIntervalMinutes: parseInt(process.env.PRICE_CHECK_INTERVAL_MINUTES) || 60,
+        },
+      });
+    } catch (error) {
+      res.status(500).json({ success: false, error: error.message });
+    }
   });
 
   // ============================================
