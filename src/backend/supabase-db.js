@@ -873,14 +873,119 @@ async function getDiscountsByCategory() {
       }
     }
 
-    // Convert to array and filter out empty categories
+    // Convert to array - show ALL categories, even if they have no products yet
+    // This allows users to browse all available categories
     const results = Array.from(categoryStats.values())
-      .filter(cat => cat.productCount > 0 && cat.maxDiscount > 0)
       .sort((a, b) => b.maxDiscount - a.maxDiscount);
 
     return results;
   } catch (err) {
     console.error("[Supabase] getDiscountsByCategory exception:", err);
+    return [];
+  }
+}
+
+/**
+ * Get products by category with their stats
+ * @param {string} categoryKey - Category key (e.g., 'electronics', 'fashion')
+ * @param {object} options - Query options
+ * @returns {Promise<Array>} Products in the category with their stats
+ */
+async function getProductsByCategory(categoryKey, options = {}) {
+  try {
+    const { limit = 50, dealsOnly = false } = options;
+
+    // Get all tracked products
+    const { data: products, error } = await getSupabase()
+      .from("tracked_products")
+      .select("*")
+      .not("current_price", "is", null);
+
+    if (error) {
+      console.error("[Supabase] getProductsByCategory error:", error);
+      return [];
+    }
+
+    if (!products || products.length === 0) return [];
+
+    // Define category keywords (same as getDiscountsByCategory)
+    const categoryDefinitions = {
+      electronics: { keywords: ["phone", "laptop", "computer", "tablet", "tv", "audio", "headphone", "speaker", "celular", "computadora", "televisor", "bocina"] },
+      home: { keywords: ["home", "kitchen", "furniture", "decor", "hogar", "cocina", "mueble", "decoración"] },
+      fashion: { keywords: ["clothing", "shoes", "fashion", "watch", "jewelry", "ropa", "zapatos", "moda", "reloj", "joyería"] },
+      sports: { keywords: ["sport", "fitness", "exercise", "outdoor", "deporte", "ejercicio", "aire libre"] },
+      beauty: { keywords: ["beauty", "cosmetic", "skincare", "perfume", "belleza", "cosmético", "cuidado piel"] },
+      toys: { keywords: ["toy", "game", "puzzle", "lego", "juguete", "juego"] },
+      books: { keywords: ["book", "kindle", "reading", "libro", "lectura"] },
+      automotive: { keywords: ["car", "auto", "vehicle", "motor", "carro", "vehículo", "coche"] },
+      other: { keywords: [] }
+    };
+
+    const categoryDef = categoryDefinitions[categoryKey];
+    if (!categoryDef) {
+      console.error("[Supabase] Invalid category key:", categoryKey);
+      return [];
+    }
+
+    // Filter products by category
+    const categoryProducts = [];
+
+    for (const product of products) {
+      const title = (product.product_title || "").toLowerCase();
+      let isMatch = false;
+
+      if (categoryKey === "other") {
+        // "Other" includes products that don't match any specific category
+        isMatch = !Object.entries(categoryDefinitions)
+          .filter(([key]) => key !== "other")
+          .some(([_, def]) => def.keywords.some(kw => title.includes(kw)));
+      } else {
+        // Match against category keywords
+        isMatch = categoryDef.keywords.some(kw => title.includes(kw));
+      }
+
+      if (isMatch) {
+        // Get price stats for this product
+        const history = await getPriceHistory(product.id, { period: "30d", limit: 50 });
+
+        if (history && history.length > 0) {
+          const prices = history.map(h => parseFloat(h.price));
+          const currentPrice = parseFloat(product.current_price);
+          const avgPrice = prices.reduce((sum, p) => sum + p, 0) / prices.length;
+          const minPrice = Math.min(...prices);
+
+          const isBestPrice = currentPrice <= minPrice;
+          const isGoodDeal = currentPrice < avgPrice * 0.95;
+          const savingsPercent = avgPrice > 0 ? ((avgPrice - currentPrice) / avgPrice) * 100 : 0;
+          const savingsAmount = avgPrice - currentPrice;
+
+          const productWithStats = {
+            ...product,
+            avgPrice: Math.round(avgPrice * 100) / 100,
+            minPrice: Math.round(minPrice * 100) / 100,
+            isBestPrice,
+            isGoodDeal,
+            savingsPercent: Math.round(savingsPercent),
+            savingsAmount: Math.round(savingsAmount * 100) / 100
+          };
+
+          // Apply dealsOnly filter if requested
+          if (!dealsOnly || isGoodDeal || isBestPrice) {
+            categoryProducts.push(productWithStats);
+          }
+        } else {
+          // Include products without history
+          categoryProducts.push(product);
+        }
+      }
+    }
+
+    // Sort by savings percentage (best deals first)
+    categoryProducts.sort((a, b) => (b.savingsPercent || 0) - (a.savingsPercent || 0));
+
+    return categoryProducts.slice(0, limit);
+  } catch (err) {
+    console.error("[Supabase] getProductsByCategory exception:", err);
     return [];
   }
 }
@@ -1050,6 +1155,7 @@ module.exports = {
   getPopularProducts,
   getTopPriceDrops,
   getDiscountsByCategory,
+  getProductsByCategory,
   getProductCategories,
   // Setup
   createDemoAccounts

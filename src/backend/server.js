@@ -3078,7 +3078,7 @@ async function start() {
           ${categoryDiscounts
             .map(
               (cat) => `
-            <a href="/?category=${cat.key}" class="category-discount-card">
+            <a href="/category/${cat.key}" class="category-discount-card">
               <span class="category-discount-icon">${cat.icon}</span>
               <div class="category-discount-name">${lang === "es" ? cat.nameEs : cat.nameEn}</div>
               <div class="category-discount-percent">
@@ -3142,6 +3142,10 @@ async function start() {
       hasToken ? "searchPage (logged in)" : "landingPage (guest)",
     );
 
+    // Determine if we should show deal sections
+    // Only show deals on homepage (no search query, no category filter)
+    const isHomepage = !query && !category;
+
     // Search page for logged-in users with CamelCamelCamel-style sections
     const searchPage = `
       <div class="logged-in-home">
@@ -3150,11 +3154,11 @@ async function start() {
           ${searchSection}
         </div>
         ${resultsHtml}
-        ${highlightedDealsSection}
-        ${popularProductsSection}
-        ${priceDropsSection}
-        ${categorySection}
-        ${emptyDealsSection}
+        ${isHomepage ? highlightedDealsSection : ""}
+        ${isHomepage ? popularProductsSection : ""}
+        ${isHomepage ? priceDropsSection : ""}
+        ${isHomepage ? categorySection : ""}
+        ${isHomepage ? emptyDealsSection : ""}
       </div>
     `;
 
@@ -3366,6 +3370,144 @@ async function start() {
         lang,
         userData,
       ),
+    );
+  });
+
+  // Category page route - displays products filtered by category
+  app.get("/category/:categoryKey", async (req, res) => {
+    const lang = getLang(req);
+    const hasToken = Boolean(req.cookies.token);
+    const categoryKey = String(req.params.categoryKey || "").toLowerCase();
+
+    // Validate category key
+    const validCategories = ["electronics", "home", "fashion", "sports", "beauty", "toys", "books", "automotive", "other"];
+    if (!validCategories.includes(categoryKey)) {
+      return res.status(404).send("Category not found");
+    }
+
+    // Get category display names
+    const categoryNames = {
+      electronics: { en: "Electronics", es: "Electrónica", icon: "📱" },
+      home: { en: "Home & Kitchen", es: "Hogar y Cocina", icon: "🏠" },
+      fashion: { en: "Fashion", es: "Moda", icon: "👗" },
+      sports: { en: "Sports & Outdoors", es: "Deportes", icon: "⚽" },
+      beauty: { en: "Beauty", es: "Belleza", icon: "💄" },
+      toys: { en: "Toys & Games", es: "Juguetes", icon: "🎮" },
+      books: { en: "Books", es: "Libros", icon: "📚" },
+      automotive: { en: "Automotive", es: "Automotriz", icon: "🚗" },
+      other: { en: "Other", es: "Otros", icon: "📦" }
+    };
+
+    const categoryInfo = categoryNames[categoryKey];
+    const categoryName = lang === "es" ? categoryInfo.es : categoryInfo.en;
+
+    let userEmail = "";
+    let userData = null;
+    if (hasToken) {
+      try {
+        const payload = jwt.verify(req.cookies.token, JWT_SECRET);
+        const user = await db.get("SELECT * FROM users WHERE id = ?", payload.id);
+        userEmail = user?.email || "";
+        userData = user;
+      } catch (e) {
+        console.log(`[Category] Token invalid: ${e.message}`);
+      }
+    }
+
+    console.log(`[Category] Loading category: ${categoryKey} (${categoryName})`);
+
+    // Get products for this category
+    let categoryProducts = [];
+    try {
+      categoryProducts = await supabaseDb.getProductsByCategory(categoryKey, {
+        limit: 50,
+        dealsOnly: false
+      });
+      console.log(`[Category] Found ${categoryProducts.length} products in ${categoryKey}`);
+    } catch (error) {
+      console.error(`[Category] Error fetching products:`, error);
+    }
+
+    // Render product cards
+    const productsHtml = categoryProducts.length > 0
+      ? categoryProducts.map(product => renderHomeProductCard(product, lang)).join("")
+      : `
+        <div class="empty-state">
+          <span class="empty-state-icon">📦</span>
+          <p class="empty-state-text">
+            ${lang === "es"
+              ? "No hay productos en esta categoría todavía."
+              : "No products in this category yet."}
+          </p>
+          <a href="/" class="empty-state-link">
+            ${lang === "es" ? "← Volver al inicio" : "← Back to home"}
+          </a>
+        </div>
+      `;
+
+    // Get all categories for the navigation
+    let allCategories = [];
+    try {
+      allCategories = await supabaseDb.getDiscountsByCategory();
+    } catch (error) {
+      console.error("[Category] Error fetching categories:", error);
+    }
+
+    // Category navigation section
+    const categoryNavSection = allCategories.length > 0
+      ? `
+      <section class="category-nav-section">
+        <h3 class="category-nav-title">${lang === "es" ? "Todas las Categorías" : "All Categories"}</h3>
+        <div class="category-nav-grid">
+          ${allCategories.map(cat => `
+            <a href="/category/${cat.key}" class="category-nav-card ${cat.key === categoryKey ? 'active' : ''}">
+              <span class="category-nav-icon">${cat.icon}</span>
+              <div class="category-nav-name">${lang === "es" ? cat.nameEs : cat.nameEn}</div>
+              ${cat.maxDiscount > 0 ? `<div class="category-nav-discount">${cat.maxDiscount}% OFF</div>` : ''}
+            </a>
+          `).join("")}
+        </div>
+      </section>
+      `
+      : "";
+
+    const pageContent = `
+      <div class="category-page">
+        <div class="category-header">
+          <a href="/" class="category-back-link">
+            <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+              <path d="M19 12H5M12 19l-7-7 7-7"/>
+            </svg>
+            ${lang === "es" ? "Inicio" : "Home"}
+          </a>
+          <h1 class="category-title">
+            <span class="category-title-icon">${categoryInfo.icon}</span>
+            ${categoryName}
+          </h1>
+          <p class="category-subtitle">
+            ${categoryProducts.length} ${lang === "es" ? "productos encontrados" : "products found"}
+          </p>
+        </div>
+
+        ${categoryNavSection}
+
+        <section class="category-products-section">
+          <div class="products-grid">
+            ${productsHtml}
+          </div>
+        </section>
+      </div>
+    `;
+
+    res.send(
+      renderPage(
+        lang === "es" ? `${categoryName} - ShopSavvy` : `${categoryName} - ShopSavvy`,
+        pageContent,
+        hasToken,
+        userEmail,
+        lang,
+        userData
+      )
     );
   });
 

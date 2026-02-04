@@ -9,9 +9,12 @@
   "scripts": {
     "start": "node src/backend/server.js",
     "dev": "node src/backend/server.js",
+    "dev:clean": "taskkill /F /IM node.exe 2>nul || true && node src/backend/server.js",
     "setup:https": "node setup-https.js",
     "seed": "node src/backend/scripts/seed-products.js",
-    "worker": "node src/backend/workers/price-checker.js"
+    "seed:mock": "node src/backend/scripts/seed-mock-products.js",
+    "worker": "node src/backend/workers/price-checker.js",
+    "kill": "taskkill /F /IM node.exe"
   },
   "dependencies": {
     "@supabase/supabase-js": "^2.91.1",
