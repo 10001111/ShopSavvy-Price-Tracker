@@ -228,6 +228,24 @@ async function verifyMigrationColumns() {
     // Ignore
   }
 
+  // Check Migration 007: product_cache table
+  try {
+    const { error } = await getSupabase()
+      .from("product_cache")
+      .select("id")
+      .limit(1);
+
+    if (error && error.message.includes("does not exist")) {
+      warnings.push(
+        "Migration 007 (product_cache table) may not be applied - REQUIRED FOR SEARCH",
+      );
+    }
+  } catch (e) {
+    warnings.push(
+      "Migration 007 (product_cache table) not found - REQUIRED FOR SEARCH",
+    );
+  }
+
   return {
     ok: warnings.length === 0,
     warnings,
@@ -497,25 +515,18 @@ async function addTrackedProduct({
 }
 
 /**
- * Upsert a scraped product into tracked_products.
- * If a row with the same product_id + source already exists, update its
- * price, images, description, and scraped_at. Otherwise insert.
- * This is the main entry point for data coming from the Apify Actor.
- * @param {Object} product - scraped product object from the Actor
+ * Cache a scraped product in the product_cache table (NOT tracked_products).
+ * This stores search results for display without tracking them.
+ * @param {Object} product - { id, title, url, source, price, ... }
  * @returns {Promise<Object|null>}
  */
-async function upsertScrapedProduct(product) {
-  // Base fields -- always exist on tracked_products
-  const base = {
+async function cacheScrapedProduct(product) {
+  const productData = {
     product_id: product.id,
     product_title: product.title,
     product_url: product.url || null,
     source: product.source,
     current_price: parseFloat(product.price) || 0,
-  };
-
-  // Extended fields -- added by migration 004. Included only if migration has run.
-  const extended = {
     thumbnail:
       product.thumbnail || (product.images && product.images[0]) || null,
     images: product.images || [],
@@ -525,107 +536,155 @@ async function upsertScrapedProduct(product) {
     condition: product.condition || "new",
     currency: product.currency || "MXN",
     scraped_at: new Date().toISOString(),
+    last_checked: new Date().toISOString(),
   };
 
-  // Try to find existing row by product_id + source
-  const { data: existing } = await getSupabase()
-    .from("tracked_products")
-    .select("id, current_price")
-    .eq("product_id", base.product_id)
-    .eq("source", base.source)
-    .single();
-
-  if (existing) {
-    // Try update with extended fields first; fall back to base-only on column error
-    let { data, error } = await getSupabase()
-      .from("tracked_products")
-      .update({
-        product_title: base.product_title,
-        product_url: base.product_url,
-        current_price: base.current_price,
-        last_checked: new Date().toISOString(),
-        ...extended,
-      })
-      .eq("id", existing.id)
-      .select()
-      .single();
-
-    if (
-      error &&
-      error.message &&
-      (error.message.includes("does not exist") ||
-        error.message.includes("Could not find"))
-    ) {
-      console.log(
-        "[Supabase] Migration 004 not yet applied -- using base fields only",
-      );
-      ({ data, error } = await getSupabase()
-        .from("tracked_products")
-        .update({
-          product_title: base.product_title,
-          product_url: base.product_url,
-          current_price: base.current_price,
-          last_checked: new Date().toISOString(),
-        })
-        .eq("id", existing.id)
-        .select()
-        .single());
-    }
-
-    if (error) {
-      console.error("[Supabase] upsertScrapedProduct update error:", error);
-      return null;
-    }
-
-    // Record price history if price changed
-    if (parseFloat(existing.current_price) !== base.current_price) {
-      await addPriceHistory(existing.id, base.current_price);
-      console.log(
-        `[Supabase] Price changed for ${base.product_id}: ${existing.current_price} -> ${base.current_price}`,
-      );
-    }
-
-    return data;
-  }
-
-  // Insert new -- user_id 1 = system/demo account used for scraper-sourced products
-  let { data, error } = await getSupabase()
-    .from("tracked_products")
-    .insert({
-      user_id: 1,
-      ...base,
-      ...extended,
-      created_at: new Date().toISOString(),
+  // Try to insert, on conflict update
+  const { data, error } = await getSupabase()
+    .from("product_cache")
+    .upsert(productData, {
+      onConflict: "product_id,source",
+      ignoreDuplicates: false,
     })
     .select()
     .single();
 
-  if (
-    error &&
-    error.message &&
-    (error.message.includes("does not exist") ||
-      error.message.includes("Could not find"))
-  ) {
-    console.log(
-      "[Supabase] Migration 004 not yet applied -- inserting base fields only",
-    );
-    ({ data, error } = await getSupabase()
-      .from("tracked_products")
-      .insert({ user_id: 1, ...base, created_at: new Date().toISOString() })
-      .select()
-      .single());
-  }
-
   if (error) {
-    console.error("[Supabase] upsertScrapedProduct insert error:", error);
+    console.error("[Supabase] cacheScrapedProduct error:", error);
     return null;
   }
 
-  // Record initial price history
-  if (data) {
-    await addPriceHistory(data.id, base.current_price);
+  return data;
+}
+
+// DELETED: upsertScrapedProduct - was causing auto-tracking bug
+// Use cacheScrapedProduct() instead
+
+/**
+ * Search product cache (for displaying search results)
+ * @param {string} query - Search query
+ * @param {Object} options - { limit, source }
+ * @returns {Promise<Array>}
+ */
+async function searchProductCache(query, options = {}) {
+  const { limit = 20, source = "all", fuzzy = false } = options;
+
+  // Normalize query for better matching
+  const normalizedQuery = query.trim().toLowerCase();
+
+  // OPTIMIZATION: For fuzzy search, try multiple search strategies
+  if (fuzzy) {
+    // Split query into words for broader matching
+    const words = normalizedQuery.split(/\s+/).filter((w) => w.length > 2);
+
+    if (words.length === 0) {
+      return []; // Query too short for fuzzy search
+    }
+
+    // Search for products matching ANY of the keywords
+    let queryBuilder = getSupabase()
+      .from("product_cache")
+      .select("*")
+      .order("scraped_at", { ascending: false })
+      .limit(limit * 2); // Get more results for filtering
+
+    // Build OR condition for fuzzy matching
+    const orConditions = words
+      .map((word) => `product_title.ilike.%${word}%`)
+      .join(",");
+    queryBuilder = queryBuilder.or(orConditions);
+
+    // Filter by source if specified
+    if (source !== "all") {
+      queryBuilder = queryBuilder.eq("source", source);
+    }
+
+    const { data, error } = await queryBuilder;
+
+    if (error) {
+      console.error("[Supabase] searchProductCache (fuzzy) error:", error);
+      return [];
+    }
+
+    // Score and sort results by relevance
+    const scoredResults = (data || []).map((product) => {
+      const title = (product.product_title || "").toLowerCase();
+      let score = 0;
+
+      // Exact query match = highest score
+      if (title.includes(normalizedQuery)) {
+        score += 100;
+      }
+
+      // Count matching words
+      words.forEach((word) => {
+        if (title.includes(word)) {
+          score += 10;
+        }
+      });
+
+      // Prefer newer results (slight boost)
+      const age = Date.now() - new Date(product.scraped_at).getTime();
+      const ageHours = age / (1000 * 60 * 60);
+      if (ageHours < 24) score += 5;
+
+      return { ...product, _score: score };
+    });
+
+    // Sort by score and return top results
+    return scoredResults.sort((a, b) => b._score - a._score).slice(0, limit);
   }
 
+  // OPTIMIZATION: Standard exact search (fast path)
+  let queryBuilder = getSupabase()
+    .from("product_cache")
+    .select("*")
+    .ilike("product_title", `%${normalizedQuery}%`)
+    .order("scraped_at", { ascending: false })
+    .limit(limit);
+
+  // Filter by source if specified
+  if (source !== "all") {
+    queryBuilder = queryBuilder.eq("source", source);
+  }
+
+  const { data, error } = await queryBuilder;
+
+  if (error) {
+    console.error("[Supabase] searchProductCache error:", error);
+    return [];
+  }
+
+  return data || [];
+}
+
+/**
+ * Get a single product from product_cache by product_id
+ * @param {string} productId - The product ID to search for
+ * @returns {Promise<Object|null>} - Product data or null
+ */
+async function getProductFromCache(productId) {
+  console.log(`[Supabase] Getting product from cache: ${productId}`);
+
+  const { data, error } = await getSupabase()
+    .from("product_cache")
+    .select("*")
+    .eq("product_id", productId)
+    .order("scraped_at", { ascending: false })
+    .limit(1)
+    .single();
+
+  if (error) {
+    // Check if error is "no rows" which is expected
+    if (error.code === "PGRST116") {
+      console.log(`[Supabase] Product not found in cache: ${productId}`);
+      return null;
+    }
+    console.error("[Supabase] getProductFromCache error:", error);
+    return null;
+  }
+
+  console.log(`[Supabase] Found product in cache: ${data?.product_title}`);
   return data;
 }
 
@@ -661,36 +720,9 @@ async function removeTrackedProduct(id, userId) {
   return !error;
 }
 
-/**
- * Search tracked products by keyword (case-insensitive title match).
- * Used by the home-page search to surface already-scraped products
- * alongside live ML API results.
- * @param {string} query - search keyword
- * @param {Object} [opts]
- * @param {number} [opts.limit=20]
- * @param {string} [opts.source] - filter by 'amazon' | 'mercadolibre'
- * @returns {Promise<Array>}
- */
-async function searchTrackedProducts(query, { limit = 20, source } = {}) {
-  if (!query || !query.trim()) return [];
-
-  let req = getSupabase()
-    .from("tracked_products")
-    .select("*")
-    .ilike("product_title", `%${query.trim()}%`)
-    .order("created_at", { ascending: false })
-    .limit(limit);
-
-  if (source && source !== "all") {
-    req = req.eq("source", source);
-  }
-
-  const { data, error } = await req;
-  if (error) {
-    console.error("[Supabase] searchTrackedProducts error:", error);
-  }
-  return data || [];
-}
+// DELETED: searchTrackedProducts
+// Was used for old cache system that stored searches in tracked_products
+// Now use: searchProductCache() for search results cache
 
 /**
  * Get all tracked products (for background worker)
@@ -1799,12 +1831,14 @@ module.exports = {
   recordLoginAttempt,
   getLoginHistory,
   getAllLoginHistory,
-  // Tracked products
+  // Product cache (search results)
+  cacheScrapedProduct,
+  searchProductCache,
+  getProductFromCache,
+  // Tracked products (user-initiated tracking only)
   addTrackedProduct,
-  upsertScrapedProduct,
   getTrackedProducts,
   getTrackedProductById,
-  searchTrackedProducts,
   removeTrackedProduct,
   getAllTrackedProducts,
   updateTrackedProductPrice,

@@ -567,22 +567,31 @@ function renderPage(
         : ""
     }
     <script>
-      // Header scroll effect
+      // ========================================
+      // PERFORMANCE: Optimized Header Scroll Effect
+      // ========================================
       (function() {
         const header = document.querySelector('.site-header');
         if (!header) return;
 
         let ticking = false;
+        let lastScrollY = window.scrollY;
+        const SCROLL_THRESHOLD = 50;
 
         function updateHeader() {
-          if (window.scrollY > 50) {
-            header.classList.add('scrolled');
-          } else {
-            header.classList.remove('scrolled');
+          const scrollY = window.scrollY;
+
+          // Only update if we've crossed the threshold
+          if ((lastScrollY <= SCROLL_THRESHOLD && scrollY > SCROLL_THRESHOLD) ||
+              (lastScrollY > SCROLL_THRESHOLD && scrollY <= SCROLL_THRESHOLD)) {
+            header.classList.toggle('scrolled', scrollY > SCROLL_THRESHOLD);
           }
+
+          lastScrollY = scrollY;
           ticking = false;
         }
 
+        // Use passive listener for better scroll performance
         window.addEventListener('scroll', function() {
           if (!ticking) {
             window.requestAnimationFrame(updateHeader);
@@ -647,7 +656,9 @@ function renderPage(
         });
       })();
 
-      // Scroll Reveal Animations (Intersection Observer)
+      // ========================================
+      // PERFORMANCE: Optimized Scroll Reveal Animations
+      // ========================================
       (function() {
         // Only run if IntersectionObserver is supported
         if (!('IntersectionObserver' in window)) return;
@@ -659,15 +670,18 @@ function renderPage(
         const revealElements = document.querySelectorAll('[data-reveal]');
         if (!revealElements.length) return;
 
-        // Create the observer
+        // Batch process entries for better performance
         const observer = new IntersectionObserver(function(entries) {
-          entries.forEach(function(entry) {
-            // When element enters viewport
-            if (entry.isIntersecting) {
-              entry.target.classList.add('revealed');
-              // Stop observing once revealed (animate only once)
-              observer.unobserve(entry.target);
-            }
+          // Use requestAnimationFrame for smooth animations
+          window.requestAnimationFrame(function() {
+            entries.forEach(function(entry) {
+              // When element enters viewport
+              if (entry.isIntersecting) {
+                entry.target.classList.add('revealed');
+                // Stop observing once revealed (animate only once)
+                observer.unobserve(entry.target);
+              }
+            });
           });
         }, {
           root: null, // viewport
@@ -680,6 +694,39 @@ function renderPage(
           observer.observe(el);
         });
       })();
+
+      // ========================================
+      // PERFORMANCE: Debounce Utility
+      // ========================================
+      function debounce(func, wait) {
+        let timeout;
+        return function executedFunction() {
+          const context = this;
+          const args = arguments;
+          const later = function() {
+            timeout = null;
+            func.apply(context, args);
+          };
+          clearTimeout(timeout);
+          timeout = setTimeout(later, wait);
+        };
+      }
+
+      // ========================================
+      // PERFORMANCE: Throttle Utility
+      // ========================================
+      function throttle(func, limit) {
+        let inThrottle;
+        return function() {
+          const args = arguments;
+          const context = this;
+          if (!inThrottle) {
+            func.apply(context, args);
+            inThrottle = true;
+            setTimeout(function() { inThrottle = false; }, limit);
+          }
+        };
+      }
     </script>
     ${extraBody}
   </body>
@@ -1181,6 +1228,7 @@ async function fetchAllProducts({
   page,
   pageSize,
   source = "all",
+  forceSynchronous = false, // For homepage/featured products
 }) {
   const results = {
     products: [],
@@ -1218,7 +1266,7 @@ async function fetchAllProducts({
       });
       if (items && items.length > 0) {
         for (const item of items) {
-          await supabaseDb.upsertScrapedProduct(item).catch(() => {});
+          await supabaseDb.cacheScrapedProduct(item).catch(() => {});
         }
         console.log(
           `[fetchAllProducts] Scrape stored ${items.length} products for "${query}"`,
@@ -1230,41 +1278,136 @@ async function fetchAllProducts({
   };
 
   if (USE_SUPABASE && query) {
-    // Check Supabase first for already-scraped results
-    const existing = await supabaseDb
-      .searchTrackedProducts(query, { limit: pageSize, source })
+    const searchStartTime = Date.now();
+    console.log(`[PERF] 🔍 Starting search for "${query}" (source: ${source})`);
+
+    // OPTIMIZATION 1: Try exact match first (fastest)
+    let existing = await supabaseDb
+      .searchProductCache(query, { limit: pageSize, source })
       .catch(() => []);
 
+    const exactMatchTime = Date.now() - searchStartTime;
+    console.log(
+      `[PERF] ⚡ Exact match search took ${exactMatchTime}ms, found ${existing.length} products`,
+    );
+
+    // OPTIMIZATION 2: If no exact match, try fuzzy search on cached products
+    if (existing.length === 0) {
+      // Search for products with similar titles (broaden search)
+      const fuzzyResults = await supabaseDb
+        .searchProductCache(query, { limit: pageSize * 2, source, fuzzy: true })
+        .catch(() => []);
+
+      if (fuzzyResults.length > 0) {
+        console.log(
+          `[fetchAllProducts] Fuzzy match found ${fuzzyResults.length} cached products for "${query}"`,
+        );
+        existing = fuzzyResults.slice(0, pageSize);
+      }
+    }
+
+    // OPTIMIZATION 3: Stale-while-revalidate pattern
     if (existing.length > 0) {
-      // Cache hit: serve immediately, refresh in background for next time
+      // Return cached results immediately (FAST!)
       promises.push(
         Promise.resolve({
           products: mapRows(existing),
           total: existing.length,
           totalPages: 1,
-          source: "supabase",
+          source: "supabase-cache",
         }),
       );
-      // Background refresh — don't block
-      runScrapeAndStore();
+
+      // Check if cache is stale (older than 6 hours)
+      const oldestResult = existing[0];
+      const cacheAge = oldestResult.scraped_at
+        ? Date.now() - new Date(oldestResult.scraped_at).getTime()
+        : Infinity;
+      const SIX_HOURS = 6 * 60 * 60 * 1000;
+
+      if (cacheAge > SIX_HOURS) {
+        // Refresh in background if stale
+        console.log(
+          `[fetchAllProducts] Cache stale (${Math.round(cacheAge / 3600000)}h old), refreshing in background`,
+        );
+        runScrapeAndStore().catch(() => {}); // Fire and forget
+      } else {
+        console.log(
+          `[fetchAllProducts] Cache fresh (${Math.round(cacheAge / 3600000)}h old), skipping refresh`,
+        );
+      }
     } else {
-      // Cache miss: scrape synchronously so this request gets results
-      console.log(
-        `[fetchAllProducts] No cached results for "${query}" — running scrape synchronously`,
-      );
-      await runScrapeAndStore();
-      // Re-read Supabase after scrape
-      const fresh = await supabaseDb
-        .searchTrackedProducts(query, { limit: pageSize, source })
-        .catch(() => []);
-      promises.push(
-        Promise.resolve({
-          products: mapRows(fresh),
-          total: fresh.length,
-          totalPages: 1,
-          source: "supabase",
-        }),
-      );
+      // OPTIMIZATION 4: True cache miss
+
+      // For homepage/featured products, scrape synchronously to ensure content
+      if (forceSynchronous) {
+        console.log(
+          `[fetchAllProducts] No cached results for "${query}" — scraping synchronously (featured products)`,
+        );
+        try {
+          await runScrapeAndStore();
+          const fresh = await supabaseDb
+            .searchProductCache(query, { limit: pageSize, source })
+            .catch(() => []);
+
+          console.log(
+            `[fetchAllProducts] After sync scrape, found ${fresh.length} products`,
+          );
+
+          if (fresh.length > 0) {
+            promises.push(
+              Promise.resolve({
+                products: mapRows(fresh),
+                total: fresh.length,
+                totalPages: 1,
+                source: "supabase-cache",
+              }),
+            );
+          } else {
+            // Scrape completed but found nothing - show message
+            promises.push(
+              Promise.resolve({
+                products: [],
+                total: 0,
+                totalPages: 0,
+                source: "supabase-cache",
+                notice: "No products found. Try a different search term.",
+              }),
+            );
+          }
+        } catch (error) {
+          console.error(`[fetchAllProducts] Sync scrape failed:`, error);
+          promises.push(
+            Promise.resolve({
+              products: [],
+              total: 0,
+              totalPages: 0,
+              source: "supabase-cache",
+              error: `Scrape failed: ${error.message}`,
+            }),
+          );
+        }
+      } else {
+        // For regular searches, return empty immediately and scrape in background
+        console.log(
+          `[fetchAllProducts] No cached results for "${query}" — triggering background scrape`,
+        );
+
+        // Return empty results immediately
+        promises.push(
+          Promise.resolve({
+            products: [],
+            total: 0,
+            totalPages: 0,
+            source: "supabase-cache",
+            notice:
+              "Discovering new products... Refresh in 30 seconds for results.",
+          }),
+        );
+
+        // Start scrape in background (don't wait)
+        runScrapeAndStore().catch(() => {});
+      }
     }
   }
 
@@ -1314,11 +1457,17 @@ async function fetchAllProducts({
  * Get product by ID from the appropriate source
  */
 async function fetchProductById(id) {
-  // 1. Supabase-first: check if we already have this product from a previous scrape
+  console.log(`[PRODUCT] 🔍 Fetching product by ID: "${id}"`);
+
+  // 1. Supabase-first: check tracked_products table (user's tracked items)
   if (USE_SUPABASE) {
     try {
+      console.log(`[PRODUCT] Checking tracked_products table...`);
       const row = await supabaseDb.getTrackedProductById(id);
       if (row) {
+        console.log(
+          `[PRODUCT] ✅ Found in tracked_products: "${row.product_title}"`,
+        );
         const product = {
           id: row.product_id,
           title: row.product_title,
@@ -1335,12 +1484,43 @@ async function fetchProductById(id) {
         };
         return { product, notice: "", error: "", isRealData: true };
       }
+      console.log(`[PRODUCT] ❌ Not found in tracked_products`);
     } catch (e) {
-      console.error("[fetchProductById] Supabase lookup error:", e.message);
+      console.error("[PRODUCT] ❌ tracked_products lookup error:", e.message);
+    }
+
+    // 2. Check product_cache table (scraped search results)
+    try {
+      console.log(`[PRODUCT] Checking product_cache table...`);
+      const cached = await supabaseDb.getProductFromCache(id);
+      if (cached) {
+        console.log(
+          `[PRODUCT] ✅ Found in product_cache: "${cached.product_title}"`,
+        );
+        const product = {
+          id: cached.product_id,
+          title: cached.product_title,
+          price: parseFloat(cached.current_price) || 0,
+          currency_id: cached.currency || "MXN",
+          condition: cached.condition || "new",
+          available_quantity: 1,
+          permalink: cached.product_url || null,
+          thumbnail: cached.thumbnail || null,
+          description: cached.description || null,
+          seller: cached.seller ? { nickname: cached.seller } : null,
+          source: cached.source,
+          category: detectCategory(cached.product_title || ""),
+        };
+        return { product, notice: "", error: "", isRealData: true };
+      }
+      console.log(`[PRODUCT] ❌ Not found in product_cache`);
+    } catch (e) {
+      console.error("[PRODUCT] ❌ product_cache lookup error:", e.message);
     }
   }
 
-  // 2. Not in Supabase — guide the user to scrape it
+  // 3. Not in database — guide the user to scrape it
+  console.log(`[PRODUCT] ⚠️ Product "${id}" not found in any table`);
   return {
     product: null,
     error:
@@ -1530,6 +1710,7 @@ async function start() {
           page: 1,
           pageSize: 12,
           source: "mercadolibre",
+          forceSynchronous: true, // Homepage should always load products
         });
       } catch (e) {
         console.log("[Home] Error fetching featured products:", e.message);
@@ -1562,14 +1743,55 @@ async function start() {
       </div>
     `;
 
+    // Check if we have a notice about discovering new products (background scraping)
+    const isBackgroundScraping = results.notices?.some(
+      (n) => n.includes("Discovering") || n.includes("Descubriendo"),
+    );
+
     const resultsHtml =
-      (query || isFeatured) && results.products.length
+      (query || isFeatured) && (results.products.length || isBackgroundScraping)
         ? `
       <div class="results-section">
         ${isFeatured ? `<h2 class="section-title">${lang === "es" ? "Ofertas Destacadas" : "Featured Deals"}</h2>` : ""}
-        ${results.notices?.length ? results.notices.map((n) => `<div class="notice">${n}</div>`).join("") : ""}
-        ${results.error ? `<div class="notice">${results.error}</div>` : ""}
-        ${!results.error && results.products.length === 0 ? `<p class="muted">${t(lang, "noResults")}</p>` : ""}
+        ${
+          results.notices?.length
+            ? results.notices
+                .map(
+                  (n) => `<div class="notice info-notice">
+          <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+            <circle cx="12" cy="12" r="10"/><path d="M12 6v6l4 2"/>
+          </svg>
+          ${n}
+        </div>`,
+                )
+                .join("")
+            : ""
+        }
+        ${results.error ? `<div class="notice error-notice">${results.error}</div>` : ""}
+        ${
+          !results.error &&
+          results.products.length === 0 &&
+          isBackgroundScraping
+            ? `
+          <div class="discovering-state">
+            <div class="spinner"></div>
+            <h3>${lang === "es" ? "Buscando productos..." : "Searching for products..."}</h3>
+            <p>${
+              lang === "es"
+                ? "Estamos buscando las mejores ofertas en Amazon y Mercado Libre. Esto puede tomar 30-60 segundos."
+                : "We're searching for the best deals on Amazon and Mercado Libre. This may take 30-60 seconds."
+            }</p>
+            <button onclick="location.reload()" class="btn-secondary" style="margin-top: 20px;">
+              <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+                <polyline points="23 4 23 10 17 10"/><path d="M20.49 15a9 9 0 1 1-2.12-9.36L23 10"/>
+              </svg>
+              ${lang === "es" ? "Refrescar Resultados" : "Refresh Results"}
+            </button>
+          </div>
+        `
+            : ""
+        }
+        ${!results.error && results.products.length === 0 && !isBackgroundScraping ? `<p class="muted">${t(lang, "noResults")}</p>` : ""}
         ${
           results.products.length
             ? `
@@ -1582,7 +1804,7 @@ async function start() {
             <div class="pagination">
               ${page > 1 ? `<a href="${buildSearchParams("/", { q: query, minPrice, maxPrice, sort, source, page: page - 1 })}">${t(lang, "previous")}</a>` : ""}
               <span>${t(lang, "page")} ${page} ${t(lang, "of")} ${results.totalPages || 1}</span>
-              ${page < results.totalPages ? `<a href="${buildSearchParams("/", { q: query, minPrice, maxPrice, sort, source, page: page + 1 })}">${t(lang, "next")}</a>` : ""}
+              ${page < results.totalPages ? `<a href="${buildSearchParams("/", { q: query, minPrice, maxPage, sort, source, page: page + 1 })}">${t(lang, "next")}</a>` : ""}
             </div>
           `
               : ""
@@ -2163,14 +2385,17 @@ async function start() {
       `;
     };
 
-    // Highlighted Deals Section (CamelCamelCamel style with carousel)
-    const highlightedDealsSection =
-      highlightedDeals.length > 0
-        ? `
+    // Highlighted Deals Section (CamelCamelCamel style with carousel) - Always show
+    const highlightedDealsSection = `
       <section class="ccc-section" id="highlighted-deals">
         <div class="ccc-section-header">
           <div class="ccc-section-title-row">
             <h2 class="ccc-section-title">${lang === "es" ? "Ofertas Destacadas →" : "Highlighted Deals →"}</h2>
+            <button class="section-toggle-btn" aria-label="${lang === "es" ? "Minimizar sección" : "Minimize section"}">
+              <svg class="toggle-icon" width="20" height="20" viewBox="0 0 20 20" fill="none">
+                <path d="M5 7.5L10 12.5L15 7.5" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"/>
+              </svg>
+            </button>
           </div>
           <p class="ccc-section-desc">${
             lang === "es"
@@ -2178,6 +2403,10 @@ async function start() {
               : "These are outstanding deals we've found and feel are worth sharing. Check back often as these are frequently updated."
           }</p>
         </div>
+        <div class="ccc-section-content">
+        ${
+          highlightedDeals.length > 0
+            ? `
         <div class="ccc-carousel-wrapper">
           <button class="ccc-carousel-arrow" data-carousel="deals-carousel" data-dir="prev" aria-label="${lang === "es" ? "Anterior" : "Previous"}">‹</button>
           <div class="ccc-carousel" id="deals-carousel">
@@ -2186,19 +2415,31 @@ async function start() {
           <button class="ccc-carousel-arrow" data-carousel="deals-carousel" data-dir="next" aria-label="${lang === "es" ? "Siguiente" : "Next"}">›</button>
           <div class="ccc-carousel-progress"><div class="ccc-carousel-progress-fill"></div></div>
         </div>
+        `
+            : `
+        <div class="empty-state">
+          <p class="empty-state-text">${lang === "es" ? "No hay ofertas disponibles en este momento. Vuelve pronto para ver nuevas ofertas." : "No deals available at the moment. Check back soon for new deals."}</p>
+        </div>
+        `
+        }
+        </div>
       </section>
-    `
-        : "";
+    `;
 
-    // Popular Products Section (CamelCamelCamel style)
+    // Popular Products Section (CamelCamelCamel style) - Always show
     // Title and description change when the user has search history driving the list
     const hasPersonalised = userInterestProducts.length > 0;
-    const popularProductsSection =
-      popularProducts.length > 0
-        ? `
+    const popularProductsSection = `
       <section class="ccc-section" id="popular-products">
         <div class="ccc-section-header">
-          <h2 class="ccc-section-title">${hasPersonalised ? (lang === "es" ? "Basado en tus búsquedas →" : "Based on Your Searches →") : "Popular Products →"}</h2>
+          <div class="ccc-section-title-row">
+            <h2 class="ccc-section-title">${hasPersonalised ? (lang === "es" ? "Basado en tus búsquedas →" : "Based on Your Searches →") : "Popular Products →"}</h2>
+            <button class="section-toggle-btn" aria-label="${lang === "es" ? "Minimizar sección" : "Minimize section"}">
+              <svg class="toggle-icon" width="20" height="20" viewBox="0 0 20 20" fill="none">
+                <path d="M5 7.5L10 12.5L15 7.5" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"/>
+              </svg>
+            </button>
+          </div>
           <p class="ccc-section-desc">${
             hasPersonalised
               ? lang === "es"
@@ -2208,12 +2449,22 @@ async function start() {
                 ? "Mira estas ofertas populares recientes. Ve lo que otros usuarios de OfertaRadar han estado comprando últimamente."
                 : "Check out these recently popular deals. See what OfertaRadar users have been buying lately."
           }</p>
+          ${
+            popularProducts.length > 0
+              ? `
           <!-- Segmented toggle: All Products ↔ Deals Only -->
           <div class="pp-segmented" data-filter-target="popular-grid" id="pp-seg-popular">
             <button class="pp-seg-btn active" data-filter="all">${lang === "es" ? "Todos" : "All Products"}</button>
             <button class="pp-seg-btn deals-btn" data-filter="deals">${lang === "es" ? "Solo Ofertas" : "Deals Only"}<span class="sale-dot"></span></button>
           </div>
+          `
+              : ""
+          }
         </div>
+        <div class="ccc-section-content">
+        ${
+          popularProducts.length > 0
+            ? `
         <!-- Sticky category chip bar -->
         <div class="pp-sticky-bar" data-filter-target="popular-grid">
           <div class="pp-chip-row">
@@ -2229,29 +2480,51 @@ async function start() {
         <div class="ccc-product-grid" id="popular-grid">
           ${popularProducts.map((p) => renderHomeProductCard(p, false)).join("")}
         </div>
+        `
+            : `
+        <div class="empty-state">
+          <p class="empty-state-text">${lang === "es" ? "No hay productos populares en este momento. ¡Sé el primero en rastrear productos!" : "No popular products at the moment. Be the first to track products!"}</p>
+        </div>
+        `
+        }
+        </div>
       </section>
-    `
-        : "";
+    `;
 
     // Top Mercado Libre Price Drops Section (CamelCamelCamel style)
-    const priceDropsSection =
-      topPriceDrops.length > 0
-        ? `
+    const priceDropsSection = `
       <section class="ccc-section" id="price-drops">
         <div class="ccc-section-header">
-          <h2 class="ccc-section-title">${lang === "es" ? "Grandes Bajas de Precio →" : "Top Price Drops →"}</h2>
+          <div class="ccc-section-title-row">
+            <h2 class="ccc-section-title">${lang === "es" ? "Grandes Bajas de Precio →" : "Top Price Drops →"}</h2>
+            <button class="section-toggle-btn" aria-label="${lang === "es" ? "Minimizar sección" : "Minimize section"}">
+              <svg class="toggle-icon" width="20" height="20" viewBox="0 0 20 20" fill="none">
+                <path d="M5 7.5L10 12.5L15 7.5" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"/>
+              </svg>
+            </button>
+          </div>
           <p class="ccc-section-desc">${
             lang === "es"
               ? "Grandes bajas de precio. Los productos abajo fueron seleccionados de categorías que rastrean frecuentemente y han tenido grandes bajas de precio desde la última actualización."
               : "Big price drops! The products below are selected from categories that you frequently track products in and have had large price drops since the last price update."
           }</p>
+          ${
+            topPriceDrops.length > 0
+              ? `
           <!-- 3-way time segmented toggle -->
           <div class="pd-segmented" data-filter-target="drops-grid" id="pd-seg-drops">
             <button class="pd-seg-btn active" data-filter="recent">${lang === "es" ? "Recientes" : "Most Recent"}</button>
             <button class="pd-seg-btn" data-filter="daily">${lang === "es" ? "Hoy" : "Daily"}</button>
             <button class="pd-seg-btn" data-filter="weekly">${lang === "es" ? "Semanal" : "Weekly"}</button>
           </div>
+          `
+              : ""
+          }
         </div>
+        <div class="ccc-section-content">
+        ${
+          topPriceDrops.length > 0
+            ? `
         <!-- Sticky category chip bar (reuses .pp-sticky-bar, JS keys on data-filter-target) -->
         <div class="pp-sticky-bar" data-filter-target="drops-grid">
           <div class="pp-chip-row">
@@ -2267,9 +2540,16 @@ async function start() {
         <div class="ccc-product-grid" id="drops-grid">
           ${topPriceDrops.map((p) => renderHomeProductCard(p, true)).join("")}
         </div>
+        `
+            : `
+        <div class="empty-state">
+          <p class="empty-state-text">${lang === "es" ? "No hay caídas de precios en este momento. Los productos rastreados aparecerán aquí cuando sus precios bajen." : "No price drops at the moment. Tracked products will appear here when their prices decrease."}</p>
+        </div>
+        `
+        }
+        </div>
       </section>
-    `
-        : "";
+    `;
 
     // Discounts by Category Section
     // SVG icon map — dual-tone filled silhouettes, 32×32 viewBox
@@ -2291,11 +2571,19 @@ async function start() {
         ? `
       <section class="home-section" id="category-discounts">
         <div class="home-section-header">
-          <h2 class="home-section-title">
-            <span class="home-section-title-icon">🏷️</span>
-            ${lang === "es" ? "Descuentos por Categoría" : "Discounts by Category"}
-          </h2>
+          <div class="ccc-section-title-row">
+            <h2 class="home-section-title">
+              <span class="home-section-title-icon">🏷️</span>
+              ${lang === "es" ? "Descuentos por Categoría" : "Discounts by Category"}
+            </h2>
+            <button class="section-toggle-btn" aria-label="${lang === "es" ? "Minimizar sección" : "Minimize section"}">
+              <svg class="toggle-icon" width="20" height="20" viewBox="0 0 20 20" fill="none">
+                <path d="M5 7.5L10 12.5L15 7.5" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"/>
+              </svg>
+            </button>
+          </div>
         </div>
+        <div class="ccc-section-content">
         <div class="ccc-carousel-wrapper">
           <button class="ccc-carousel-arrow" data-carousel="category-grid-row" data-dir="prev" aria-label="${lang === "es" ? "Anterior" : "Previous"}">‹</button>
           <div class="category-grid" id="category-grid-row">
@@ -2312,6 +2600,7 @@ async function start() {
               .join("")}
           </div>
           <button class="ccc-carousel-arrow" data-carousel="category-grid-row" data-dir="next" aria-label="${lang === "es" ? "Siguiente" : "Next"}">›</button>
+        </div>
         </div>
       </section>
     `
@@ -2383,6 +2672,95 @@ async function start() {
         lang,
         userData,
         `<script>
+          // ========================================
+          // PERFORMANCE & DEBUG LOGGING
+          // ========================================
+          console.log('%c🚀 OfertaRadar Performance Monitoring', 'background: #f97316; color: white; padding: 8px; font-size: 14px; font-weight: bold;');
+          console.log('%cSearch Optimizations Active:', 'color: #10b981; font-weight: bold;');
+          console.log('  ✅ Stale-while-revalidate caching');
+          console.log('  ✅ Fuzzy search matching');
+          console.log('  ✅ Smart cache refresh (6 hour threshold)');
+          console.log('  ✅ Background scraping');
+          console.log('%cCurrent Page:', 'color: #3b82f6; font-weight: bold;', window.location.pathname);
+          console.log('%cSearch Query:', 'color: #3b82f6; font-weight: bold;', new URLSearchParams(window.location.search).get('q') || 'None');
+
+          // Track page load performance using modern Performance API
+          window.addEventListener('load', function() {
+            // Use PerformanceNavigationTiming API (modern, more accurate)
+            if (window.performance && performance.getEntriesByType) {
+              const perfData = performance.getEntriesByType('navigation')[0];
+              if (perfData) {
+                const loadTime = perfData.loadEventEnd - perfData.fetchStart;
+                if (loadTime > 0 && loadTime < 60000) { // Sanity check: between 0 and 60 seconds
+                  console.log('%c⚡ Page Load Time:', 'color: #f59e0b; font-weight: bold;', (loadTime / 1000).toFixed(2) + 's');
+
+                  // Performance breakdown
+                  console.log('%c📊 Performance Breakdown:', 'color: #06b6d4; font-weight: bold;');
+                  console.log('  DNS Lookup:', (perfData.domainLookupEnd - perfData.domainLookupStart).toFixed(0) + 'ms');
+                  console.log('  Server Response:', (perfData.responseEnd - perfData.requestStart).toFixed(0) + 'ms');
+                  console.log('  DOM Processing:', (perfData.domContentLoadedEventEnd - perfData.responseEnd).toFixed(0) + 'ms');
+                }
+              }
+            }
+
+            // Check if we have results
+            const productsFound = document.querySelectorAll('.product-card, .deal-card-ccc, .home-product-card').length;
+            console.log('%c📦 Products Displayed:', 'color: #8b5cf6; font-weight: bold;', productsFound);
+
+            // Check cache status
+            const hasNotice = document.querySelector('.info-notice');
+            if (hasNotice) {
+              console.log('%c💾 Cache Status:', 'color: #06b6d4; font-weight: bold;', hasNotice.textContent.trim());
+            }
+
+            const isDiscovering = document.querySelector('.discovering-state');
+            if (isDiscovering) {
+              console.log('%c🔍 Status:', 'color: #f97316; font-weight: bold;', 'Background scraping in progress...');
+              console.log('%cℹ️ Tip:', 'color: #6366f1; font-weight: bold;', 'Refresh the page in 30-60 seconds to see results');
+            }
+
+            // ========================================
+            // PERFORMANCE: Lazy Load Images with Fade-in
+            // ========================================
+            const lazyImages = document.querySelectorAll('img[loading="lazy"]');
+            lazyImages.forEach(img => {
+              if (img.complete) {
+                img.classList.add('loaded');
+              } else {
+                img.addEventListener('load', () => {
+                  img.classList.add('loaded');
+                });
+              }
+            });
+
+            // ========================================
+            // PERFORMANCE: Add Hardware Acceleration to Cards
+            // ========================================
+            const cards = document.querySelectorAll('.product-card, .deal-card-ccc, .home-product-card');
+            cards.forEach(card => {
+              card.classList.add('hw-accelerated');
+            });
+
+            // ========================================
+            // PERFORMANCE: Smooth Scroll for Internal Links
+            // ========================================
+            document.querySelectorAll('a[href^="#"]').forEach(anchor => {
+              anchor.addEventListener('click', function (e) {
+                const href = this.getAttribute('href');
+                if (href && href !== '#') {
+                  e.preventDefault();
+                  const target = document.querySelector(href);
+                  if (target) {
+                    target.scrollIntoView({
+                      behavior: 'smooth',
+                      block: 'start'
+                    });
+                  }
+                }
+              });
+            });
+          });
+
           // Price range sync for search
           const minInput = document.getElementById("minPrice");
           const maxInput = document.getElementById("maxPrice");
@@ -2522,8 +2900,11 @@ async function start() {
             carousels.forEach(function(carousel) {
               var id = carousel.id || '(no-id)';
 
-              // --- scroll → progress + arrow sync ---
-              carousel.addEventListener('scroll', function() { syncCarousel(carousel); }, { passive: true });
+              // --- scroll → progress + arrow sync (throttled for performance) ---
+              var throttledSync = throttle(function() {
+                requestAnimationFrame(function() { syncCarousel(carousel); });
+              }, 100);
+              carousel.addEventListener('scroll', throttledSync, { passive: true });
 
               // Initial sync is deferred to requestAnimationFrame so the browser
               // has finished layout (scrollWidth / clientWidth are accurate).
@@ -2604,7 +2985,11 @@ async function start() {
             if (catRow) {
               console.log('[Carousel] category-grid-row found, wiring scroll sync');
 
-              catRow.addEventListener('scroll', function() { syncCarousel(catRow); }, { passive: true });
+              // Throttled scroll for better performance
+              var throttledCatSync = throttle(function() {
+                requestAnimationFrame(function() { syncCarousel(catRow); });
+              }, 100);
+              catRow.addEventListener('scroll', throttledCatSync, { passive: true });
 
               requestAnimationFrame(function() {
                 console.log('[Carousel category-grid-row] initial sync (rAF)');
@@ -2649,7 +3034,9 @@ async function start() {
 
               console.log('[Filters #' + gridId + '] applying — state:', JSON.stringify(state), 'total cards:', cards.length);
 
-              cards.forEach(function(card) {
+              // Use requestAnimationFrame for smooth DOM updates
+              requestAnimationFrame(function() {
+                cards.forEach(function(card) {
                 var pass = true;
 
                 // 1) deal / time filter
@@ -2686,11 +3073,12 @@ async function start() {
                   }
                 }
 
-                card.style.display = pass ? '' : 'none';
-                pass ? shown++ : hidden++;
-              });
+                  card.style.display = pass ? '' : 'none';
+                  pass ? shown++ : hidden++;
+                });
 
-              console.log('[Filters #' + gridId + '] result — shown:', shown, 'hidden:', hidden);
+                console.log('[Filters #' + gridId + '] result — shown:', shown, 'hidden:', hidden);
+              });
             }
 
             // ─── 1. Segmented toggle (Popular Products) ─────────────────
@@ -2801,6 +3189,30 @@ async function start() {
 
           })();
 
+          // Section minimize/expand toggle
+          (function() {
+            const toggleButtons = document.querySelectorAll('.section-toggle-btn');
+
+            toggleButtons.forEach(function(btn) {
+              btn.addEventListener('click', function(e) {
+                e.preventDefault();
+                const section = btn.closest('.ccc-section, .home-section');
+                if (section) {
+                  section.classList.toggle('collapsed');
+
+                  // Update aria-label
+                  const isCollapsed = section.classList.contains('collapsed');
+                  const lang = '${lang}';
+                  btn.setAttribute('aria-label',
+                    isCollapsed
+                      ? (lang === 'es' ? 'Expandir sección' : 'Expand section')
+                      : (lang === 'es' ? 'Minimizar sección' : 'Minimize section')
+                  );
+                }
+              });
+            });
+          })();
+
           // Scroll animations for landing page
           (function() {
             const animatedElements = document.querySelectorAll('.animate-on-scroll');
@@ -2846,12 +3258,22 @@ async function start() {
 
           // Trigger Apify scrape, then reload with the query so results appear
           async function triggerScrape() {
+            console.log('[SCRAPE] triggerScrape() called');
+
             const input = document.querySelector('input[name="q"]');
             const query = input ? input.value.trim() : '';
+            console.log('[SCRAPE] Query:', query);
+
             if (!query) {
+              console.warn('[SCRAPE] No query entered');
               alert('${lang === "es" ? "Escribe algo en la búsqueda primero." : "Type a search query first."}');
               return;
             }
+
+            // Get current source from URL or default to 'all'
+            const urlParams = new URLSearchParams(window.location.search);
+            const currentSource = urlParams.get('source') || 'all';
+            console.log('[SCRAPE] Current source:', currentSource);
 
             const btn = document.getElementById('scrapeBtn');
             btn.disabled = true;
@@ -2867,29 +3289,42 @@ async function start() {
             statusEl.className = 'visible';
             statusEl.textContent = '${lang === "es" ? "Descubriendo nuevos productos… esto puede tomar hasta 2 minutos." : "Discovering new products… this may take up to 2 minutes."}';
 
+            const startTime = Date.now();
+            console.log('[SCRAPE] Starting scrape at', new Date().toLocaleTimeString());
+
             try {
               const res = await fetch('/api/scrape', {
                 method: 'POST',
                 headers: { 'Content-Type': 'application/json' },
                 body: JSON.stringify({ source: 'all', query, maxResults: 20 }),
               });
+
+              const elapsedTime = ((Date.now() - startTime) / 1000).toFixed(1);
+              console.log('[SCRAPE] Response received after', elapsedTime, 'seconds');
+
               const data = await res.json();
+              console.log('[SCRAPE] Response data:', data);
 
               if (data.success) {
+                console.log('[SCRAPE] Success! Found', data.count, 'products');
                 statusEl.textContent = '${lang === "es" ? "✓ Descubiertos" : "✓ Discovered"} ' + data.count + ' ${lang === "es" ? "productos. Recargando resultados…" : "products. Reloading results…"}';
+
                 // Small delay so user reads the message, then reload with query
                 setTimeout(() => {
                   const url = new URL(window.location.href);
                   url.searchParams.set('q', query);
-                  url.searchParams.set('source', source);
+                  url.searchParams.set('source', currentSource);
+                  console.log('[SCRAPE] Reloading page with URL:', url.toString());
                   window.location.href = url.toString();
                 }, 1200);
               } else {
+                console.error('[SCRAPE] Failed:', data.error);
                 statusEl.textContent = '⚠ ' + (data.error || '${lang === "es" ? "Error desconocido" : "Unknown error"}');
                 btn.disabled = false;
                 btn.textContent = '🔍 ${lang === "es" ? "Descubrir nuevos productos" : "Discover New Products"}';
               }
             } catch (err) {
+              console.error('[SCRAPE] Network error:', err);
               statusEl.textContent = '⚠ ${lang === "es" ? "Error de red:" : "Network error:"} ' + err.message;
               btn.disabled = false;
               btn.textContent = '🔍 ${lang === "es" ? "Descubrir nuevos productos" : "Discover New Products"}';
@@ -5364,33 +5799,27 @@ State: ${state || "none"}</pre>
           });
         }
 
-        // Remove tracked product with custom confirmation modal
-        function removeTrackedProduct(productId) {
-          showConfirmModal(
-            '${lang === "es" ? "¿Eliminar producto?" : "Remove product?"}',
-            '${lang === "es" ? "¿Estás seguro de que quieres dejar de rastrear este producto?" : "Are you sure you want to stop tracking this product?"}',
-            async function() {
-              try {
-                const response = await fetch(\`/api/track/\${productId}\`, {
-                  method: 'DELETE',
-                  credentials: 'include'
-                });
+        // Remove tracked product without confirmation
+        async function removeTrackedProduct(productId) {
+          try {
+            const response = await fetch(\`/api/track/\${productId}\`, {
+              method: 'DELETE',
+              credentials: 'include'
+            });
 
-                const data = await response.json();
+            const data = await response.json();
 
-                if (data.success) {
-                  // Refresh the page to show updated list
-                  location.reload();
-                } else {
-                  console.error('[Remove] Error:', data.error);
-                  showToast('${lang === "es" ? "Error al eliminar producto" : "Error removing product"}', 'error');
-                }
-              } catch (error) {
-                console.error('[Remove] Exception:', error);
-                showToast('${lang === "es" ? "Error al eliminar producto" : "Error removing product"}', 'error');
-              }
+            if (data.success) {
+              // Refresh the page to show updated list
+              location.reload();
+            } else {
+              console.error('[Remove] Error:', data.error);
+              showToast('${lang === "es" ? "Error al eliminar producto" : "Error removing product"}', 'error');
             }
-          );
+          } catch (error) {
+            console.error('[Remove] Exception:', error);
+            showToast('${lang === "es" ? "Error al eliminar producto" : "Error removing product"}', 'error');
+          }
         }
 
         // Custom confirmation modal
@@ -5715,13 +6144,23 @@ State: ${state || "none"}</pre>
         }
       </style>
       <script>
+        // ========================================
+        // PRODUCT PAGE DEBUG LOGGING
+        // ========================================
+        console.log('%c📦 Product Page Loaded', 'background: #3b82f6; color: white; padding: 8px; font-size: 14px; font-weight: bold;');
+        console.log('%cProduct ID:', 'color: #10b981; font-weight: bold;', '${id}');
+        console.log('%cProduct Found:', 'color: #10b981; font-weight: bold;', ${product ? "true" : "false"});
+        ${product ? `console.log('%cProduct Title:', 'color: #3b82f6; font-weight: bold;', ${JSON.stringify(product.title)});` : ""}
+        ${product ? `console.log('%cProduct Source:', 'color: #3b82f6; font-weight: bold;', ${JSON.stringify(product.source)});` : ""}
+        ${product ? `console.log('%cProduct Price:', 'color: #f59e0b; font-weight: bold;', ${JSON.stringify(formatPrice(product.price, product.currency_id))});` : ""}
+
         // Product data stored safely in JavaScript object
         const productData = {
-          id: ${JSON.stringify(product.id)},
-          title: ${JSON.stringify(product.title || "Unknown Product")},
-          url: ${JSON.stringify(product.permalink || "")},
-          source: ${JSON.stringify(product.source || "mercadolibre")},
-          price: ${product.price || 0}
+          id: ${JSON.stringify(product?.id || id)},
+          title: ${JSON.stringify(product?.title || "Unknown Product")},
+          url: ${JSON.stringify(product?.permalink || "")},
+          source: ${JSON.stringify(product?.source || "mercadolibre")},
+          price: ${product?.price || 0}
         };
 
         // Wait for DOM to be ready
@@ -6087,14 +6526,16 @@ State: ${state || "none"}</pre>
         });
       }
 
-      // Store each scraped product into Supabase
+      // Store each scraped product into Supabase product_cache
       const stored = [];
       for (const product of products) {
-        const row = await supabaseDb.upsertScrapedProduct(product);
+        const row = await supabaseDb.cacheScrapedProduct(product);
         if (row) stored.push(row);
       }
 
-      console.log(`[Scrape] Stored ${stored.length} products into Supabase`);
+      console.log(
+        `[Scrape] Cached ${stored.length} products into Supabase product_cache`,
+      );
 
       res.json({
         success: true,
@@ -6554,19 +6995,24 @@ State: ${state || "none"}</pre>
 }
 
 /**
- * One-time background seed: scrape popular queries so the home page
- * sections (Highlighted Deals, Popular Products, Price Drops) have real
- * data instead of falling back to hardcoded mocks.
+ * One-time background seed: scrape popular queries to populate the product cache
+ * so the home page sections (Highlighted Deals, Popular Products, Price Drops)
+ * have real data available from the start.
  * Skipped if Supabase or Apify is not configured.
  */
 async function seedHomeData() {
   if (!USE_SUPABASE) return;
   try {
-    // Check if we already have enough tracked products — skip if so
-    const existing = await supabaseDb.getAllTrackedProducts();
-    if (existing && existing.length >= 10) {
+    // Check if we already have cached products — skip if so
+    const { data: existingCache } = await supabaseDb
+      .getSupabase()
+      .from("product_cache")
+      .select("id")
+      .limit(10);
+
+    if (existingCache && existingCache.length >= 10) {
       console.log(
-        `[Seed] Supabase already has ${existing.length} tracked products — skipping seed.`,
+        `[Seed] Product cache already has ${existingCache.length}+ products — skipping seed.`,
       );
       return;
     }
@@ -6577,7 +7023,10 @@ async function seedHomeData() {
       "celulares",
       "ofertas amazon",
     ];
-    console.log("[Seed] Starting home data seed with queries:", seedQueries);
+    console.log(
+      "[Seed] Starting product cache seed with queries:",
+      seedQueries,
+    );
 
     for (const query of seedQueries) {
       try {
@@ -6588,15 +7037,15 @@ async function seedHomeData() {
         });
         if (items && items.length > 0) {
           for (const item of items) {
-            await supabaseDb.upsertScrapedProduct(item).catch(() => {});
+            await supabaseDb.cacheScrapedProduct(item).catch(() => {});
           }
-          console.log(`[Seed] Stored ${items.length} products for "${query}"`);
+          console.log(`[Seed] Cached ${items.length} products for "${query}"`);
         }
       } catch (e) {
         console.error(`[Seed] Error scraping "${query}":`, e.message);
       }
     }
-    console.log("[Seed] Home data seed complete.");
+    console.log("[Seed] Product cache seed complete.");
   } catch (e) {
     console.error("[Seed] seedHomeData error:", e.message);
   }
