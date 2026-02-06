@@ -35,120 +35,120 @@ const priceCheckQueue = new Queue("price-check", REDIS_URL, {
   },
 });
 
+const { recheckPrices } = require("../apify");
+
 /**
- * Fetch current price for a Mercado Libre product
+ * Batch re-check prices for a group of products using the Apify Actor.
+ * Groups products by their product_url, sends them all in one Actor run.
+ * Returns a map of product_id -> new price.
+ * @param {Array} products - tracked product rows with { product_id, product_url }
+ * @returns {Promise<Map<string, number>>} product_id -> price
  */
-async function fetchMLPrice(productId) {
-  try {
-    const response = await fetch(
-      `https://api.mercadolibre.com/items/${productId}`,
-      {
-        headers: {
-          Accept: "application/json",
-        },
-      },
-    );
+async function batchRecheckPrices(products) {
+  // Collect all product URLs (using snake_case to match DB schema)
+  const urls = products.filter((p) => p.product_url).map((p) => p.product_url);
 
-    if (!response.ok) {
-      if (response.status === 404) {
-        console.log(`[PriceChecker] Product ${productId} not found (404)`);
-        return null;
-      }
-      throw new Error(`ML API returned ${response.status}`);
-    }
-
-    const data = await response.json();
-    return parseFloat(data.price);
-  } catch (error) {
-    console.error(
-      `[PriceChecker] Error fetching ML price for ${productId}:`,
-      error.message,
-    );
-    throw error;
+  if (urls.length === 0) {
+    console.log("[PriceChecker] No product URLs available for re-check");
+    return new Map();
   }
+
+  // Call Apify Actor with all URLs at once
+  const results = await recheckPrices(urls);
+
+  // Build a map: product_id -> price from results.
+  // Also build a URL -> price map as fallback (Actor may return results keyed by URL).
+  const priceMap = new Map();
+  const urlPriceMap = new Map();
+  for (const item of results) {
+    const price = parseFloat(item.price);
+    if (item.id && !isNaN(price)) {
+      priceMap.set(item.id, price);
+    }
+    if (item.url && !isNaN(price)) {
+      urlPriceMap.set(item.url, price);
+    }
+  }
+
+  // Merge URL-based results: for each product, if ID lookup missed, try URL
+  for (const p of products) {
+    if (
+      !priceMap.has(p.product_id) &&
+      p.product_url &&
+      urlPriceMap.has(p.product_url)
+    ) {
+      priceMap.set(p.product_id, urlPriceMap.get(p.product_url));
+    }
+  }
+
+  return priceMap;
 }
 
 /**
- * Fetch current price for an Amazon product
- * Note: Requires Amazon PA-API credentials
- */
-async function fetchAmazonPrice(asin) {
-  // TODO: Implement Amazon PA-API 5.0 price fetch
-  // For now, return null (Amazon integration not fully implemented)
-  console.log(
-    `[PriceChecker] Amazon price fetch not yet implemented for ${asin}`,
-  );
-  return null;
-}
-
-/**
- * Process a single price check job
+ * Process a price check job.
+ * Each job carries a batch of tracked products to re-check via Apify.
  */
 priceCheckQueue.process(
   parseInt(process.env.PRICE_CHECK_CONCURRENCY) || 5,
   async (job) => {
-    const { trackedProductId, productId, source } = job.data;
+    const { products } = job.data; // array of { tracked_product_id, product_id, source, product_url }
 
     console.log(
-      `[PriceChecker] Checking price for ${productId} (source: ${source})`,
+      `[PriceChecker] Processing batch of ${products.length} products`,
     );
 
     try {
-      // Fetch current price based on source
-      let currentPrice = null;
+      // Batch re-check all products in one Apify Actor run
+      const priceMap = await batchRecheckPrices(products);
 
-      if (source === "mercadolibre") {
-        currentPrice = await fetchMLPrice(productId);
-      } else if (source === "amazon") {
-        currentPrice = await fetchAmazonPrice(productId);
-      }
+      let updated = 0;
+      let skipped = 0;
 
-      if (currentPrice === null) {
-        console.log(
-          `[PriceChecker] Could not fetch price for ${productId}, skipping`,
+      for (const product of products) {
+        const newPrice = priceMap.get(product.product_id);
+
+        if (newPrice == null) {
+          console.log(
+            `[PriceChecker] No price returned for ${product.product_id}, skipping`,
+          );
+          skipped++;
+          continue;
+        }
+
+        // Update tracked product price
+        await supabaseDb.updateTrackedProductPrice(
+          product.tracked_product_id,
+          newPrice,
         );
-        return { status: "skipped", reason: "price_fetch_failed" };
+
+        // Add price history entry
+        await supabaseDb.addPriceHistory(product.tracked_product_id, newPrice);
+
+        console.log(`[PriceChecker] ✓ ${product.product_id}: $${newPrice}`);
+        updated++;
       }
-
-      // Update tracked product with new price
-      await supabaseDb.updateTrackedProductPrice(
-        trackedProductId,
-        currentPrice,
-      );
-
-      // Add price history entry
-      await supabaseDb.addPriceHistory(trackedProductId, currentPrice);
-
-      console.log(
-        `[PriceChecker] ✓ Updated price for ${productId}: $${currentPrice}`,
-      );
 
       return {
         status: "success",
-        productId,
-        price: currentPrice,
+        updated,
+        skipped,
         timestamp: new Date().toISOString(),
       };
     } catch (error) {
-      console.error(
-        `[PriceChecker] Error processing ${productId}:`,
-        error.message,
-      );
-      throw error; // Let Bull handle retry logic
+      console.error(`[PriceChecker] Batch error:`, error.message);
+      throw error;
     }
   },
 );
 
 /**
- * Schedule price checks for all tracked products
+ * Schedule price checks for all tracked products.
+ * Batches products into groups of 20 -- each batch is one Apify Actor run.
  */
 async function scheduleAllPriceChecks() {
   try {
-    console.log(
-      "[PriceChecker] Scheduling price checks for all tracked products...",
-    );
+    console.log("[PriceChecker] Scheduling price checks...");
 
-    // Get all tracked products from database
     const products = await supabaseDb.getAllTrackedProducts();
 
     if (products.length === 0) {
@@ -156,43 +156,46 @@ async function scheduleAllPriceChecks() {
       return 0;
     }
 
-    console.log(`[PriceChecker] Found ${products.length} tracked products`);
+    // Filter out products checked within the last 30 minutes
+    const now = new Date();
+    const stale = products.filter((p) => {
+      if (!p.last_checked) return true;
+      const mins = (now - new Date(p.last_checked)) / (1000 * 60);
+      return mins >= 30;
+    });
 
-    // Add each product to the queue
-    let scheduled = 0;
-    for (const product of products) {
-      // Skip if last check was recent (within 30 minutes)
-      if (product.last_checked) {
-        const lastChecked = new Date(product.last_checked);
-        const now = new Date();
-        const minutesSinceCheck = (now - lastChecked) / (1000 * 60);
+    console.log(
+      `[PriceChecker] ${stale.length} of ${products.length} products need re-check`,
+    );
 
-        if (minutesSinceCheck < 30) {
-          console.log(
-            `[PriceChecker] Skipping ${product.product_id} (checked ${Math.round(minutesSinceCheck)} min ago)`,
-          );
-          continue;
-        }
-      }
+    if (stale.length === 0) return 0;
 
-      // Add job to queue with delay to avoid rate limiting
+    // Chunk into batches of 20 (each batch = 1 Apify Actor run)
+    const BATCH_SIZE = 20;
+    let batchIndex = 0;
+
+    for (let i = 0; i < stale.length; i += BATCH_SIZE) {
+      const batch = stale.slice(i, i + BATCH_SIZE).map((p) => ({
+        tracked_product_id: p.id,
+        product_id: p.product_id,
+        source: p.source,
+        product_url: p.product_url,
+      }));
+
       await priceCheckQueue.add(
+        { products: batch },
         {
-          trackedProductId: product.id,
-          productId: product.product_id,
-          source: product.source,
-        },
-        {
-          delay: scheduled * 2000, // 2 second delay between checks
-          jobId: `price-check-${product.id}-${Date.now()}`, // Unique job ID
+          delay: batchIndex * 5000, // 5 second delay between batches
+          jobId: `price-batch-${batchIndex}-${Date.now()}`,
         },
       );
-
-      scheduled++;
+      batchIndex++;
     }
 
-    console.log(`[PriceChecker] Scheduled ${scheduled} price checks`);
-    return scheduled;
+    console.log(
+      `[PriceChecker] Scheduled ${batchIndex} batch jobs (${stale.length} products)`,
+    );
+    return batchIndex;
   } catch (error) {
     console.error("[PriceChecker] Error scheduling price checks:", error);
     throw error;

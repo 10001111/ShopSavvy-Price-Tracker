@@ -23,6 +23,9 @@ CREATE INDEX IF NOT EXISTS idx_search_history_created_at
 -- RLS: service role full access (same pattern as other tables)
 ALTER TABLE public.search_history ENABLE ROW LEVEL SECURITY;
 
+-- Drop existing policy if it exists, then recreate
+DROP POLICY IF EXISTS "Service role has full access to search_history" ON public.search_history;
+
 CREATE POLICY "Service role has full access to search_history"
   ON public.search_history
   FOR ALL USING (true) WITH CHECK (true);

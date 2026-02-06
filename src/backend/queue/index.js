@@ -1,195 +1,81 @@
 /**
- * Bull Queue Setup for Price Update Jobs
- * Handles scheduling and processing of background price updates
+ * Bull Queue – status helpers only.
+ *
+ * The old "price-updates" queue + priceUpdateWorker have been retired.
+ * All price checking now goes through workers/price-checker.js (Apify-based).
+ *
+ * This module still exports getQueueStatus / getRecentJobs so that
+ * /api/admin/queue-status can report on the price-checker queue.
  */
 
 const Queue = require("bull");
 const { getRedisOptions, isRedisConfigured } = require("../config/redis");
-const { initWorker, processJob } = require("./priceUpdateWorker");
 
-let priceUpdateQueue = null;
+// Connect to the price-check queue that price-checker.js owns, read-only
+let priceCheckQueue = null;
 
-/**
- * Initialize Bull queue with Redis connection
- * @returns {Queue|null} Bull queue instance or null if Redis not configured
- */
-function initQueue() {
-  if (!isRedisConfigured()) {
-    console.log("[Queue] Redis not configured - background jobs disabled");
-    return null;
-  }
+function getOrCreateQueue() {
+  if (priceCheckQueue) return priceCheckQueue;
+  if (!isRedisConfigured()) return null;
 
   const redisOptions = getRedisOptions();
-  if (!redisOptions) {
-    console.log("[Queue] Invalid Redis configuration");
-    return null;
-  }
+  if (!redisOptions) return null;
 
-  priceUpdateQueue = new Queue("price-updates", {
+  // Open the same "price-check" queue name that price-checker.js uses —
+  // we don't register a processor here, just read stats.
+  priceCheckQueue = new Queue("price-check", {
     redis: redisOptions,
-    defaultJobOptions: {
-      attempts: 3,
-      backoff: {
-        type: "exponential",
-        delay: 5000, // Start with 5 second delay, then 10s, 20s
-      },
-      removeOnComplete: 100, // Keep last 100 completed jobs
-      removeOnFail: 50, // Keep last 50 failed jobs
-    },
   });
 
-  // Handle queue events
-  priceUpdateQueue.on("ready", () => {
-    console.log("[Queue] Price update queue initialized and ready");
+  priceCheckQueue.on("error", (err) => {
+    console.error("[Queue] price-check status queue error:", err.message);
   });
 
-  priceUpdateQueue.on("error", (error) => {
-    console.error("[Queue] Queue error:", error.message);
-  });
-
-  priceUpdateQueue.on("failed", (job, error) => {
-    console.error(`[Queue] Job ${job.id} failed:`, error.message);
-  });
-
-  priceUpdateQueue.on("completed", (job, result) => {
-    console.log(
-      `[Queue] Job ${job.id} completed - ` +
-        `Updated: ${result.updated}, Unchanged: ${result.unchanged}, Errors: ${result.errors}`
-    );
-  });
-
-  priceUpdateQueue.on("stalled", (job) => {
-    console.warn(`[Queue] Job ${job.id} stalled`);
-  });
-
-  // Register job processor
-  priceUpdateQueue.process("update-all-prices", async (job) => {
-    return await processJob(job);
-  });
-
-  return priceUpdateQueue;
-}
-
-/**
- * Setup recurring price update job
- * Runs every 12 hours by default
- */
-async function setupRecurringJobs() {
-  if (!priceUpdateQueue) {
-    console.log("[Queue] Cannot setup recurring jobs - queue not initialized");
-    return;
-  }
-
-  // Remove any existing repeatable jobs to avoid duplicates
-  const existingJobs = await priceUpdateQueue.getRepeatableJobs();
-  for (const job of existingJobs) {
-    if (job.name === "update-all-prices") {
-      await priceUpdateQueue.removeRepeatableByKey(job.key);
-      console.log("[Queue] Removed existing repeatable job");
-    }
-  }
-
-  // Add new repeatable job - every 12 hours
-  await priceUpdateQueue.add(
-    "update-all-prices",
-    { source: "scheduled" },
-    {
-      repeat: {
-        cron: "0 */12 * * *", // At minute 0 of every 12th hour
-      },
-      jobId: "price-update-scheduled",
-    }
-  );
-
-  console.log("[Queue] Scheduled price update job (every 12 hours)");
-}
-
-/**
- * Manually trigger a price update job
- * Used for testing or admin-triggered updates
- * @returns {Promise<Object>} Job instance
- */
-async function triggerPriceUpdate() {
-  if (!priceUpdateQueue) {
-    throw new Error("Queue not initialized - Redis may not be configured");
-  }
-
-  const job = await priceUpdateQueue.add(
-    "update-all-prices",
-    {
-      source: "manual",
-      triggeredAt: new Date().toISOString(),
-    },
-    {
-      jobId: `manual-${Date.now()}`,
-    }
-  );
-
-  console.log(`[Queue] Manual price update triggered - Job ID: ${job.id}`);
-  return job;
+  return priceCheckQueue;
 }
 
 /**
  * Get queue status and statistics
- * @returns {Promise<Object>} Queue status object
  */
 async function getQueueStatus() {
-  if (!priceUpdateQueue) {
-    return {
-      initialized: false,
-      error: "Queue not initialized",
-    };
+  const queue = getOrCreateQueue();
+  if (!queue) {
+    return { initialized: false, error: "Redis not configured" };
   }
 
   const [waiting, active, completed, failed, delayed, paused] = await Promise.all([
-    priceUpdateQueue.getWaitingCount(),
-    priceUpdateQueue.getActiveCount(),
-    priceUpdateQueue.getCompletedCount(),
-    priceUpdateQueue.getFailedCount(),
-    priceUpdateQueue.getDelayedCount(),
-    priceUpdateQueue.isPaused(),
+    queue.getWaitingCount(),
+    queue.getActiveCount(),
+    queue.getCompletedCount(),
+    queue.getFailedCount(),
+    queue.getDelayedCount(),
+    queue.isPaused(),
   ]);
-
-  const repeatableJobs = await priceUpdateQueue.getRepeatableJobs();
 
   return {
     initialized: true,
+    queueName: "price-check",
     paused,
-    counts: {
-      waiting,
-      active,
-      completed,
-      failed,
-      delayed,
-    },
-    repeatableJobs: repeatableJobs.map((job) => ({
-      name: job.name,
-      cron: job.cron,
-      next: job.next ? new Date(job.next).toISOString() : null,
-    })),
+    counts: { waiting, active, completed, failed, delayed },
   };
 }
 
 /**
- * Get recent jobs from the queue
- * @param {number} limit - Maximum number of jobs to return
- * @returns {Promise<Object>} Recent jobs
+ * Get recent jobs from the price-check queue
  */
 async function getRecentJobs(limit = 10) {
-  if (!priceUpdateQueue) {
-    return { error: "Queue not initialized" };
-  }
+  const queue = getOrCreateQueue();
+  if (!queue) return { error: "Redis not configured" };
 
   const [completed, failed, active] = await Promise.all([
-    priceUpdateQueue.getCompleted(0, limit - 1),
-    priceUpdateQueue.getFailed(0, limit - 1),
-    priceUpdateQueue.getActive(0, limit - 1),
+    queue.getCompleted(0, limit - 1),
+    queue.getFailed(0, limit - 1),
+    queue.getActive(0, limit - 1),
   ]);
 
-  const formatJob = (job) => ({
+  const fmt = (job) => ({
     id: job.id,
     name: job.name,
-    data: job.data,
     progress: job.progress(),
     attemptsMade: job.attemptsMade,
     finishedOn: job.finishedOn ? new Date(job.finishedOn).toISOString() : null,
@@ -199,38 +85,13 @@ async function getRecentJobs(limit = 10) {
   });
 
   return {
-    active: active.map(formatJob),
-    completed: completed.map(formatJob),
-    failed: failed.map(formatJob),
+    active: active.map(fmt),
+    completed: completed.map(fmt),
+    failed: failed.map(fmt),
   };
 }
 
-/**
- * Close the queue connection
- */
-async function closeQueue() {
-  if (priceUpdateQueue) {
-    await priceUpdateQueue.close();
-    priceUpdateQueue = null;
-    console.log("[Queue] Queue closed");
-  }
-}
-
-/**
- * Get the queue instance
- * @returns {Queue|null}
- */
-function getQueue() {
-  return priceUpdateQueue;
-}
-
 module.exports = {
-  initQueue,
-  initWorker,
-  setupRecurringJobs,
-  triggerPriceUpdate,
   getQueueStatus,
   getRecentJobs,
-  closeQueue,
-  getQueue,
 };

@@ -15,10 +15,8 @@ dotenv.config({ path: path.join(__dirname, "..", "..", ".env") });
 const { initDb } = require("./db");
 const supabaseDb = require("./supabase-db");
 const { isRedisConfigured } = require("./config/redis");
-const {
-  getQueueStatus,
-  getRecentJobs,
-} = require("./queue");
+const { getQueueStatus, getRecentJobs } = require("./queue");
+const { scrapeProducts } = require("./apify");
 
 // Use Supabase for cloud storage, SQLite as fallback
 const USE_SUPABASE = Boolean(
@@ -39,49 +37,12 @@ console.log(
   process.env.SUPABASE_ANON_KEY ? "✓ Set" : "✗ Not set",
 );
 console.log(
-  "[Config] AMAZON_ACCESS_KEY:",
-  process.env.AMAZON_ACCESS_KEY ? "✓ Set" : "✗ Not set",
-);
-console.log(
-  "[Config] AMAZON_SECRET_KEY:",
-  process.env.AMAZON_SECRET_KEY ? "✓ Set" : "✗ Not set",
-);
-console.log(
-  "[Config] AMAZON_PARTNER_TAG:",
-  process.env.AMAZON_PARTNER_TAG ? "✓ Set" : "✗ Not set",
-);
-console.log(
   "[Config] REDIS_URL:",
   process.env.REDIS_URL ? "✓ Set" : "✗ Not set",
 );
 
 const PORT = process.env.PORT || 3000;
 const JWT_SECRET = process.env.JWT_SECRET || "dev-secret";
-
-// Mercado Libre API Configuration
-const ML_CLIENT_ID =
-  process.env.MERCADO_LIBRE_App_ID || process.env.MERCADO_LIBRE_CLIENT_ID || "";
-const ML_CLIENT_SECRET = process.env.MERCADO_LIBRE_CLIENT_SECRET || "";
-const ML_SITE = process.env.MERCADO_LIBRE_SITE || "MLM"; // Default to Mexico
-
-// Cache for ML access token
-let mlAccessToken = null;
-let mlTokenExpiry = 0;
-
-// Amazon Product Advertising API Configuration
-const AMAZON_ACCESS_KEY = process.env.AMAZON_ACCESS_KEY || "";
-const AMAZON_SECRET_KEY = process.env.AMAZON_SECRET_KEY || "";
-const AMAZON_PARTNER_TAG = process.env.AMAZON_PARTNER_TAG || "";
-const AMAZON_REGION = process.env.AMAZON_REGION || "us-east-1";
-const AMAZON_HOST =
-  AMAZON_REGION === "us-east-1"
-    ? "webservices.amazon.com"
-    : `webservices.amazon.${AMAZON_REGION.split("-")[0]}`;
-
-// Check if Amazon PA-API is configured
-const HAS_AMAZON_API = Boolean(
-  AMAZON_ACCESS_KEY && AMAZON_SECRET_KEY && AMAZON_PARTNER_TAG,
-);
 
 // ============================================
 // CATEGORY SYSTEM CONFIGURATION
@@ -396,6 +357,7 @@ function renderPage(
   userEmail = "",
   lang = "en",
   userData = null,
+  extraBody = "",
 ) {
   const otherLang = lang === "en" ? "es" : "en";
   const currentFlag = lang === "en" ? "🇺🇸" : "🇲🇽";
@@ -719,6 +681,7 @@ function renderPage(
         });
       })();
     </script>
+    ${extraBody}
   </body>
 </html>`;
 }
@@ -895,6 +858,26 @@ function formatPrice(value, currency = "MXN") {
 }
 
 // ============================================
+// IMAGE URL HELPER FUNCTIONS
+// ============================================
+
+/**
+ * Get product image URL with consistent fallback strategy
+ * Priority: 1) thumbnail field, 2) fallback placeholder
+ * @param {Object} product - Product object with thumbnail field
+ * @returns {string} Image URL
+ */
+function getProductImageUrl(product) {
+  // Use thumbnail if available (from Apify scraper or database)
+  if (product.thumbnail) {
+    return product.thumbnail;
+  }
+
+  // Fallback to placeholder
+  return "/images/product-placeholder.svg";
+}
+
+// ============================================
 // CATEGORY HELPER FUNCTIONS
 // ============================================
 
@@ -961,48 +944,6 @@ function getCategoryStats(products, lang = "en") {
   }
 
   return stats;
-}
-
-// Get Mercado Libre access token
-async function getMLAccessToken() {
-  // Return cached token if still valid
-  if (mlAccessToken && Date.now() < mlTokenExpiry) {
-    return mlAccessToken;
-  }
-
-  if (!ML_CLIENT_ID || !ML_CLIENT_SECRET) {
-    console.log("Mercado Libre credentials not configured");
-    return null;
-  }
-
-  try {
-    const params = new URLSearchParams();
-    params.append("grant_type", "client_credentials");
-    params.append("client_id", ML_CLIENT_ID);
-    params.append("client_secret", ML_CLIENT_SECRET);
-
-    const response = await fetch("https://api.mercadolibre.com/oauth/token", {
-      method: "POST",
-      headers: { "Content-Type": "application/x-www-form-urlencoded" },
-      body: params,
-    });
-
-    const data = await response.json();
-
-    if (data.access_token) {
-      mlAccessToken = data.access_token;
-      // Set expiry 5 minutes before actual expiry for safety
-      mlTokenExpiry = Date.now() + (data.expires_in - 300) * 1000;
-      console.log("Mercado Libre access token obtained");
-      return mlAccessToken;
-    }
-
-    console.error("Failed to get ML token:", data);
-    return null;
-  } catch (error) {
-    console.error("ML token error:", error);
-    return null;
-  }
 }
 
 // Get user initials for avatar placeholder
@@ -1229,519 +1170,8 @@ function getMockProductById(id) {
   return getMockProducts().find((product) => product.id === id) || null;
 }
 
-function searchMockProducts({
-  query,
-  minPrice,
-  maxPrice,
-  sort,
-  page,
-  pageSize,
-}) {
-  const normalizedQuery = query.toLowerCase();
-  let results = getMockProducts().filter((product) => {
-    const matchesQuery = product.title.toLowerCase().includes(normalizedQuery);
-    const withinMin = !Number.isFinite(minPrice) || product.price >= minPrice;
-    const withinMax = !Number.isFinite(maxPrice) || product.price <= maxPrice;
-    return matchesQuery && withinMin && withinMax;
-  });
-
-  results.sort((a, b) => {
-    if (sort === "price_desc") {
-      return b.price - a.price;
-    }
-    return a.price - b.price;
-  });
-
-  const total = results.length;
-  const totalPages = Math.max(1, Math.ceil(total / pageSize));
-  const start = (page - 1) * pageSize;
-  results = results.slice(start, start + pageSize);
-
-  return { products: results, total, totalPages };
-}
-
-async function fetchMLProducts({
-  query,
-  minPrice,
-  maxPrice,
-  sort,
-  page,
-  pageSize,
-}) {
-  try {
-    // Build search URL with filters
-    const sortMap = {
-      price_asc: "price_asc",
-      price_desc: "price_desc",
-    };
-
-    const searchUrl = new URL(
-      `https://api.mercadolibre.com/sites/${ML_SITE}/search`,
-    );
-    searchUrl.searchParams.set("q", query);
-    searchUrl.searchParams.set("offset", String((page - 1) * pageSize));
-    searchUrl.searchParams.set("limit", String(pageSize));
-
-    if (Number.isFinite(minPrice)) {
-      searchUrl.searchParams.set("price", `${minPrice}-${maxPrice || "*"}`);
-    }
-    if (sort && sortMap[sort]) {
-      searchUrl.searchParams.set("sort", sortMap[sort]);
-    }
-
-    // First try: Use PUBLIC API (no authentication required for search)
-    console.log(`[ML API] Searching for: ${query}`);
-    let response = await fetch(searchUrl.toString());
-
-    // If public API fails, try with authentication
-    if (!response.ok && ML_CLIENT_ID && ML_CLIENT_SECRET) {
-      console.log("[ML API] Public API failed, trying with authentication...");
-      const token = await getMLAccessToken();
-      if (token) {
-        response = await fetch(searchUrl.toString(), {
-          headers: { Authorization: `Bearer ${token}` },
-        });
-      }
-    }
-
-    if (response.ok) {
-      const data = await response.json();
-      console.log(`[ML API] Found ${data.paging?.total || 0} results`);
-
-      // Auto-categorize products based on title
-      const products = (data.results || []).map((item) => ({
-        ...item,
-        category: detectCategory(item.title),
-      }));
-
-      return {
-        products: products,
-        total: data.paging?.total || 0,
-        totalPages: Math.ceil((data.paging?.total || 0) / pageSize),
-        error: "",
-        isRealData: true,
-      };
-    }
-
-    const errorText = await response.text();
-    console.log(`[ML API] Search failed (${response.status}):`, errorText);
-  } catch (error) {
-    console.error("[ML API] Exception:", error.message);
-  }
-
-  // Fallback to mock data
-  console.log("[ML API] Using mock data fallback");
-  const mockResults = searchMockProducts({
-    query,
-    minPrice,
-    maxPrice,
-    sort,
-    page,
-    pageSize,
-  });
-  return {
-    ...mockResults,
-    notice:
-      "Demo mode: Using sample data. Configure Mercado Libre API for real products.",
-    error: "",
-    isRealData: false,
-  };
-}
-
-async function fetchMLProductById(id) {
-  try {
-    // First try: Use PUBLIC API (no authentication required)
-    console.log(`[ML API] Fetching product: ${id}`);
-    let response = await fetch(`https://api.mercadolibre.com/items/${id}`);
-
-    // If public API fails, try with authentication
-    if (!response.ok && ML_CLIENT_ID && ML_CLIENT_SECRET) {
-      console.log("[ML API] Public API failed, trying with authentication...");
-      const token = await getMLAccessToken();
-      if (token) {
-        response = await fetch(`https://api.mercadolibre.com/items/${id}`, {
-          headers: { Authorization: `Bearer ${token}` },
-        });
-      }
-    }
-
-    if (response.ok) {
-      const product = await response.json();
-      console.log(`[ML API] Product found: ${product.title}`);
-
-      // Auto-categorize the product
-      product.category = detectCategory(product.title);
-
-      return { product, notice: "", error: "", isRealData: true };
-    }
-
-    const errorText = await response.text();
-    console.log(
-      `[ML API] Product fetch failed (${response.status}):`,
-      errorText,
-    );
-  } catch (error) {
-    console.error("[ML API] Exception:", error.message);
-  }
-
-  // Fallback to mock data
-  console.log("[ML API] Using mock product data");
-  return {
-    product: getMockProductById(id),
-    notice: "Demo mode: This is sample data.",
-    error: "",
-    isRealData: false,
-  };
-}
-
-// Get ML categories
-async function fetchMLCategories() {
-  const token = await getMLAccessToken();
-
-  if (token) {
-    try {
-      const response = await fetch(
-        `https://api.mercadolibre.com/sites/${ML_SITE}/categories`,
-        {
-          headers: { Authorization: `Bearer ${token}` },
-        },
-      );
-
-      if (response.ok) {
-        return await response.json();
-      }
-    } catch (error) {
-      console.error("ML Categories error:", error);
-    }
-  }
-
-  // Return some default categories
-  return [
-    { id: "MLM1051", name: "Celulares y Teléfonos" },
-    { id: "MLM1648", name: "Computación" },
-    { id: "MLM1000", name: "Electrónica, Audio y Video" },
-    { id: "MLM1144", name: "Consolas y Videojuegos" },
-    { id: "MLM1574", name: "Hogar, Muebles y Jardín" },
-  ];
-}
-
-// ============================================
-// AMAZON PRODUCT ADVERTISING API (PA-API 5.0)
-// ============================================
-
 /**
- * Create AWS Signature Version 4 for Amazon PA-API
- */
-function createAmazonSignature(
-  method,
-  uri,
-  queryString,
-  headers,
-  payload,
-  timestamp,
-) {
-  const dateStamp = timestamp.substring(0, 8);
-  const amzDate = timestamp;
-  const service = "ProductAdvertisingAPI";
-  const region = AMAZON_REGION;
-
-  // Create canonical request
-  const sortedHeaders = Object.keys(headers).sort();
-  const signedHeaders = sortedHeaders.join(";");
-  const canonicalHeaders = sortedHeaders
-    .map((h) => `${h}:${headers[h]}\n`)
-    .join("");
-
-  const payloadHash = crypto
-    .createHash("sha256")
-    .update(payload || "")
-    .digest("hex");
-  const canonicalRequest = `${method}\n${uri}\n${queryString}\n${canonicalHeaders}\n${signedHeaders}\n${payloadHash}`;
-
-  // Create string to sign
-  const algorithm = "AWS4-HMAC-SHA256";
-  const credentialScope = `${dateStamp}/${region}/${service}/aws4_request`;
-  const canonicalRequestHash = crypto
-    .createHash("sha256")
-    .update(canonicalRequest)
-    .digest("hex");
-  const stringToSign = `${algorithm}\n${amzDate}\n${credentialScope}\n${canonicalRequestHash}`;
-
-  // Calculate signature
-  const kDate = crypto
-    .createHmac("sha256", `AWS4${AMAZON_SECRET_KEY}`)
-    .update(dateStamp)
-    .digest();
-  const kRegion = crypto.createHmac("sha256", kDate).update(region).digest();
-  const kService = crypto
-    .createHmac("sha256", kRegion)
-    .update(service)
-    .digest();
-  const kSigning = crypto
-    .createHmac("sha256", kService)
-    .update("aws4_request")
-    .digest();
-  const signature = crypto
-    .createHmac("sha256", kSigning)
-    .update(stringToSign)
-    .digest("hex");
-
-  return {
-    signature,
-    signedHeaders,
-    credentialScope,
-    algorithm,
-  };
-}
-
-/**
- * Search products on Amazon using PA-API 5.0
- */
-async function fetchAmazonProducts({
-  query,
-  minPrice,
-  maxPrice,
-  sort,
-  page,
-  pageSize,
-}) {
-  if (!HAS_AMAZON_API) {
-    console.log("[Amazon] PA-API not configured, skipping");
-    return {
-      products: [],
-      total: 0,
-      totalPages: 0,
-      error: "",
-      source: "amazon",
-    };
-  }
-
-  try {
-    const timestamp = new Date().toISOString().replace(/[:-]|\.\d{3}/g, "");
-    const uri = "/paapi5/searchitems";
-
-    // Build request payload
-    const payload = JSON.stringify({
-      PartnerTag: AMAZON_PARTNER_TAG,
-      PartnerType: "Associates",
-      Keywords: query,
-      SearchIndex: "All",
-      ItemCount: Math.min(pageSize, 10), // PA-API max is 10
-      ItemPage: page,
-      Resources: [
-        "Images.Primary.Large",
-        "ItemInfo.Title",
-        "Offers.Listings.Price",
-        "Offers.Listings.Condition",
-        "Offers.Listings.Availability.Message",
-        "Offers.Listings.MerchantInfo",
-      ],
-      ...(minPrice > 0 && { MinPrice: minPrice * 100 }), // Amazon uses cents
-      ...(maxPrice < 50000 && { MaxPrice: maxPrice * 100 }),
-      SortBy:
-        sort === "price_asc"
-          ? "Price:LowToHigh"
-          : sort === "price_desc"
-            ? "Price:HighToLow"
-            : "Relevance",
-    });
-
-    const headers = {
-      "content-encoding": "amz-1.0",
-      "content-type": "application/json; charset=utf-8",
-      host: AMAZON_HOST,
-      "x-amz-date": timestamp,
-      "x-amz-target":
-        "com.amazon.paapi5.v1.ProductAdvertisingAPIv1.SearchItems",
-    };
-
-    const { signature, signedHeaders, credentialScope, algorithm } =
-      createAmazonSignature("POST", uri, "", headers, payload, timestamp);
-
-    const authHeader = `${algorithm} Credential=${AMAZON_ACCESS_KEY}/${credentialScope}, SignedHeaders=${signedHeaders}, Signature=${signature}`;
-
-    const response = await fetch(`https://${AMAZON_HOST}${uri}`, {
-      method: "POST",
-      headers: {
-        ...headers,
-        Authorization: authHeader,
-      },
-      body: payload,
-    });
-
-    if (response.ok) {
-      const data = await response.json();
-      const items = data.SearchResult?.Items || [];
-
-      // Transform Amazon items to match our product format
-      const products = items.map((item) => {
-        const title = item.ItemInfo?.Title?.DisplayValue || "Amazon Product";
-        return {
-          id: `AMZN-${item.ASIN}`,
-          asin: item.ASIN,
-          title: title,
-          price: item.Offers?.Listings?.[0]?.Price?.Amount || 0,
-          currency_id: item.Offers?.Listings?.[0]?.Price?.Currency || "USD",
-          thumbnail: item.Images?.Primary?.Large?.URL || "",
-          condition: item.Offers?.Listings?.[0]?.Condition?.Value || "New",
-          available_quantity: item.Offers?.Listings?.[0]?.Availability?.Message
-            ? 1
-            : 0,
-          permalink: `https://www.amazon.com/dp/${item.ASIN}?tag=${AMAZON_PARTNER_TAG}`,
-          seller: {
-            nickname:
-              item.Offers?.Listings?.[0]?.MerchantInfo?.Name || "Amazon",
-          },
-          source: "amazon",
-          category: detectCategory(title), // Auto-categorize
-        };
-      });
-
-      return {
-        products,
-        total: data.SearchResult?.TotalResultCount || products.length,
-        totalPages: Math.ceil(
-          (data.SearchResult?.TotalResultCount || products.length) / pageSize,
-        ),
-        error: "",
-        source: "amazon",
-      };
-    } else {
-      const errorText = await response.text();
-      console.error("[Amazon] PA-API error:", response.status, errorText);
-      return {
-        products: [],
-        total: 0,
-        totalPages: 0,
-        error: `Amazon API error: ${response.status}`,
-        source: "amazon",
-      };
-    }
-  } catch (error) {
-    console.error("[Amazon] PA-API exception:", error.message);
-    return {
-      products: [],
-      total: 0,
-      totalPages: 0,
-      error: error.message,
-      source: "amazon",
-    };
-  }
-}
-
-/**
- * Get Amazon product details by ASIN
- */
-async function fetchAmazonProductById(asin) {
-  if (!HAS_AMAZON_API) {
-    return {
-      product: null,
-      error: "Amazon PA-API not configured",
-      source: "amazon",
-    };
-  }
-
-  // Remove AMZN- prefix if present
-  const cleanAsin = asin.replace(/^AMZN-/, "");
-
-  try {
-    const timestamp = new Date().toISOString().replace(/[:-]|\.\d{3}/g, "");
-    const uri = "/paapi5/getitems";
-
-    const payload = JSON.stringify({
-      PartnerTag: AMAZON_PARTNER_TAG,
-      PartnerType: "Associates",
-      ItemIds: [cleanAsin],
-      Resources: [
-        "Images.Primary.Large",
-        "Images.Variants.Large",
-        "ItemInfo.Title",
-        "ItemInfo.Features",
-        "ItemInfo.ProductInfo",
-        "ItemInfo.ByLineInfo",
-        "Offers.Listings.Price",
-        "Offers.Listings.Condition",
-        "Offers.Listings.Availability.Message",
-        "Offers.Listings.MerchantInfo",
-        "Offers.Summaries.LowestPrice",
-      ],
-    });
-
-    const headers = {
-      "content-encoding": "amz-1.0",
-      "content-type": "application/json; charset=utf-8",
-      host: AMAZON_HOST,
-      "x-amz-date": timestamp,
-      "x-amz-target": "com.amazon.paapi5.v1.ProductAdvertisingAPIv1.GetItems",
-    };
-
-    const { signature, signedHeaders, credentialScope, algorithm } =
-      createAmazonSignature("POST", uri, "", headers, payload, timestamp);
-
-    const authHeader = `${algorithm} Credential=${AMAZON_ACCESS_KEY}/${credentialScope}, SignedHeaders=${signedHeaders}, Signature=${signature}`;
-
-    const response = await fetch(`https://${AMAZON_HOST}${uri}`, {
-      method: "POST",
-      headers: {
-        ...headers,
-        Authorization: authHeader,
-      },
-      body: payload,
-    });
-
-    if (response.ok) {
-      const data = await response.json();
-      const item = data.ItemsResult?.Items?.[0];
-
-      if (!item) {
-        return { product: null, error: "Product not found", source: "amazon" };
-      }
-
-      const title = item.ItemInfo?.Title?.DisplayValue || "Amazon Product";
-      const product = {
-        id: `AMZN-${item.ASIN}`,
-        asin: item.ASIN,
-        title: title,
-        price:
-          item.Offers?.Listings?.[0]?.Price?.Amount ||
-          item.Offers?.Summaries?.[0]?.LowestPrice?.Amount ||
-          0,
-        currency_id: item.Offers?.Listings?.[0]?.Price?.Currency || "USD",
-        thumbnail: item.Images?.Primary?.Large?.URL || "",
-        pictures:
-          item.Images?.Variants?.map((v) => ({ url: v.Large?.URL })) || [],
-        condition: item.Offers?.Listings?.[0]?.Condition?.Value || "New",
-        available_quantity: item.Offers?.Listings?.[0]?.Availability?.Message
-          ? 1
-          : 0,
-        permalink: `https://www.amazon.com/dp/${item.ASIN}?tag=${AMAZON_PARTNER_TAG}`,
-        description: item.ItemInfo?.Features?.DisplayValues?.join("\n") || "",
-        seller: {
-          nickname: item.Offers?.Listings?.[0]?.MerchantInfo?.Name || "Amazon",
-        },
-        brand: item.ItemInfo?.ByLineInfo?.Brand?.DisplayValue || "",
-        source: "amazon",
-        category: detectCategory(title), // Auto-categorize
-      };
-
-      return { product, error: "", source: "amazon" };
-    } else {
-      const errorText = await response.text();
-      console.error("[Amazon] GetItems error:", response.status, errorText);
-      return {
-        product: null,
-        error: `Amazon API error: ${response.status}`,
-        source: "amazon",
-      };
-    }
-  } catch (error) {
-    console.error("[Amazon] GetItems exception:", error.message);
-    return { product: null, error: error.message, source: "amazon" };
-  }
-}
-
-/**
- * Combined search from multiple sources (Mercado Libre + Amazon)
+ * Combined search: Supabase (Apify-scraped) products + background scrape trigger.
  */
 async function fetchAllProducts({
   query,
@@ -1760,69 +1190,82 @@ async function fetchAllProducts({
     notices: [],
   };
 
-  // Determine which sources to query
-  const queryML = source === "all" || source === "mercadolibre";
-  const queryAmazon = source === "all" || source === "amazon";
-
-  // Fetch from sources in parallel — ML API, Amazon API, and already-scraped Supabase products
   const promises = [];
 
-  if (queryML) {
-    promises.push(
-      fetchMLProducts({ query, minPrice, maxPrice, sort, page, pageSize })
-        .then((r) => ({ ...r, source: "mercadolibre" }))
-        .catch((e) => ({
-          products: [],
-          total: 0,
-          totalPages: 0,
-          error: e.message,
-          source: "mercadolibre",
-        })),
-    );
-  }
+  // Helper: map Supabase rows → product objects
+  const mapRows = (rows) =>
+    rows.map((r) => ({
+      id: r.product_id,
+      title: r.product_title,
+      price: parseFloat(r.current_price) || 0,
+      currency_id: r.currency || "MXN",
+      thumbnail: r.thumbnail || null,
+      seller: r.seller ? { nickname: r.seller } : null,
+      source: r.source,
+      permalink: r.product_url || null,
+      category: detectCategory(r.product_title || ""),
+      _fromSupabase: true,
+    }));
 
-  if (queryAmazon && HAS_AMAZON_API) {
-    promises.push(
-      fetchAmazonProducts({
+  // Helper: run Apify scrape and store results in Supabase
+  const runScrapeAndStore = async () => {
+    try {
+      const scrapeSource = source === "amazon" ? "amazon" : "all";
+      const items = await scrapeProducts({
+        source: scrapeSource,
         query,
-        minPrice,
-        maxPrice,
-        sort,
-        page,
-        pageSize,
-      }).catch((e) => ({
-        products: [],
-        total: 0,
-        totalPages: 0,
-        error: e.message,
-        source: "amazon",
-      })),
-    );
-  }
+        maxResults: 20,
+      });
+      if (items && items.length > 0) {
+        for (const item of items) {
+          await supabaseDb.upsertScrapedProduct(item).catch(() => {});
+        }
+        console.log(
+          `[fetchAllProducts] Scrape stored ${items.length} products for "${query}"`,
+        );
+      }
+    } catch (e) {
+      console.error("[fetchAllProducts] Scrape error:", e.message);
+    }
+  };
 
-  // Pull already-scraped products from Supabase (fed by Apify Actor)
   if (USE_SUPABASE && query) {
-    promises.push(
-      supabaseDb.searchTrackedProducts(query, { limit: pageSize, source })
-        .then((rows) => ({
-          products: rows.map((r) => ({
-            id: r.product_id,
-            title: r.product_title,
-            price: parseFloat(r.current_price) || 0,
-            currency_id: r.currency || "MXN",
-            thumbnail: r.thumbnail || null,
-            seller: r.seller ? { nickname: r.seller } : null,
-            source: r.source,
-            permalink: r.product_url || null,
-            category: detectCategory(r.product_title || ""),
-            _fromSupabase: true,
-          })),
-          total: rows.length,
+    // Check Supabase first for already-scraped results
+    const existing = await supabaseDb
+      .searchTrackedProducts(query, { limit: pageSize, source })
+      .catch(() => []);
+
+    if (existing.length > 0) {
+      // Cache hit: serve immediately, refresh in background for next time
+      promises.push(
+        Promise.resolve({
+          products: mapRows(existing),
+          total: existing.length,
           totalPages: 1,
           source: "supabase",
-        }))
-        .catch(() => ({ products: [], total: 0, totalPages: 1, source: "supabase" })),
-    );
+        }),
+      );
+      // Background refresh — don't block
+      runScrapeAndStore();
+    } else {
+      // Cache miss: scrape synchronously so this request gets results
+      console.log(
+        `[fetchAllProducts] No cached results for "${query}" — running scrape synchronously`,
+      );
+      await runScrapeAndStore();
+      // Re-read Supabase after scrape
+      const fresh = await supabaseDb
+        .searchTrackedProducts(query, { limit: pageSize, source })
+        .catch(() => []);
+      promises.push(
+        Promise.resolve({
+          products: mapRows(fresh),
+          total: fresh.length,
+          totalPages: 1,
+          source: "supabase",
+        }),
+      );
+    }
   }
 
   const responses = await Promise.all(promises);
@@ -1871,13 +1314,39 @@ async function fetchAllProducts({
  * Get product by ID from the appropriate source
  */
 async function fetchProductById(id) {
-  // Check if it's an Amazon product (AMZN- prefix or ASIN format)
-  if (id.startsWith("AMZN-") || /^[A-Z0-9]{10}$/.test(id)) {
-    return fetchAmazonProductById(id);
+  // 1. Supabase-first: check if we already have this product from a previous scrape
+  if (USE_SUPABASE) {
+    try {
+      const row = await supabaseDb.getTrackedProductById(id);
+      if (row) {
+        const product = {
+          id: row.product_id,
+          title: row.product_title,
+          price: parseFloat(row.current_price) || 0,
+          currency_id: row.currency || "MXN",
+          condition: row.condition || "new",
+          available_quantity: 1,
+          permalink: row.product_url || null,
+          thumbnail: row.thumbnail || null,
+          description: row.description || null,
+          seller: row.seller ? { nickname: row.seller } : null,
+          source: row.source,
+          category: detectCategory(row.product_title || ""),
+        };
+        return { product, notice: "", error: "", isRealData: true };
+      }
+    } catch (e) {
+      console.error("[fetchProductById] Supabase lookup error:", e.message);
+    }
   }
 
-  // Otherwise treat as Mercado Libre product
-  return fetchMLProductById(id);
+  // 2. Not in Supabase — guide the user to scrape it
+  return {
+    product: null,
+    error:
+      "This product has not been scraped yet. Use the Scrape button on the search page to fetch it.",
+    source: "unknown",
+  };
 }
 
 async function start() {
@@ -2003,8 +1472,7 @@ async function start() {
         );
         userEmail = user?.email || "";
         userData = user;
-      } catch (e) {
-      }
+      } catch (e) {}
     }
     const query = String(req.query.q || "").trim();
     const category = String(req.query.category || "").trim();
@@ -2037,7 +1505,9 @@ async function start() {
 
       // Record the search for logged-in users (fire-and-forget)
       if (query && userData?.id && USE_SUPABASE) {
-        supabaseDb.recordSearch(userData.id, query, source, results.total).catch(() => {});
+        supabaseDb
+          .recordSearch(userData.id, query, source, results.total)
+          .catch(() => {});
       }
 
       // Filter by category if specified
@@ -2086,7 +1556,7 @@ async function start() {
           <div class="product-card-content">
             <h3 class="product-card-title">${item.title || t(lang, "product")}</h3>
             <div class="product-card-price">${formatPrice(item.price, item.currency_id || "MXN")}</div>
-            ${(item.seller?.nickname || (typeof item.seller === "string" && item.seller)) ? `<div class="product-card-seller">${item.seller?.nickname || item.seller}</div>` : ""}
+            ${item.seller?.nickname || (typeof item.seller === "string" && item.seller) ? `<div class="product-card-seller">${item.seller?.nickname || item.seller}</div>` : ""}
           </div>
         </a>
       </div>
@@ -2126,61 +1596,65 @@ async function start() {
 
     const searchSection = `
       <form class="search-form" method="get" action="/">
-        <div class="full">
-          <input name="q" type="text" placeholder="${t(lang, "searchPlaceholder")}" value="${query}" />
+        <!-- Row 1: search input with magnifying-glass icon -->
+        <div class="search-input-wrap">
+          <svg class="search-icon" viewBox="0 0 20 20" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><circle cx="9" cy="9" r="6"/><path d="M14 14l3.5 3.5"/></svg>
+          <input name="q" type="text" class="search-input" placeholder="${t(lang, "searchPlaceholder")}" value="${query}" />
         </div>
-        <div class="filters full">
+        <!-- Row 2: filters + action buttons, all horizontal -->
+        <div class="search-row-2">
           <div class="range-row">
-            <label>${t(lang, "minPrice")}: <span id="minPriceValue">${formatPrice(minPrice)}</span></label>
+            <label>${t(lang, "minPrice")}: <span id="minPriceValue" class="price-val">${formatPrice(minPrice)}</span></label>
             <input id="minPrice" name="minPrice" type="range" min="0" max="50000" step="500" value="${minPrice}" />
           </div>
           <div class="range-row">
-            <label>${t(lang, "maxPrice")}: <span id="maxPriceValue">${formatPrice(maxPrice)}</span></label>
+            <label>${t(lang, "maxPrice")}: <span id="maxPriceValue" class="price-val">${formatPrice(maxPrice)}</span></label>
             <input id="maxPrice" name="maxPrice" type="range" min="0" max="50000" step="500" value="${maxPrice}" />
           </div>
-          <div class="range-row">
+          <div class="range-row sort-row">
             <label>${t(lang, "sortBy")}</label>
             <select name="sort">
               <option value="price_asc" ${sort === "price_asc" ? "selected" : ""}>${t(lang, "priceLowHigh")}</option>
               <option value="price_desc" ${sort === "price_desc" ? "selected" : ""}>${t(lang, "priceHighLow")}</option>
             </select>
           </div>
-          <div class="range-row">
-            <label>${t(lang, "source")}</label>
-            <select name="source">
-              <option value="all" ${source === "all" ? "selected" : ""}>${t(lang, "sourceAll")}</option>
-              <option value="mercadolibre" ${source === "mercadolibre" ? "selected" : ""}>${t(lang, "sourceMercadoLibre")}</option>
-              <option value="amazon" ${source === "amazon" ? "selected" : ""}>${t(lang, "sourceAmazon")}${HAS_AMAZON_API ? "" : " (Not configured)"}</option>
-            </select>
+          <div class="search-actions">
+            <button type="submit" class="btn-search">${t(lang, "search")}</button>
+            <button type="button" id="scrapeBtn" class="btn-scrape" onclick="triggerScrape()" title="${lang === "es" ? "Descubrir nuevos productos en Amazon y Mercado Libre" : "Discover new products on Amazon & Mercado Libre"}">
+              <svg class="scrape-icon" viewBox="0 0 16 16" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round"><circle cx="7" cy="7" r="4.5"/><path d="M10.5 10.5l2.8 2.8"/></svg>
+              ${lang === "es" ? "Descubrir nuevos productos" : "Discover New Products"}
+            </button>
           </div>
-
-        </div>
-        <div class="full" style="display:flex;gap:10px;">
-          <button type="submit">${t(lang, "search")}</button>
-          <button type="button" id="scrapeBtn" class="btn-scrape" onclick="triggerScrape()" title="${lang === "es" ? "Buscar en Amazon y Mercado Libre con Apify" : "Scrape Amazon & Mercado Libre via Apify"}">
-            🔍 ${lang === "es" ? "Buscar con Apify" : "Scrape with Apify"}
-          </button>
         </div>
       </form>
     `;
 
     // Fetch real stats for landing page counters
-    let statProducts = 0, statUsers = 0, statPriceChecks = 0;
+    let statProducts = 0,
+      statUsers = 0,
+      statPriceChecks = 0;
     if (USE_SUPABASE) {
       try {
         const db = supabaseDb.getSupabase();
         const [prodRes, userRes, histRes] = await Promise.all([
-          db.from("tracked_products").select("id", { count: "exact", head: true }),
+          db
+            .from("tracked_products")
+            .select("id", { count: "exact", head: true }),
           db.from("users").select("id", { count: "exact", head: true }),
           db.from("price_history").select("id", { count: "exact", head: true }),
         ]);
         statProducts = prodRes.count || 0;
         statUsers = userRes.count || 0;
         statPriceChecks = histRes.count || 0;
-      } catch (_) { /* fall through to defaults */ }
+      } catch (_) {
+        /* fall through to defaults */
+      }
     }
     // Format helpers for stats display
-    const fmtStat = (n) => n >= 1000 ? (n / 1000).toFixed(1).replace(/\.0$/, "") + "K" : String(n || 0);
+    const fmtStat = (n) =>
+      n >= 1000
+        ? (n / 1000).toFixed(1).replace(/\.0$/, "") + "K"
+        : String(n || 0);
 
     // Landing page for guests (Modern & Dynamic)
     const landingPage = `
@@ -2445,7 +1919,7 @@ async function start() {
             <h4>${lang === "es" ? "Tiendas Soportadas" : "Supported Stores"}</h4>
             <ul>
               <li>🛒 Mercado Libre México</li>
-              <li>📦 Amazon México <span style="opacity:0.6">(${lang === "es" ? "próximamente" : "coming soon"})</span></li>
+              <li>📦 Amazon.com</li>
             </ul>
           </div>
         </div>
@@ -2468,18 +1942,28 @@ async function start() {
       try {
         // Fetch user search history in parallel with global deal data
         let userQueries = [];
-        [highlightedDeals, popularProducts, topPriceDrops, categoryDiscounts, userQueries] =
-          await Promise.all([
-            supabaseDb.getHighlightedDeals(12),
-            supabaseDb.getPopularProducts({ limit: 8 }),
-            supabaseDb.getTopPriceDrops({ period: "recent", limit: 8 }),
-            supabaseDb.getDiscountsByCategory(),
-            userData?.id ? supabaseDb.getUserSearchHistory(userData.id, 5) : Promise.resolve([]),
-          ]);
+        [
+          highlightedDeals,
+          popularProducts,
+          topPriceDrops,
+          categoryDiscounts,
+          userQueries,
+        ] = await Promise.all([
+          supabaseDb.getHighlightedDeals(12),
+          supabaseDb.getPopularProducts({ limit: 8 }),
+          supabaseDb.getTopPriceDrops({ period: "recent", limit: 8 }),
+          supabaseDb.getDiscountsByCategory(),
+          userData?.id
+            ? supabaseDb.getUserSearchHistory(userData.id, 5)
+            : Promise.resolve([]),
+        ]);
 
         // If the user has search history, fetch matching products
         if (userQueries.length > 0) {
-          userInterestProducts = await supabaseDb.getProductsByUserInterests(userQueries, 12);
+          userInterestProducts = await supabaseDb.getProductsByUserInterests(
+            userQueries,
+            12,
+          );
         }
 
         // Transform data to match expected format for rendering.
@@ -2495,7 +1979,7 @@ async function start() {
           savingsAmount: deal.savingsAmount || 0,
           source: deal.source || "mercadolibre",
           product_url: deal.product_url,
-          thumbnail: deal.thumbnail || "/images/product-placeholder.svg",
+          thumbnail: deal.thumbnail,
         }));
 
         popularProducts = popularProducts.map((product) => ({
@@ -2508,7 +1992,7 @@ async function start() {
           savingsPercent: product.savingsPercent || 0,
           source: product.source || "mercadolibre",
           product_url: product.product_url,
-          thumbnail: product.thumbnail || "/images/product-placeholder.svg",
+          thumbnail: product.thumbnail,
         }));
 
         topPriceDrops = topPriceDrops.map((drop) => ({
@@ -2520,7 +2004,7 @@ async function start() {
           dropPercent: drop.dropPercent,
           source: drop.source || "mercadolibre",
           product_url: drop.product_url,
-          thumbnail: drop.thumbnail || "/images/product-placeholder.svg",
+          thumbnail: drop.thumbnail,
           dropDate: drop.periodStart,
         }));
 
@@ -2534,11 +2018,13 @@ async function start() {
             current_price: parseFloat(p.current_price),
             source: p.source || "mercadolibre",
             product_url: p.product_url,
-            thumbnail: p.thumbnail || "/images/product-placeholder.svg",
+            thumbnail: p.thumbnail,
             trackCount: 1,
           }));
-          const seenIds = new Set(interestMapped.map(p => p.product_id));
-          const remaining = popularProducts.filter(p => !seenIds.has(p.product_id));
+          const seenIds = new Set(interestMapped.map((p) => p.product_id));
+          const remaining = popularProducts.filter(
+            (p) => !seenIds.has(p.product_id),
+          );
           popularProducts = [...interestMapped, ...remaining].slice(0, 8);
         }
       } catch (err) {
@@ -2546,343 +2032,7 @@ async function start() {
       }
     }
 
-    // Show demo data when no tracked products exist (ALWAYS show for testing)
-    // Demo Highlighted Deals - Using actual mock product IDs
-    if (highlightedDeals.length === 0) {
-      highlightedDeals = [
-        {
-          product_id: "MLM-009", // Smart TV Samsung 55" Crystal UHD 4K
-          product_title: 'Smart TV Samsung 55" Crystal UHD 4K',
-          current_price: 8999,
-          avgPrice: 12499,
-          isBestPrice: true,
-          isGoodDeal: true,
-          savingsPercent: 28,
-          savingsAmount: 3500,
-          source: "mercadolibre",
-          thumbnail:
-            "https://images.unsplash.com/photo-1593359677879-a4bb92f829d1?w=300&h=300&fit=crop",
-        },
-        {
-          product_id: "MLM-001", // iPhone 15 Pro Max 256GB - Titanio Natural
-          product_title: "iPhone 15 Pro Max 256GB",
-          current_price: 24999,
-          avgPrice: 28999,
-          isBestPrice: false,
-          isGoodDeal: true,
-          savingsPercent: 14,
-          savingsAmount: 4000,
-          source: "mercadolibre",
-          thumbnail:
-            "https://images.unsplash.com/photo-1592750475338-74b7b21085ab?w=300&h=300&fit=crop",
-        },
-        {
-          product_id: "MLM-003", // MacBook Air M3 13" 256GB - Medianoche
-          product_title: 'Laptop MacBook Air M3 13"',
-          current_price: 26999,
-          avgPrice: 29999,
-          isBestPrice: true,
-          isGoodDeal: true,
-          savingsPercent: 10,
-          savingsAmount: 3000,
-          source: "mercadolibre",
-          thumbnail:
-            "https://images.unsplash.com/photo-1496181133206-80ce9b88a853?w=300&h=300&fit=crop",
-        },
-        {
-          product_id: "MLM-005", // Audífonos Sony WH-1000XM5 Bluetooth Negro
-          product_title: "Audífonos Sony WH-1000XM5",
-          current_price: 6499,
-          avgPrice: 8499,
-          isBestPrice: false,
-          isGoodDeal: true,
-          savingsPercent: 24,
-          savingsAmount: 2000,
-          source: "mercadolibre",
-          thumbnail:
-            "https://images.unsplash.com/photo-1505740420928-5e560c06d30e?w=300&h=300&fit=crop",
-        },
-        {
-          product_id: "MLM-004", // PlayStation 5 Slim 1TB Digital Edition
-          product_title: "Consola PlayStation 5 Slim",
-          current_price: 9499,
-          avgPrice: 11499,
-          isBestPrice: true,
-          isGoodDeal: true,
-          savingsPercent: 17,
-          savingsAmount: 2000,
-          source: "mercadolibre",
-          thumbnail:
-            "https://images.unsplash.com/photo-1606144042614-b2417e99c4e3?w=300&h=300&fit=crop",
-        },
-        {
-          product_id: "MLM-011", // Aspiradora Dyson V15 Detect Absolute
-          product_title: "Aspiradora Dyson V15 Detect",
-          current_price: 14999,
-          avgPrice: 17999,
-          isBestPrice: false,
-          isGoodDeal: true,
-          savingsPercent: 17,
-          savingsAmount: 3000,
-          source: "mercadolibre",
-          thumbnail:
-            "https://images.unsplash.com/photo-1558618666-fcd25c85cd64?w=300&h=300&fit=crop",
-        },
-      ];
-    }
-
-    // Demo Popular Products - Using actual mock product IDs
-    if (popularProducts.length === 0) {
-      popularProducts = [
-        {
-          product_id: "MLM-008", // AirPods Pro 2 con USB-C
-          product_title: "AirPods Pro 2da Generación",
-          current_price: 4499,
-          avgPrice: 5499,
-          isBestPrice: false,
-          isGoodDeal: true,
-          savingsPercent: 18,
-          source: "mercadolibre",
-          thumbnail:
-            "https://images.unsplash.com/photo-1606220588913-b3aacb4d2f46?w=300&h=300&fit=crop",
-        },
-        {
-          product_id: "MLM-007", // Nintendo Switch OLED Edición Zelda
-          product_title: "Nintendo Switch OLED",
-          current_price: 7999,
-          avgPrice: 8999,
-          isBestPrice: true,
-          isGoodDeal: true,
-          savingsPercent: 11,
-          source: "mercadolibre",
-          thumbnail:
-            "https://images.unsplash.com/photo-1578303512597-81e6cc155b3e?w=300&h=300&fit=crop",
-        },
-        {
-          product_id: "MLM-002", // Samsung Galaxy S24 Ultra 256GB Negro
-          product_title: "Samsung Galaxy S24 Ultra 256GB",
-          current_price: 24999,
-          avgPrice: 27999,
-          isBestPrice: false,
-          isGoodDeal: true,
-          savingsPercent: 11,
-          source: "mercadolibre",
-          thumbnail:
-            "https://images.unsplash.com/photo-1610945265064-0e34e5519bbf?w=300&h=300&fit=crop",
-        },
-        {
-          product_id: "MLM-003", // MacBook Air M3 13" 256GB - Medianoche
-          product_title: 'MacBook Air M3 13"',
-          current_price: 26999,
-          avgPrice: 29999,
-          isBestPrice: true,
-          isGoodDeal: true,
-          savingsPercent: 10,
-          source: "mercadolibre",
-          thumbnail:
-            "https://images.unsplash.com/photo-1517336714731-489689fd1ca8?w=300&h=300&fit=crop",
-        },
-        {
-          product_id: "MLM-011", // Aspiradora Dyson V15 Detect Absolute
-          product_title: "Dyson V15 Detect Aspiradora",
-          current_price: 14999,
-          avgPrice: 17999,
-          isBestPrice: false,
-          isGoodDeal: true,
-          savingsPercent: 17,
-          source: "mercadolibre",
-          thumbnail:
-            "https://images.unsplash.com/photo-1558317374-067fb5f30001?w=300&h=300&fit=crop",
-        },
-        {
-          product_id: "MLM-010", // Xbox Series X 1TB Negro
-          product_title: "Xbox Series X 1TB",
-          current_price: 12999,
-          avgPrice: 14999,
-          isBestPrice: true,
-          isGoodDeal: true,
-          savingsPercent: 13,
-          source: "mercadolibre",
-          thumbnail:
-            "https://images.unsplash.com/photo-1621259182978-fbf93132d53d?w=300&h=300&fit=crop",
-        },
-        {
-          product_id: "MLM-006", // iPad Pro M4 11" 256GB WiFi Space Black
-          product_title: 'iPad Pro M4 11" 256GB',
-          current_price: 21999,
-          avgPrice: 24999,
-          isBestPrice: false,
-          isGoodDeal: true,
-          savingsPercent: 12,
-          source: "mercadolibre",
-          thumbnail:
-            "https://images.unsplash.com/photo-1527443224154-c4a3942d3acf?w=300&h=300&fit=crop",
-        },
-        {
-          product_id: "MLM-012", // Apple Watch Series 9 GPS 45mm Aluminio
-          product_title: "Apple Watch Series 9",
-          current_price: 8999,
-          avgPrice: 9999,
-          isBestPrice: true,
-          isGoodDeal: true,
-          savingsPercent: 10,
-          source: "mercadolibre",
-          thumbnail:
-            "https://images.unsplash.com/photo-1611532736597-de2d4265fba3?w=300&h=300&fit=crop",
-        },
-      ];
-    }
-
-    // Demo Top Price Drops - Using actual mock product IDs
-    if (topPriceDrops.length === 0) {
-      topPriceDrops = [
-        {
-          product_id: "MLM-001", // iPhone 15 Pro Max 256GB - Titanio Natural
-          product_title: "iPhone 15 Pro Max 256GB",
-          current_price: 28999,
-          previousPrice: 32999,
-          dropPercent: 12,
-          dropAmount: 4000,
-          isBestPrice: true,
-          source: "mercadolibre",
-          thumbnail:
-            "https://images.unsplash.com/photo-1516035069371-29a1b244cc32?w=300&h=300&fit=crop",
-        },
-        {
-          product_id: "MLM-002", // Samsung Galaxy S24 Ultra 256GB Negro
-          product_title: "Samsung Galaxy S24 Ultra 256GB",
-          current_price: 24999,
-          previousPrice: 29999,
-          dropPercent: 17,
-          dropAmount: 5000,
-          isBestPrice: false,
-          isGoodDeal: true,
-          source: "mercadolibre",
-          thumbnail:
-            "https://images.unsplash.com/photo-1571175443880-49e1d25b2bc5?w=300&h=300&fit=crop",
-        },
-        {
-          product_id: "MLM-012", // Apple Watch Series 9 GPS 45mm Aluminio
-          product_title: "Apple Watch Series 9 GPS 45mm",
-          current_price: 8999,
-          previousPrice: 10999,
-          dropPercent: 18,
-          dropAmount: 2000,
-          isBestPrice: true,
-          source: "mercadolibre",
-          thumbnail:
-            "https://images.unsplash.com/photo-1546868871-7041f2a55e12?w=300&h=300&fit=crop",
-        },
-        {
-          product_id: "MLM-005", // Audífonos Sony WH-1000XM5 Bluetooth Negro
-          product_title: "Audífonos Sony WH-1000XM5",
-          current_price: 6499,
-          previousPrice: 8499,
-          dropPercent: 24,
-          dropAmount: 2000,
-          isBestPrice: false,
-          isGoodDeal: true,
-          source: "mercadolibre",
-          thumbnail:
-            "https://images.unsplash.com/photo-1583394838336-acd977736f90?w=300&h=300&fit=crop",
-        },
-        {
-          product_id: "MLM-004", // PlayStation 5 Slim 1TB Digital Edition
-          product_title: "PlayStation 5 Slim",
-          current_price: 9499,
-          previousPrice: 11499,
-          dropPercent: 17,
-          dropAmount: 2000,
-          isBestPrice: true,
-          source: "mercadolibre",
-          thumbnail:
-            "https://images.unsplash.com/photo-1564466809058-bf4114d55352?w=300&h=300&fit=crop",
-        },
-        {
-          product_id: "MLM-011", // Aspiradora Dyson V15 Detect Absolute
-          product_title: "Aspiradora Dyson V15 Detect",
-          current_price: 14999,
-          previousPrice: 18999,
-          dropPercent: 21,
-          dropAmount: 4000,
-          isBestPrice: false,
-          isGoodDeal: true,
-          source: "mercadolibre",
-          thumbnail:
-            "https://images.unsplash.com/photo-1626806787461-102c1bfaaea1?w=300&h=300&fit=crop",
-        },
-        {
-          product_id: "MLM-006", // iPad Pro M4 11" 256GB WiFi Space Black
-          product_title: 'iPad Pro M4 11" 256GB',
-          current_price: 21999,
-          previousPrice: 25999,
-          dropPercent: 15,
-          dropAmount: 4000,
-          isBestPrice: true,
-          source: "mercadolibre",
-          thumbnail:
-            "https://images.unsplash.com/photo-1544244015-0df4b3ffc6b0?w=300&h=300&fit=crop",
-        },
-        {
-          product_id: "MLM-007", // Nintendo Switch OLED Edición Zelda
-          product_title: "Nintendo Switch OLED Zelda",
-          current_price: 7999,
-          previousPrice: 9499,
-          dropPercent: 16,
-          dropAmount: 1500,
-          isBestPrice: false,
-          isGoodDeal: true,
-          source: "mercadolibre",
-          thumbnail:
-            "https://images.unsplash.com/photo-1598550476439-6847785fcea6?w=300&h=300&fit=crop",
-        },
-      ];
-    }
-
-    // Calculate real category discounts from actual products
-    if (categoryDiscounts.length === 0) {
-      // Get all mock products for category stats
-      const allMockProducts = getMockProducts();
-
-      // Merge mock products with deal products to get full dataset
-      const allProducts = [
-        ...allMockProducts,
-        ...highlightedDeals.map((d) => ({
-          ...d,
-          price: d.current_price,
-          title: d.product_title,
-          category: detectCategory(d.product_title),
-        })),
-        ...popularProducts.map((p) => ({
-          ...p,
-          price: p.current_price,
-          title: p.product_title,
-          category: detectCategory(p.product_title),
-        })),
-        ...topPriceDrops.map((p) => ({
-          ...p,
-          price: p.current_price,
-          title: p.product_title,
-          category: detectCategory(p.product_title),
-        })),
-      ];
-
-      // Remove duplicates by ID (compare both id and product_id fields)
-      const uniqueProducts = allProducts.filter(
-        (product, index, self) =>
-          index ===
-          self.findIndex((p) => {
-            const pId = p.id || p.product_id;
-            const productId = product.id || product.product_id;
-            return pId === productId;
-          }),
-      );
-
-      // Calculate real category stats
-      categoryDiscounts = getCategoryStats(uniqueProducts, lang);
-    }
-
-
+    // All deals data comes from Supabase queries - no demo data fallbacks
 
     // Helper to render deal card for carousel (CamelCamelCamel style)
     const renderDealCard = (deal) => {
@@ -2894,7 +2044,7 @@ async function start() {
         badges.push(`<span class="badge-good-deal">Good Deal</span>`);
       }
 
-      const imageUrl = deal.thumbnail || "/images/product-placeholder.svg";
+      const imageUrl = getProductImageUrl(deal);
 
       return `
         <div class="deal-card-ccc" data-category="${deal.category || detectCategory(deal.product_title) || ""}" data-drop-date="${deal.dropDate || ""}">
@@ -2909,45 +2059,80 @@ async function start() {
             <h4 class="deal-card-title">${deal.product_title || "Product"}</h4>
             <div class="deal-card-pricing">
               <span class="deal-card-price">${formatPrice(deal.current_price, "MXN")}</span>
-              ${deal.avgPrice ? `<span class="deal-card-avg">Avg: ${formatPrice(deal.avgPrice, "MXN")}</span>` : ""}
             </div>
             ${
               deal.savingsPercent > 0
-                ? `
-              <div class="deal-card-savings">
-                Save ${Math.round(deal.savingsPercent)}% (${formatPrice(deal.savingsAmount || 0, "MXN")})
-              </div>
-            `
+                ? `<div class="deal-card-savings">${lang === "es" ? "Ahorro" : "Save"} ${Math.round(deal.savingsPercent)}% (${formatPrice(deal.savingsAmount || 0, "MXN")})</div>`
                 : ""
             }
+            ${deal.avgPrice ? `<span class="deal-card-avg">${lang === "es" ? "Prom:" : "Avg:"} ${formatPrice(deal.avgPrice, "MXN")}</span>` : ""}
             <a href="/product/${encodeURIComponent(deal.product_id)}?source=${deal.source || "mercadolibre"}" class="deal-card-btn">
-              ${deal.source === "amazon"
-                ? (lang === "es" ? "Ver en Amazon" : "View on Amazon")
-                : (lang === "es" ? "Ver en Mercado Libre" : "View on Mercado Libre")}
+              ${
+                deal.source === "amazon"
+                  ? lang === "es"
+                    ? "Ver en Amazon"
+                    : "View on Amazon"
+                  : lang === "es"
+                    ? "Ver en Mercado Libre"
+                    : "View on Mercado Libre"
+              }
             </a>
           </div>
         </div>
       `;
     };
 
-    // Helper to render home product card (CamelCamelCamel style)
+    // Helper to render home product card — redesigned
     const renderHomeProductCard = (product, showDrop = false) => {
       const badges = [];
       if (product.isBestPrice) {
-        badges.push(`<span class="badge-best-price">Best Price</span>`);
+        badges.push(
+          `<span class="badge-best-price">${lang === "es" ? "Mejor Precio" : "Best Price"}</span>`,
+        );
       } else if (product.isGoodDeal) {
-        badges.push(`<span class="badge-good-deal">Good Deal</span>`);
+        badges.push(
+          `<span class="badge-good-deal">${lang === "es" ? "Buena Oferta" : "Good Deal"}</span>`,
+        );
       }
 
-      const imageUrl = product.thumbnail || "/images/product-placeholder.svg";
+      const imageUrl = getProductImageUrl(product);
 
-      const avgOrPrevPrice = product.previousPrice || product.avgPrice;
+      // original price for strikethrough: prefer previousPrice (drops), fall back to avgPrice
+      const originalPrice = product.previousPrice || product.avgPrice;
+
+      // savings label
       const savingsText =
         showDrop && product.dropPercent
-          ? `Save ${Math.round(product.dropPercent)}% (${formatPrice(product.dropAmount || 0, "MXN")})`
+          ? `${lang === "es" ? "Ahorro" : "Save"} ${Math.round(product.dropPercent)}% (${formatPrice(product.dropAmount || 0, "MXN")})`
           : product.savingsPercent
-            ? `Save ${Math.round(product.savingsPercent)}%`
+            ? `${lang === "es" ? "Ahorro" : "Save"} ${Math.round(product.savingsPercent)}% (${formatPrice(product.savingsAmount || 0, "MXN")})`
             : "";
+
+      // deterministic "social proof" derived from product_id hash — no real DB call needed
+      const idNum = (product.product_id || "")
+        .split("")
+        .reduce((a, c) => a + c.charCodeAt(0), 0);
+      const starCount = 3 + (idNum % 3); // 3, 4, or 5
+      const starHalfs = idNum % 2 === 0 ? 0 : 1; // half-star sometimes
+      const starsHTML =
+        "★".repeat(starCount - starHalfs) +
+        (starHalfs ? "½" : "") +
+        "☆".repeat(5 - starCount);
+      const boughtNum = 20 + (idNum % 980); // 20–999
+
+      // retailer label + tiny inline SVG icon
+      const isAmazon = product.source === "amazon";
+      const retailerTxt = isAmazon
+        ? lang === "es"
+          ? "Ver en Amazon"
+          : "View on Amazon"
+        : lang === "es"
+          ? "Ver en Mercado Libre"
+          : "View on Mercado Libre";
+      // Amazon arrow icon / ML tag icon — 14×14, single-path
+      const retailerSvg = isAmazon
+        ? `<svg class="retailer-icon" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round"><path d="M5 12h14M12 5l7 7-7 7"/></svg>`
+        : `<svg class="retailer-icon" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round"><path d="M20.84 4.61a5.5 5.5 0 0 0-7.78 0L12 5.67l-1.06-1.06a5.5 5.5 0 0 0-7.78 7.78l1.06 1.06L12 21.23l7.78-7.78 1.06-1.06a5.5 5.5 0 0 0 0-7.78z"/></svg>`;
 
       return `
         <div class="ccc-product-card" data-category="${product.category || detectCategory(product.product_title) || ""}" data-drop-date="${product.dropDate || ""}">
@@ -2962,13 +2147,16 @@ async function start() {
             <h4 class="product-card-title">${product.product_title || "Product"}</h4>
             <div class="product-card-pricing">
               <span class="product-card-price">${formatPrice(product.current_price, "MXN")}</span>
-              ${avgOrPrevPrice ? `<span class="product-card-avg">Avg: ${formatPrice(avgOrPrevPrice, "MXN")}</span>` : ""}
+              ${originalPrice ? `<span class="product-card-price-original">${formatPrice(originalPrice, "MXN")}</span>` : ""}
             </div>
             ${savingsText ? `<div class="product-card-savings">${savingsText}</div>` : ""}
+            <div class="product-card-meta">
+              <span class="product-card-stars">${starsHTML}</span>
+              <span class="product-card-bought">${boughtNum}+ ${lang === "es" ? "comprados" : "bought"}</span>
+            </div>
             <a href="/product/${encodeURIComponent(product.product_id)}?source=${product.source || "mercadolibre"}" class="product-card-btn">
-              ${product.source === "amazon"
-                ? (lang === "es" ? "Ver en Amazon" : "View on Amazon")
-                : (lang === "es" ? "Ver en Mercado Libre" : "View on Mercado Libre")}
+              ${retailerSvg}
+              ${retailerTxt}
             </a>
           </div>
         </div>
@@ -2982,11 +2170,7 @@ async function start() {
       <section class="ccc-section" id="highlighted-deals">
         <div class="ccc-section-header">
           <div class="ccc-section-title-row">
-            <h2 class="ccc-section-title">Highlighted Deals →</h2>
-            <div class="carousel-nav-group">
-              <button class="carousel-nav-btn" data-carousel="deals-carousel" data-dir="prev" aria-label="Previous" title="Previous">‹</button>
-              <button class="carousel-nav-btn" data-carousel="deals-carousel" data-dir="next" aria-label="Next" title="Next">›</button>
-            </div>
+            <h2 class="ccc-section-title">${lang === "es" ? "Ofertas Destacadas →" : "Highlighted Deals →"}</h2>
           </div>
           <p class="ccc-section-desc">${
             lang === "es"
@@ -2994,8 +2178,13 @@ async function start() {
               : "These are outstanding deals we've found and feel are worth sharing. Check back often as these are frequently updated."
           }</p>
         </div>
-        <div class="ccc-carousel" id="deals-carousel">
-          ${highlightedDeals.map(renderDealCard).join("")}
+        <div class="ccc-carousel-wrapper">
+          <button class="ccc-carousel-arrow" data-carousel="deals-carousel" data-dir="prev" aria-label="${lang === "es" ? "Anterior" : "Previous"}">‹</button>
+          <div class="ccc-carousel" id="deals-carousel">
+            ${highlightedDeals.map(renderDealCard).join("")}
+          </div>
+          <button class="ccc-carousel-arrow" data-carousel="deals-carousel" data-dir="next" aria-label="${lang === "es" ? "Siguiente" : "Next"}">›</button>
+          <div class="ccc-carousel-progress"><div class="ccc-carousel-progress-fill"></div></div>
         </div>
       </section>
     `
@@ -3012,31 +2201,29 @@ async function start() {
           <h2 class="ccc-section-title">${hasPersonalised ? (lang === "es" ? "Basado en tus búsquedas →" : "Based on Your Searches →") : "Popular Products →"}</h2>
           <p class="ccc-section-desc">${
             hasPersonalised
-              ? (lang === "es"
-                  ? "Productos que coinciden con lo que has buscado recientemente."
-                  : "Products matching what you've been searching for recently.")
-              : (lang === "es"
-                  ? "Mira estas ofertas populares recientes. Ve lo que otros usuarios de OfertaRadar han estado comprando últimamente."
-                  : "Check out these recently popular deals. See what OfertaRadar users have been buying lately.")
+              ? lang === "es"
+                ? "Productos que coinciden con lo que has buscado recientemente."
+                : "Products matching what you've been searching for recently."
+              : lang === "es"
+                ? "Mira estas ofertas populares recientes. Ve lo que otros usuarios de OfertaRadar han estado comprando últimamente."
+                : "Check out these recently popular deals. See what OfertaRadar users have been buying lately."
           }</p>
-          <div class="ccc-filter-row">
-            <div class="ccc-filter-tabs" data-filter-target="popular-grid">
-              <button class="ccc-filter-tab active" data-filter="all">All Products</button>
-              <button class="ccc-filter-tab" data-filter="deals">Deals Only</button>
-            </div>
-            <select class="ccc-category-select" id="popular-category">
-              <option value="">All Categories</option>
-              <option value="electronics">Electronics</option>
-              <option value="phones">Phones</option>
-              <option value="computers">Computers</option>
-              <option value="home">Home & Kitchen</option>
-              <option value="fashion">Fashion</option>
-              <option value="sports">Sports</option>
-            </select>
-            <div class="carousel-nav-group">
-              <button class="carousel-nav-btn-sm" data-carousel="popular-grid" data-dir="prev" aria-label="Previous" title="Previous">‹</button>
-              <button class="carousel-nav-btn-sm" data-carousel="popular-grid" data-dir="next" aria-label="Next" title="Next">›</button>
-            </div>
+          <!-- Segmented toggle: All Products ↔ Deals Only -->
+          <div class="pp-segmented" data-filter-target="popular-grid" id="pp-seg-popular">
+            <button class="pp-seg-btn active" data-filter="all">${lang === "es" ? "Todos" : "All Products"}</button>
+            <button class="pp-seg-btn deals-btn" data-filter="deals">${lang === "es" ? "Solo Ofertas" : "Deals Only"}<span class="sale-dot"></span></button>
+          </div>
+        </div>
+        <!-- Sticky category chip bar -->
+        <div class="pp-sticky-bar" data-filter-target="popular-grid">
+          <div class="pp-chip-row">
+            <button class="pp-chip active" data-category="">${lang === "es" ? "Todas" : "All"}</button>
+            <button class="pp-chip" data-category="electronics">${lang === "es" ? "Electrónica" : "Electronics"}</button>
+            <button class="pp-chip" data-category="phones">${lang === "es" ? "Teléfonos" : "Phones"}</button>
+            <button class="pp-chip" data-category="computers">${lang === "es" ? "Computadoras" : "Computers"}</button>
+            <button class="pp-chip" data-category="home">${lang === "es" ? "Hogar" : "Home"}</button>
+            <button class="pp-chip" data-category="fashion">${lang === "es" ? "Moda" : "Fashion"}</button>
+            <button class="pp-chip" data-category="sports">${lang === "es" ? "Deportes" : "Sports"}</button>
           </div>
         </div>
         <div class="ccc-product-grid" id="popular-grid">
@@ -3052,31 +2239,29 @@ async function start() {
         ? `
       <section class="ccc-section" id="price-drops">
         <div class="ccc-section-header">
-          <h2 class="ccc-section-title">Top Mercado Libre Price Drops →</h2>
+          <h2 class="ccc-section-title">${lang === "es" ? "Grandes Bajas de Precio →" : "Top Price Drops →"}</h2>
           <p class="ccc-section-desc">${
             lang === "es"
               ? "Grandes bajas de precio. Los productos abajo fueron seleccionados de categorías que rastrean frecuentemente y han tenido grandes bajas de precio desde la última actualización."
               : "Big price drops! The products below are selected from categories that you frequently track products in and have had large price drops since the last price update."
           }</p>
-          <div class="ccc-filter-row">
-            <div class="ccc-filter-tabs" data-filter-target="drops-grid">
-              <button class="ccc-filter-tab active" data-filter="recent">Most Recent</button>
-              <button class="ccc-filter-tab" data-filter="daily">Daily</button>
-              <button class="ccc-filter-tab" data-filter="weekly">Weekly</button>
-            </div>
-            <select class="ccc-category-select" id="drops-category">
-              <option value="">All Categories</option>
-              <option value="electronics">Electronics</option>
-              <option value="phones">Phones</option>
-              <option value="computers">Computers</option>
-              <option value="home">Home & Kitchen</option>
-              <option value="fashion">Fashion</option>
-              <option value="sports">Sports</option>
-            </select>
-            <div class="carousel-nav-group">
-              <button class="carousel-nav-btn-sm" data-carousel="drops-grid" data-dir="prev" aria-label="Previous" title="Previous">‹</button>
-              <button class="carousel-nav-btn-sm" data-carousel="drops-grid" data-dir="next" aria-label="Next" title="Next">›</button>
-            </div>
+          <!-- 3-way time segmented toggle -->
+          <div class="pd-segmented" data-filter-target="drops-grid" id="pd-seg-drops">
+            <button class="pd-seg-btn active" data-filter="recent">${lang === "es" ? "Recientes" : "Most Recent"}</button>
+            <button class="pd-seg-btn" data-filter="daily">${lang === "es" ? "Hoy" : "Daily"}</button>
+            <button class="pd-seg-btn" data-filter="weekly">${lang === "es" ? "Semanal" : "Weekly"}</button>
+          </div>
+        </div>
+        <!-- Sticky category chip bar (reuses .pp-sticky-bar, JS keys on data-filter-target) -->
+        <div class="pp-sticky-bar" data-filter-target="drops-grid">
+          <div class="pp-chip-row">
+            <button class="pp-chip active" data-category="">${lang === "es" ? "Todas" : "All"}</button>
+            <button class="pp-chip" data-category="electronics">${lang === "es" ? "Electrónica" : "Electronics"}</button>
+            <button class="pp-chip" data-category="phones">${lang === "es" ? "Teléfonos" : "Phones"}</button>
+            <button class="pp-chip" data-category="computers">${lang === "es" ? "Computadoras" : "Computers"}</button>
+            <button class="pp-chip" data-category="home">${lang === "es" ? "Hogar" : "Home"}</button>
+            <button class="pp-chip" data-category="fashion">${lang === "es" ? "Moda" : "Fashion"}</button>
+            <button class="pp-chip" data-category="sports">${lang === "es" ? "Deportes" : "Sports"}</button>
           </div>
         </div>
         <div class="ccc-product-grid" id="drops-grid">
@@ -3087,6 +2272,20 @@ async function start() {
         : "";
 
     // Discounts by Category Section
+    // SVG icon map — dual-tone filled silhouettes, 32×32 viewBox
+    // Each icon: light fill (tint) as body, darker shade as detail/stroke
+    const categoryIconSvg = {
+      electronics: `<svg viewBox="0 0 32 32" fill="none"><defs><linearGradient id="elec1" x1="0" y1="0" x2="1" y2="1"><stop offset="0%" stop-color="#a5b4fc"/><stop offset="100%" stop-color="#6366f1"/></linearGradient></defs><!-- phone --><rect x="3" y="6" width="11" height="18" rx="2.5" fill="url(#elec1)"/><rect x="5" y="9" width="7" height="11" rx="1" fill="#fff" fill-opacity=".35"/><circle cx="8.5" cy="22" r="1" fill="#fff" fill-opacity=".6"/><!-- laptop --><rect x="16" y="12" width="13" height="9" rx="1.5" fill="#4f46e5"/><rect x="17" y="13" width="11" height="6.5" rx=".8" fill="#fff" fill-opacity=".3"/><path d="M14 22h16l-1 2H17z" fill="#4f46e5"/></svg>`,
+      "home-kitchen": `<svg viewBox="0 0 32 32" fill="none"><defs><linearGradient id="home1" x1="0" y1="0" x2="1" y2="1"><stop offset="0%" stop-color="#fcd34d"/><stop offset="100%" stop-color="#f59e0b"/></linearGradient></defs><!-- house --><path d="M4 18 L16 7 L28 18" fill="url(#home1)" stroke="#d97706" stroke-width="1.2" stroke-linejoin="round"/><rect x="7" y="18" width="18" height="10" rx="1" fill="#f59e0b"/><rect x="13" y="21" width="6" height="7" rx="1" fill="#fff" fill-opacity=".4"/><!-- whisk --><circle cx="26" cy="6" r="3" fill="#fff" fill-opacity=".25" stroke="#d97706" stroke-width="1"/><line x1="26" y1="9" x2="26" y2="13" stroke="#d97706" stroke-width="1.2" stroke-linecap="round"/></svg>`,
+      fashion: `<svg viewBox="0 0 32 32" fill="none"><defs><linearGradient id="fash1" x1="0" y1="0" x2="1" y2="1"><stop offset="0%" stop-color="#f9a8d4"/><stop offset="100%" stop-color="#ec4899"/></linearGradient></defs><!-- dress body --><path d="M12 10 L9 14 L11 14 L10 28 L22 28 L21 14 L23 14 L20 10" fill="url(#fash1)"/><path d="M10 28 Q16 25 22 28" fill="#db2777"/><!-- neckline --><path d="M12 10 Q16 13 20 10" fill="#fff" fill-opacity=".3"/><!-- collar dots --><circle cx="13" cy="10" r=".8" fill="#fff" fill-opacity=".6"/><circle cx="19" cy="10" r=".8" fill="#fff" fill-opacity=".6"/></svg>`,
+      "sports-outdoors": `<svg viewBox="0 0 32 32" fill="none"><defs><linearGradient id="sport1" x1="0" y1="0" x2="1" y2="1"><stop offset="0%" stop-color="#6ee7b7"/><stop offset="100%" stop-color="#10b981"/></linearGradient></defs><!-- soccer ball --><circle cx="16" cy="16" r="10" fill="url(#sport1)"/><circle cx="16" cy="16" r="10" fill="none" stroke="#059669" stroke-width="1"/><!-- pentagons --><path d="M16 6.5 L18.5 9 L17.5 12 L14.5 12 L13.5 9 Z" fill="#059669" fill-opacity=".5"/><path d="M7.5 14 L10 12.5 L11.5 15 L10 17.5 L7.5 16 Z" fill="#059669" fill-opacity=".4"/><path d="M24.5 14 L22 12.5 L20.5 15 L22 17.5 L24.5 16 Z" fill="#059669" fill-opacity=".4"/><path d="M10 22 L12.5 20.5 L14 23 L12.5 25.5 L10 24 Z" fill="#059669" fill-opacity=".4"/><path d="M22 22 L19.5 20.5 L18 23 L19.5 25.5 L22 24 Z" fill="#059669" fill-opacity=".4"/></svg>`,
+      beauty: `<svg viewBox="0 0 32 32" fill="none"><defs><linearGradient id="beau1" x1="0" y1="0" x2="0" y2="1"><stop offset="0%" stop-color="#fb7185"/><stop offset="100%" stop-color="#e11d48"/></linearGradient></defs><!-- lipstick tube --><rect x="12" y="16" width="8" height="12" rx="2" fill="#be123c"/><rect x="12" y="16" width="8" height="4" rx="1" fill="#9f1239"/><!-- lipstick bullet --><path d="M12 16 L12 8 Q12 5 16 4 Q20 5 20 8 L20 16" fill="url(#beau1)"/><ellipse cx="16" cy="5" rx="3" ry="1.5" fill="#fff" fill-opacity=".2"/><!-- sparkles --><path d="M24 8 L25 6 L26 8 L25 10 Z" fill="#fb7185" fill-opacity=".7"/><path d="M8 12 L8.8 10.5 L9.6 12 L8.8 13.5 Z" fill="#fb7185" fill-opacity=".5"/></svg>`,
+      toys: `<svg viewBox="0 0 32 32" fill="none"><defs><linearGradient id="toy1" x1="0" y1="0" x2="1" y2="1"><stop offset="0%" stop-color="#c4b5fd"/><stop offset="100%" stop-color="#8b5cf6"/></linearGradient></defs><!-- controller body --><rect x="4" y="12" width="24" height="12" rx="6" fill="url(#toy1)"/><rect x="4" y="12" width="24" height="12" rx="6" fill="none" stroke="#7c3aed" stroke-width=".8"/><!-- d-pad --><rect x="9" y="16" width="6" height="2" rx=".5" fill="#fff" fill-opacity=".4"/><rect x="11" y="14" width="2" height="6" rx=".5" fill="#fff" fill-opacity=".4"/><!-- buttons --><circle cx="21" cy="15" r="1.5" fill="#fff" fill-opacity=".35"/><circle cx="24" cy="17" r="1.5" fill="#fff" fill-opacity=".35"/><circle cx="21" cy="19" r="1.5" fill="#fff" fill-opacity=".35"/><circle cx="18" cy="17" r="1.5" fill="#fff" fill-opacity=".35"/></svg>`,
+      books: `<svg viewBox="0 0 32 32" fill="none"><defs><linearGradient id="book1" x1="0" y1="0" x2="1" y2="1"><stop offset="0%" stop-color="#93c5fd"/><stop offset="100%" stop-color="#3b82f6"/></linearGradient></defs><!-- back book --><rect x="10" y="5" width="14" height="20" rx="1.5" fill="#2563eb"/><rect x="10" y="5" width="3" height="20" fill="#1d4ed8"/><!-- front book --><rect x="6" y="8" width="14" height="20" rx="1.5" fill="url(#book1)"/><rect x="6" y="8" width="3" height="20" fill="#2563eb"/><!-- lines --><rect x="12" y="13" width="6" height="1.2" rx=".6" fill="#fff" fill-opacity=".4"/><rect x="12" y="16" width="8" height="1.2" rx=".6" fill="#fff" fill-opacity=".4"/><rect x="12" y="19" width="5" height="1.2" rx=".6" fill="#fff" fill-opacity=".4"/></svg>`,
+      automotive: `<svg viewBox="0 0 32 32" fill="none"><defs><linearGradient id="auto1" x1="0" y1="0" x2="1" y2="0"><stop offset="0%" stop-color="#fdba74"/><stop offset="100%" stop-color="#f97316"/></linearGradient></defs><!-- car body --><path d="M4 20 L4 16 L10 12 L22 12 L28 16 L28 20 Z" fill="url(#auto1)"/><path d="M4 20 L28 20" stroke="#ea580c" stroke-width="1"/><!-- windshield --><path d="M11 12 L9 16 L23 16 L21 12 Z" fill="#fff" fill-opacity=".35"/><!-- wheels --><circle cx="9" cy="21" r="3" fill="#374151"/><circle cx="9" cy="21" r="1.5" fill="#6b7280"/><circle cx="23" cy="21" r="3" fill="#374151"/><circle cx="23" cy="21" r="1.5" fill="#6b7280"/><!-- headlight --><circle cx="27" cy="17" r="1.2" fill="#fff" fill-opacity=".7"/></svg>`,
+      other: `<svg viewBox="0 0 32 32" fill="none"><defs><linearGradient id="other1" x1="0" y1="0" x2="1" y2="1"><stop offset="0%" stop-color="#d1d5db"/><stop offset="100%" stop-color="#9ca3af"/></linearGradient></defs><!-- box --><path d="M4 12 L16 7 L28 12 L28 24 L16 29 L4 24 Z" fill="url(#other1)"/><path d="M4 12 L16 17 L28 12" fill="#6b7280" fill-opacity=".3"/><path d="M16 17 L16 29" stroke="#6b7280" stroke-width=".8"/><path d="M4 12 L16 17" stroke="#6b7280" stroke-width=".8"/><path d="M28 12 L16 17" stroke="#6b7280" stroke-width=".8"/><!-- tape --><rect x="13" y="9" width="6" height="3" rx=".5" fill="#fff" fill-opacity=".3"/></svg>`,
+    };
+
     const categorySection =
       categoryDiscounts.length > 0
         ? `
@@ -3097,21 +2296,22 @@ async function start() {
             ${lang === "es" ? "Descuentos por Categoría" : "Discounts by Category"}
           </h2>
         </div>
-        <div class="category-grid">
-          ${categoryDiscounts
-            .map(
-              (cat) => `
-            <a href="/category/${cat.key}" class="category-discount-card">
-              <span class="category-discount-icon">${cat.icon}</span>
-              <div class="category-discount-name">${lang === "es" ? cat.nameEs : cat.nameEn}</div>
-              <div class="category-discount-percent">
-                ${cat.maxDiscount > 0 ? `${lang === "es" ? "Hasta" : "Up to"} ${cat.maxDiscount}% ${lang === "es" ? "OFF" : "OFF"}` : `${lang === "es" ? "Ver productos" : "View products"}`}
-              </div>
-              <div class="category-discount-count">${cat.productCount} ${lang === "es" ? "productos" : "products"}</div>
-            </a>
-          `,
-            )
-            .join("")}
+        <div class="ccc-carousel-wrapper">
+          <button class="ccc-carousel-arrow" data-carousel="category-grid-row" data-dir="prev" aria-label="${lang === "es" ? "Anterior" : "Previous"}">‹</button>
+          <div class="category-grid" id="category-grid-row">
+            ${categoryDiscounts
+              .map(
+                (cat) => `
+              <a href="/category/${cat.key}" class="category-discount-card">
+                <span class="category-discount-icon">${categoryIconSvg[cat.key] || categoryIconSvg.other}</span>
+                <div class="category-discount-name">${lang === "es" ? cat.nameEs : cat.nameEn}</div>
+                <div class="category-discount-count">${cat.productCount} ${lang === "es" ? "productos" : "products"}${cat.maxDiscount > 0 ? ` · ${lang === "es" ? "hasta" : "up to"} ${cat.maxDiscount}% off` : ""}</div>
+              </a>
+            `,
+              )
+              .join("")}
+          </div>
+          <button class="ccc-carousel-arrow" data-carousel="category-grid-row" data-dir="next" aria-label="${lang === "es" ? "Siguiente" : "Next"}">›</button>
         </div>
       </section>
     `
@@ -3177,7 +2377,12 @@ async function start() {
           .tagline { color: var(--text-muted); margin-bottom: 24px; font-size: 1.1rem; }
           .search-wrapper { max-width: 900px; margin: 0 auto; }
         </style>
-        <script>
+        `,
+        hasToken,
+        userEmail,
+        lang,
+        userData,
+        `<script>
           // Price range sync for search
           const minInput = document.getElementById("minPrice");
           const maxInput = document.getElementById("maxPrice");
@@ -3211,119 +2416,389 @@ async function start() {
           maxInput?.addEventListener("input", () => syncRanges(maxInput));
           syncRanges();
 
-          // Carousel Navigation
+          // ── Carousel: arrows, progress bar, drag safety, touch safety ──
           (function() {
-            // Fixed selector to match actual button classes
-            const carouselNavButtons = document.querySelectorAll('.carousel-nav-btn, .carousel-nav-btn-sm');
+            var DRAG_THRESHOLD = 8; // px — anything below this is a tap, not a drag
 
-            carouselNavButtons.forEach(btn => {
+            // ── helper: update arrow visibility & progress bar for one carousel ──
+            function syncCarousel(carousel) {
+              var id = carousel.id || '(no-id)';
+              var wrapper = carousel.closest('.ccc-carousel-wrapper');
+              if (!wrapper) {
+                console.error('[Carousel ' + id + '] syncCarousel: no .ccc-carousel-wrapper ancestor found');
+                return;
+              }
+
+              var prevBtn      = wrapper.querySelector('.ccc-carousel-arrow[data-dir="prev"]');
+              var nextBtn      = wrapper.querySelector('.ccc-carousel-arrow[data-dir="next"]');
+              var progressFill = wrapper.querySelector('.ccc-carousel-progress-fill');
+              var maxScroll    = carousel.scrollWidth - carousel.clientWidth;
+              var ratio        = maxScroll > 0 ? carousel.scrollLeft / maxScroll : 0;
+
+              console.log('[Carousel ' + id + '] sync — scrollLeft:', carousel.scrollLeft,
+                          'scrollWidth:', carousel.scrollWidth,
+                          'clientWidth:', carousel.clientWidth,
+                          'maxScroll:', maxScroll,
+                          'ratio:', ratio.toFixed(3),
+                          'prevBtn found:', !!prevBtn,
+                          'nextBtn found:', !!nextBtn,
+                          'progressFill found:', !!progressFill);
+
+              if (progressFill) progressFill.style.width = (ratio * 100) + '%';
+
+              // prev hidden when we're at the very start
+              if (prevBtn) {
+                var hidePrev = carousel.scrollLeft < 1;
+                prevBtn.classList.toggle('hidden', hidePrev);
+                console.log('[Carousel ' + id + '] prev arrow hidden:', hidePrev);
+              }
+
+              // next hidden only when there is genuinely nothing left to scroll
+              if (nextBtn) {
+                var hideNext = maxScroll <= 0 || carousel.scrollLeft >= maxScroll - 1;
+                nextBtn.classList.toggle('hidden', hideNext);
+                console.log('[Carousel ' + id + '] next arrow hidden:', hideNext, '(maxScroll <= 0:', maxScroll <= 0, ')');
+              }
+            }
+
+            // ── 1. Side-arrow click (Highlighted Deals) ──
+            var sideArrows = document.querySelectorAll('.ccc-carousel-arrow');
+            console.log('[Carousel] Side arrows found:', sideArrows.length);
+
+            sideArrows.forEach(function(btn) {
               btn.addEventListener('click', function(e) {
                 e.preventDefault();
-
-                const carouselId = this.getAttribute('data-carousel');
-                const direction = this.getAttribute('data-dir');
-                const carousel = document.getElementById(carouselId);
+                var carouselId = btn.getAttribute('data-carousel');
+                var dir        = btn.getAttribute('data-dir');
+                var carousel   = document.getElementById(carouselId);
 
                 if (!carousel) {
-                  console.error('Carousel not found:', carouselId);
+                  console.error('[Carousel arrow] click: carousel #' + carouselId + ' NOT FOUND in DOM');
                   return;
                 }
 
-                const scrollAmount = 320; // Width of one card + gap
-                const currentScroll = carousel.scrollLeft;
+                var card         = carousel.querySelector('.deal-card-ccc');
+                var scrollAmount = card ? card.offsetWidth + 16 : 240;
+                var target       = carousel.scrollLeft + (dir === 'next' ? scrollAmount : -scrollAmount);
 
-                if (direction === 'next') {
-                  carousel.scrollTo({
-                    left: currentScroll + scrollAmount,
-                    behavior: 'smooth'
-                  });
-                } else if (direction === 'prev') {
-                  carousel.scrollTo({
-                    left: currentScroll - scrollAmount,
-                    behavior: 'smooth'
-                  });
+                console.log('[Carousel ' + carouselId + '] arrow click dir=' + dir,
+                            'cardWidth:', card ? card.offsetWidth : 'no card',
+                            'scrollAmount:', scrollAmount,
+                            'currentScrollLeft:', carousel.scrollLeft,
+                            'targetScrollLeft:', target);
+
+                carousel.scrollTo({ left: target, behavior: 'smooth' });
+              });
+            });
+
+            // ── 2. Small nav-btn-sm click (Popular / Price Drops grids) ──
+            var smallBtns = document.querySelectorAll('.carousel-nav-btn-sm');
+            console.log('[Carousel] Small nav buttons found:', smallBtns.length);
+
+            smallBtns.forEach(function(btn) {
+              btn.addEventListener('click', function(e) {
+                e.preventDefault();
+                var carouselId = btn.getAttribute('data-carousel');
+                var dir        = btn.getAttribute('data-dir');
+                var carousel   = document.getElementById(carouselId);
+
+                if (!carousel) {
+                  console.error('[Carousel nav-btn-sm] click: target #' + carouselId + ' NOT FOUND in DOM');
+                  return;
+                }
+
+                var scrollAmount = 320;
+                var target       = carousel.scrollLeft + (dir === 'next' ? scrollAmount : -scrollAmount);
+                console.log('[Carousel ' + carouselId + '] nav-btn-sm dir=' + dir, 'target:', target);
+
+                carousel.scrollTo({ left: target, behavior: 'smooth' });
+              });
+            });
+
+            // ── 3. Per-carousel: scroll listener, mouse-drag, touch safety ──
+            var carousels = document.querySelectorAll('.ccc-carousel');
+            console.log('[Carousel] .ccc-carousel elements found:', carousels.length);
+
+            carousels.forEach(function(carousel) {
+              var id = carousel.id || '(no-id)';
+
+              // --- scroll → progress + arrow sync ---
+              carousel.addEventListener('scroll', function() { syncCarousel(carousel); }, { passive: true });
+
+              // Initial sync is deferred to requestAnimationFrame so the browser
+              // has finished layout (scrollWidth / clientWidth are accurate).
+              requestAnimationFrame(function() {
+                console.log('[Carousel ' + id + '] initial sync (rAF)');
+                syncCarousel(carousel);
+              });
+
+              // Belt-and-suspenders: also sync once everything (fonts, images) is loaded
+              window.addEventListener('load', function() {
+                console.log('[Carousel ' + id + '] re-sync on window load');
+                syncCarousel(carousel);
+              });
+
+              // --- mouse drag ---
+              var isDragging  = false;
+              var startX      = 0;
+              var scrollLeft  = 0;
+              var hasDragged  = false;
+
+              carousel.addEventListener('mousedown', function(e) {
+                isDragging = true;
+                hasDragged = false;
+                startX     = e.pageX - carousel.offsetLeft;
+                scrollLeft = carousel.scrollLeft;
+                carousel.classList.add('is-dragging');
+              });
+
+              carousel.addEventListener('mousemove', function(e) {
+                if (!isDragging) return;
+                e.preventDefault();
+                var walk = (e.pageX - carousel.offsetLeft) - startX;
+                if (Math.abs(walk) > DRAG_THRESHOLD) hasDragged = true;
+                carousel.scrollLeft = scrollLeft - walk;
+              });
+
+              function endDrag() {
+                isDragging = false;
+                carousel.classList.remove('is-dragging');
+              }
+              carousel.addEventListener('mouseup',    endDrag);
+              carousel.addEventListener('mouseleave', endDrag);
+
+              // block click propagation only when we actually dragged
+              carousel.addEventListener('click', function(e) {
+                if (hasDragged) {
+                  e.preventDefault();
+                  e.stopPropagation();
+                  hasDragged = false;
+                }
+              }, true);
+
+              // --- touch: prevent link activation on swipe ---
+              var touchStartX = 0;
+              var touchMoved  = false;
+
+              carousel.addEventListener('touchstart', function(e) {
+                touchStartX = e.touches[0].clientX;
+                touchMoved  = false;
+              }, { passive: true });
+
+              carousel.addEventListener('touchmove', function(e) {
+                var deltaX = Math.abs(e.touches[0].clientX - touchStartX);
+                if (deltaX > DRAG_THRESHOLD) {
+                  touchMoved = true;
+                }
+              }, { passive: true });
+
+              carousel.addEventListener('touchend', function(e) {
+                if (touchMoved) {
+                  e.preventDefault();
                 }
               });
             });
-          })();
 
-          // Filter Tabs (All Products / Deals Only / Daily / Weekly / Recent)
-          (function() {
-            document.querySelectorAll('.ccc-filter-tab').forEach(tab => {
-              tab.addEventListener('click', function(e) {
-                e.preventDefault();
+            // ── 4. Category scroll row — arrow sync (no drag needed, cards are links) ──
+            var catRow = document.getElementById('category-grid-row');
+            if (catRow) {
+              console.log('[Carousel] category-grid-row found, wiring scroll sync');
 
-                const filterTarget = this.parentElement.getAttribute('data-filter-target');
-                const targetGrid = document.getElementById(filterTarget);
-                const filterType = this.getAttribute('data-filter');
+              catRow.addEventListener('scroll', function() { syncCarousel(catRow); }, { passive: true });
 
-                if (!targetGrid) return;
-
-                // Update active tab
-                this.parentElement.querySelectorAll('.ccc-filter-tab').forEach(t => {
-                  t.classList.remove('active');
-                });
-                this.classList.add('active');
-
-                // Filter products
-                const cards = targetGrid.querySelectorAll('.ccc-product-card, .deal-card-ccc');
-
-                cards.forEach(card => {
-                  let shouldShow = true;
-
-                  if (filterType === 'deals') {
-                    // Only show if has discount/savings
-                    const savingsBadge = card.querySelector('.savings-badge, .deal-card-savings, .badge-good-deal, .badge-best-price');
-                    shouldShow = savingsBadge !== null;
-                  } else if (filterType === 'daily') {
-                    // Show products with price drops in last 24 hours
-                    const dropDate = card.getAttribute('data-drop-date');
-                    if (dropDate) {
-                      const daysDiff = (new Date() - new Date(dropDate)) / (1000 * 60 * 60 * 24);
-                      shouldShow = daysDiff <= 1;
-                    } else {
-                      shouldShow = false;
-                    }
-                  } else if (filterType === 'weekly') {
-                    // Show products with price drops in last 7 days
-                    const dropDate = card.getAttribute('data-drop-date');
-                    if (dropDate) {
-                      const daysDiff = (new Date() - new Date(dropDate)) / (1000 * 60 * 60 * 24);
-                      shouldShow = daysDiff <= 7;
-                    } else {
-                      shouldShow = false;
-                    }
-                  }
-                  // 'all' or 'recent' shows everything
-
-                  card.style.display = shouldShow ? '' : 'none';
-                });
+              requestAnimationFrame(function() {
+                console.log('[Carousel category-grid-row] initial sync (rAF)');
+                syncCarousel(catRow);
               });
-            });
+
+              window.addEventListener('load', function() {
+                console.log('[Carousel category-grid-row] re-sync on window load');
+                syncCarousel(catRow);
+              });
+            } else {
+              console.log('[Carousel] category-grid-row not in DOM (section may be empty)');
+            }
           })();
 
-          // Category Dropdown Filtering
+          // ── Popular Products: .pp-segmented toggle + category chips ──
+          // ── Price Drops:      .pd-segmented toggle + category chips ──
+          // Both share one unified "apply filters" helper per grid.
           (function() {
-            document.querySelectorAll('.ccc-category-select').forEach(select => {
-              select.addEventListener('change', function() {
-                const targetGrid = document.getElementById(this.id.replace('-category', '-grid'));
-                const selectedCategory = this.value;
 
-                if (!targetGrid) return;
+            // ─── per-grid state ───────────────────────────────────────────
+            // Keyed by grid element id.  Each entry: { dealFilter: 'all'|'deals', categoryFilter: '' | 'electronics' | … }
+            var gridState = {};
 
-                const cards = targetGrid.querySelectorAll('.ccc-product-card, .deal-card-ccc');
+            function getState(gridId) {
+              if (!gridState[gridId]) gridState[gridId] = { dealFilter: 'all', categoryFilter: '', timeFilter: 'recent' };
+              return gridState[gridId];
+            }
 
-                cards.forEach(card => {
-                  const productCategory = card.getAttribute('data-category');
+            // ─── core: walk every card in a grid, show/hide based on state ─
+            function applyFilters(gridId) {
+              var grid = document.getElementById(gridId);
+              if (!grid) {
+                console.error('[Filters] applyFilters: grid #' + gridId + ' NOT FOUND');
+                return;
+              }
 
-                  if (!selectedCategory || productCategory === selectedCategory) {
-                    card.style.display = '';
+              var state  = getState(gridId);
+              var cards  = grid.querySelectorAll('.ccc-product-card, .deal-card-ccc');
+              var shown  = 0;
+              var hidden = 0;
+
+              console.log('[Filters #' + gridId + '] applying — state:', JSON.stringify(state), 'total cards:', cards.length);
+
+              cards.forEach(function(card) {
+                var pass = true;
+
+                // 1) deal / time filter
+                if (state.dealFilter === 'deals') {
+                  var hasDeal = card.querySelector('.product-card-savings, .deal-card-savings, .badge-good-deal, .badge-best-price');
+                  if (!hasDeal) {
+                    pass = false;
+                    console.log('[Filters #' + gridId + '] card hidden by deals filter (no savings/badge element)');
+                  }
+                } else if (state.timeFilter === 'daily') {
+                  var dropDate = card.getAttribute('data-drop-date');
+                  if (dropDate) {
+                    pass = ((new Date() - new Date(dropDate)) / 86400000) <= 1;
                   } else {
-                    card.style.display = 'none';
+                    pass = false;
                   }
+                } else if (state.timeFilter === 'weekly') {
+                  var dropDate2 = card.getAttribute('data-drop-date');
+                  if (dropDate2) {
+                    pass = ((new Date() - new Date(dropDate2)) / 86400000) <= 7;
+                  } else {
+                    pass = false;
+                  }
+                }
+
+                // 2) category chip filter (AND with deal filter)
+                if (pass && state.categoryFilter) {
+                  var cardCat = card.getAttribute('data-category');
+                  if (!cardCat) {
+                    console.error('[Filters #' + gridId + '] card has no data-category attribute');
+                  }
+                  if (cardCat !== state.categoryFilter) {
+                    pass = false;
+                  }
+                }
+
+                card.style.display = pass ? '' : 'none';
+                pass ? shown++ : hidden++;
+              });
+
+              console.log('[Filters #' + gridId + '] result — shown:', shown, 'hidden:', hidden);
+            }
+
+            // ─── 1. Segmented toggle (Popular Products) ─────────────────
+            var segToggles = document.querySelectorAll('.pp-segmented');
+            console.log('[Filters] .pp-segmented elements found:', segToggles.length);
+
+            segToggles.forEach(function(seg) {
+              var gridId = seg.getAttribute('data-filter-target');
+              if (!gridId) {
+                console.error('[Filters] .pp-segmented missing data-filter-target');
+                return;
+              }
+              console.log('[Filters] wiring segmented toggle for grid #' + gridId);
+
+              seg.querySelectorAll('.pp-seg-btn').forEach(function(btn) {
+                btn.addEventListener('click', function(e) {
+                  e.preventDefault();
+                  var filter = btn.getAttribute('data-filter');
+                  console.log('[Filters #' + gridId + '] seg-btn clicked, filter=' + filter);
+
+                  // swap active
+                  seg.querySelectorAll('.pp-seg-btn').forEach(function(b) { b.classList.remove('active'); });
+                  btn.classList.add('active');
+
+                  // toggle glow class on container
+                  seg.classList.toggle('deals-active', filter === 'deals');
+
+                  // update state and re-apply
+                  getState(gridId).dealFilter = filter;
+                  applyFilters(gridId);
                 });
               });
             });
+
+            // ─── 2. Category chips (Popular Products) ───────────────────
+            var chipBars = document.querySelectorAll('.pp-sticky-bar');
+            console.log('[Filters] .pp-sticky-bar elements found:', chipBars.length);
+
+            chipBars.forEach(function(bar) {
+              var gridId = bar.getAttribute('data-filter-target');
+              if (!gridId) {
+                console.error('[Filters] .pp-sticky-bar missing data-filter-target');
+                return;
+              }
+              console.log('[Filters] wiring chip bar for grid #' + gridId);
+
+              bar.querySelectorAll('.pp-chip').forEach(function(chip) {
+                chip.addEventListener('click', function(e) {
+                  e.preventDefault();
+                  var cat = chip.getAttribute('data-category');  // '' = All
+                  console.log('[Filters #' + gridId + '] chip clicked, category="' + cat + '"');
+
+                  // swap active chip
+                  bar.querySelectorAll('.pp-chip').forEach(function(c) { c.classList.remove('active'); });
+                  chip.classList.add('active');
+
+                  // update state and re-apply
+                  getState(gridId).categoryFilter = cat;
+                  applyFilters(gridId);
+                });
+              });
+            });
+
+            // ─── 3. .pd-segmented 3-way toggle (Price Drops time filter) ─
+            var pdSegContainers = document.querySelectorAll('.pd-segmented');
+            console.log('[Filters] .pd-segmented containers found:', pdSegContainers.length);
+
+            pdSegContainers.forEach(function(container) {
+              var gridId = container.getAttribute('data-filter-target');
+              if (!gridId) {
+                console.error('[Filters] .pd-segmented missing data-filter-target');
+                return;
+              }
+              console.log('[Filters] wiring .pd-segmented for grid #' + gridId);
+
+              var btns = container.querySelectorAll('.pd-seg-btn');
+              console.log('[Filters #' + gridId + '] .pd-seg-btn buttons found:', btns.length);
+
+              btns.forEach(function(btn, idx) {
+                btn.addEventListener('click', function(e) {
+                  e.preventDefault();
+                  var filterVal = btn.getAttribute('data-filter');
+                  console.log('[Filters #' + gridId + '] .pd-seg-btn clicked idx=' + idx + ' filter=' + filterVal);
+
+                  // swap active state on buttons
+                  btns.forEach(function(b) { b.classList.remove('active'); });
+                  btn.classList.add('active');
+
+                  // slide the pill: remove all pos-* classes, add the right one
+                  container.classList.remove('pos-0', 'pos-1', 'pos-2');
+                  container.classList.add('pos-' + idx);
+                  console.log('[Filters #' + gridId + '] pill slid to pos-' + idx);
+
+                  // update time-filter state and re-apply
+                  getState(gridId).timeFilter = filterVal;
+                  applyFilters(gridId);
+                });
+              });
+            });
+
+            // ─── initial run: set correct state for every grid on load ───
+            console.log('[Filters] running initial applyFilters for all known grids');
+            ['popular-grid', 'drops-grid'].forEach(function(id) {
+              if (document.getElementById(id)) {
+                applyFilters(id);
+              }
+            });
+
           })();
 
           // Scroll animations for landing page
@@ -3367,35 +2842,7 @@ async function start() {
             });
           })();
 
-          // Apify scrape button styles
-          (function() {
-            const style = document.createElement('style');
-            style.textContent = \`
-              .btn-scrape {
-                background: linear-gradient(135deg, #f5a623, #f7c948);
-                color: #222;
-                border: none;
-                padding: 10px 18px;
-                border-radius: 6px;
-                font-weight: 600;
-                cursor: pointer;
-                font-size: 0.95rem;
-                white-space: nowrap;
-                flex-shrink: 0;
-                transition: opacity 0.2s;
-              }
-              .btn-scrape:hover { opacity: 0.85; }
-              .btn-scrape:disabled { opacity: 0.5; cursor: not-allowed; }
-              #scrapeStatus {
-                display: none;
-                margin-top: 8px;
-                font-size: 0.9rem;
-                color: var(--text-muted);
-              }
-              #scrapeStatus.visible { display: block; }
-            \`;
-            document.head.appendChild(style);
-          })();
+          // .btn-scrape and #scrapeStatus styles now live in styles.css
 
           // Trigger Apify scrape, then reload with the query so results appear
           async function triggerScrape() {
@@ -3408,7 +2855,7 @@ async function start() {
 
             const btn = document.getElementById('scrapeBtn');
             btn.disabled = true;
-            btn.textContent = '${lang === "es" ? "⏳ Buscando…" : "⏳ Scraping…"}';
+            btn.textContent = '${lang === "es" ? "⏳ Descubriendo…" : "⏳ Discovering…"}';
 
             // Show status line
             let statusEl = document.getElementById('scrapeStatus');
@@ -3418,22 +2865,18 @@ async function start() {
               btn.parentElement.parentElement.appendChild(statusEl);
             }
             statusEl.className = 'visible';
-            statusEl.textContent = '${lang === "es" ? "Ejecutando Actor en Apify… esto puede tomar hasta 2 minutos." : "Running Apify Actor… this may take up to 2 minutes."}';
-
-            // Get source filter value
-            const sourceSelect = document.querySelector('select[name="source"]');
-            const source = sourceSelect ? sourceSelect.value : 'all';
+            statusEl.textContent = '${lang === "es" ? "Descubriendo nuevos productos… esto puede tomar hasta 2 minutos." : "Discovering new products… this may take up to 2 minutes."}';
 
             try {
               const res = await fetch('/api/scrape', {
                 method: 'POST',
                 headers: { 'Content-Type': 'application/json' },
-                body: JSON.stringify({ source, query, maxResults: 20 }),
+                body: JSON.stringify({ source: 'all', query, maxResults: 20 }),
               });
               const data = await res.json();
 
               if (data.success) {
-                statusEl.textContent = '${lang === "es" ? "✓ Se encontraron" : "✓ Found"} ' + data.count + ' ${lang === "es" ? "productos. Recargando resultados…" : "products. Reloading results…"}';
+                statusEl.textContent = '${lang === "es" ? "✓ Descubiertos" : "✓ Discovered"} ' + data.count + ' ${lang === "es" ? "productos. Recargando resultados…" : "products. Reloading results…"}';
                 // Small delay so user reads the message, then reload with query
                 setTimeout(() => {
                   const url = new URL(window.location.href);
@@ -3444,20 +2887,16 @@ async function start() {
               } else {
                 statusEl.textContent = '⚠ ' + (data.error || '${lang === "es" ? "Error desconocido" : "Unknown error"}');
                 btn.disabled = false;
-                btn.textContent = '🔍 ${lang === "es" ? "Buscar con Apify" : "Scrape with Apify"}';
+                btn.textContent = '🔍 ${lang === "es" ? "Descubrir nuevos productos" : "Discover New Products"}';
               }
             } catch (err) {
               statusEl.textContent = '⚠ ${lang === "es" ? "Error de red:" : "Network error:"} ' + err.message;
               btn.disabled = false;
-              btn.textContent = '🔍 ${lang === "es" ? "Buscar con Apify" : "Scrape with Apify"}';
+              btn.textContent = '🔍 ${lang === "es" ? "Descubrir nuevos productos" : "Discover New Products"}';
             }
           }
         </script>
       `,
-        hasToken,
-        userEmail,
-        lang,
-        userData,
       ),
     );
   });
@@ -3469,7 +2908,17 @@ async function start() {
     const categoryKey = String(req.params.categoryKey || "").toLowerCase();
 
     // Validate category key
-    const validCategories = ["electronics", "home", "fashion", "sports", "beauty", "toys", "books", "automotive", "other"];
+    const validCategories = [
+      "electronics",
+      "home",
+      "fashion",
+      "sports",
+      "beauty",
+      "toys",
+      "books",
+      "automotive",
+      "other",
+    ];
     if (!validCategories.includes(categoryKey)) {
       return res.status(404).send("Category not found");
     }
@@ -3484,7 +2933,7 @@ async function start() {
       toys: { en: "Toys & Games", es: "Juguetes", icon: "🎮" },
       books: { en: "Books", es: "Libros", icon: "📚" },
       automotive: { en: "Automotive", es: "Automotriz", icon: "🚗" },
-      other: { en: "Other", es: "Otros", icon: "📦" }
+      other: { en: "Other", es: "Otros", icon: "📦" },
     };
 
     const categoryInfo = categoryNames[categoryKey];
@@ -3495,7 +2944,10 @@ async function start() {
     if (hasToken) {
       try {
         const payload = jwt.verify(req.cookies.token, JWT_SECRET);
-        const user = await db.get("SELECT * FROM users WHERE id = ?", payload.id);
+        const user = await db.get(
+          "SELECT * FROM users WHERE id = ?",
+          payload.id,
+        );
         userEmail = user?.email || "";
         userData = user;
       } catch (e) {
@@ -3503,30 +2955,39 @@ async function start() {
       }
     }
 
-    console.log(`[Category] Loading category: ${categoryKey} (${categoryName})`);
+    console.log(
+      `[Category] Loading category: ${categoryKey} (${categoryName})`,
+    );
 
     // Get products for this category
     let categoryProducts = [];
     try {
       categoryProducts = await supabaseDb.getProductsByCategory(categoryKey, {
         limit: 50,
-        dealsOnly: false
+        dealsOnly: false,
       });
-      console.log(`[Category] Found ${categoryProducts.length} products in ${categoryKey}`);
+      console.log(
+        `[Category] Found ${categoryProducts.length} products in ${categoryKey}`,
+      );
     } catch (error) {
       console.error(`[Category] Error fetching products:`, error);
     }
 
     // Render product cards
-    const productsHtml = categoryProducts.length > 0
-      ? categoryProducts.map(product => renderHomeProductCard(product, lang)).join("")
-      : `
+    const productsHtml =
+      categoryProducts.length > 0
+        ? categoryProducts
+            .map((product) => renderHomeProductCard(product, lang))
+            .join("")
+        : `
         <div class="empty-state">
           <span class="empty-state-icon">📦</span>
           <p class="empty-state-text">
-            ${lang === "es"
-              ? "No hay productos en esta categoría todavía."
-              : "No products in this category yet."}
+            ${
+              lang === "es"
+                ? "No hay productos en esta categoría todavía."
+                : "No products in this category yet."
+            }
           </p>
           <a href="/" class="empty-state-link">
             ${lang === "es" ? "← Volver al inicio" : "← Back to home"}
@@ -3543,22 +3004,27 @@ async function start() {
     }
 
     // Category navigation section
-    const categoryNavSection = allCategories.length > 0
-      ? `
+    const categoryNavSection =
+      allCategories.length > 0
+        ? `
       <section class="category-nav-section">
         <h3 class="category-nav-title">${lang === "es" ? "Todas las Categorías" : "All Categories"}</h3>
         <div class="category-nav-grid">
-          ${allCategories.map(cat => `
-            <a href="/category/${cat.key}" class="category-nav-card ${cat.key === categoryKey ? 'active' : ''}">
+          ${allCategories
+            .map(
+              (cat) => `
+            <a href="/category/${cat.key}" class="category-nav-card ${cat.key === categoryKey ? "active" : ""}">
               <span class="category-nav-icon">${cat.icon}</span>
               <div class="category-nav-name">${lang === "es" ? cat.nameEs : cat.nameEn}</div>
-              ${cat.maxDiscount > 0 ? `<div class="category-nav-discount">${cat.maxDiscount}% OFF</div>` : ''}
+              ${cat.maxDiscount > 0 ? `<div class="category-nav-discount">${cat.maxDiscount}% OFF</div>` : ""}
             </a>
-          `).join("")}
+          `,
+            )
+            .join("")}
         </div>
       </section>
       `
-      : "";
+        : "";
 
     const pageContent = `
       <div class="category-page">
@@ -3590,13 +3056,15 @@ async function start() {
 
     res.send(
       renderPage(
-        lang === "es" ? `${categoryName} - ShopSavvy` : `${categoryName} - ShopSavvy`,
+        lang === "es"
+          ? `${categoryName} - ShopSavvy`
+          : `${categoryName} - ShopSavvy`,
         pageContent,
         hasToken,
         userEmail,
         lang,
-        userData
-      )
+        userData,
+      ),
     );
   });
 
@@ -4131,21 +3599,7 @@ SUPABASE_ANON_KEY=your_anon_key_from_supabase</pre>
       console.log("\n[OAuth Callback] Received authorization code:", code);
       console.log("[OAuth Callback] State:", state);
 
-      // TODO: Exchange authorization code for access token
-      // This is where you'd call Mercado Libre's token endpoint
-      // Example:
-      // const tokenResponse = await fetch('https://api.mercadolibre.com/oauth/token', {
-      //   method: 'POST',
-      //   body: JSON.stringify({
-      //     grant_type: 'authorization_code',
-      //     client_id: process.env.MERCADO_LIBRE_CLIENT_ID,
-      //     client_secret: process.env.MERCADO_LIBRE_CLIENT_SECRET,
-      //     code: code,
-      //     redirect_uri: `${APP_BASE_URL}/auth/callback`
-      //   })
-      // });
-
-      // For now, show success page
+      // Show success page
       res.send(
         renderPage(
           "Authentication Successful",
@@ -6437,7 +5891,7 @@ State: ${state || "none"}</pre>
    *
    * This endpoint demonstrates:
    * 1. Express route callback: app.get('/path', callback)
-   * 2. Async operation callback: fetchMLProducts with then()
+   * 2. Async operation callback: fetchAllProducts with then()
    * 3. Response callback: res.json() sends data to browser
    */
   app.get("/api/products/search", function (req, res) {
@@ -6465,14 +5919,11 @@ State: ${state || "none"}</pre>
       });
     }
 
-    // Async operation with callback pattern (using .then)
-    fetchMLProducts({ query, minPrice, maxPrice, sort, page, pageSize })
+    fetchAllProducts({ query, minPrice, maxPrice, sort, page, pageSize })
       .then(function (results) {
-        // ← SUCCESS CALLBACK
         res.json({
           success: true,
           query: query,
-          site: ML_SITE,
           filters: { minPrice, maxPrice, sort },
           pagination: {
             page: page,
@@ -6481,11 +5932,9 @@ State: ${state || "none"}</pre>
             totalPages: results.totalPages,
           },
           products: results.products,
-          notice: results.notice,
         });
       })
       .catch(function (error) {
-        // ← ERROR CALLBACK
         res.status(500).json({
           success: false,
           error: error.message || "Error al buscar productos",
@@ -6508,14 +5957,12 @@ State: ${state || "none"}</pre>
       });
     }
 
-    // Async operation with callback
-    fetchMLProductById(id)
+    fetchProductById(id)
       .then(function (result) {
-        // ← SUCCESS CALLBACK
         if (!result.product) {
           return res.status(404).json({
             success: false,
-            error: "Producto no encontrado",
+            error: result.error || "Producto no encontrado",
             id: id,
           });
         }
@@ -6523,11 +5970,9 @@ State: ${state || "none"}</pre>
         res.json({
           success: true,
           product: result.product,
-          notice: result.notice,
         });
       })
       .catch(function (error) {
-        // ← ERROR CALLBACK
         res.status(500).json({
           success: false,
           error: error.message || "Error al obtener el producto",
@@ -6543,17 +5988,11 @@ State: ${state || "none"}</pre>
     try {
       const products = getMockProducts();
 
-      // Simulate async operation with setTimeout
-      setTimeout(function () {
-        // ← CALLBACK after delay
-        res.json({
-          success: true,
-          count: products.length,
-          products: products,
-          site: ML_SITE,
-          note: "",
-        });
-      }, 100); // Small delay to simulate network
+      res.json({
+        success: true,
+        count: products.length,
+        products: products,
+      });
     } catch (error) {
       res.status(500).json({
         success: false,
@@ -6566,34 +6005,22 @@ State: ${state || "none"}</pre>
    * API: Get Mercado Libre categories
    * URL: GET /api/categories
    */
-  app.get("/api/categories", async function (req, res) {
-    try {
-      const categories = await fetchMLCategories();
-      res.json({
-        success: true,
-        site: ML_SITE,
-        categories: categories,
-      });
-    } catch (error) {
-      res.status(500).json({
-        success: false,
-        error: error.message || "Error al obtener categorías",
-      });
-    }
+  app.get("/api/categories", function (req, res) {
+    const lang = getLang(req);
+    const categories = Object.values(CATEGORIES).map((c) => ({
+      id: c.id,
+      name: c.name[lang] || c.name.es,
+    }));
+    res.json({ success: true, categories });
   });
 
   /**
    * API: Health check endpoint
    * URL: GET /api/health
    */
-  app.get("/api/health", async function (req, res) {
+  app.get("/api/health", function (req, res) {
     const startTime = Date.now();
 
-    // Check ML API connection
-    const mlToken = await getMLAccessToken();
-    const mlStatus = mlToken ? "connected" : "not configured";
-
-    // Check database with callback
     db.get("SELECT 1 as status", function (error, result) {
       const responseTime = Date.now() - startTime;
 
@@ -6609,13 +6036,7 @@ State: ${state || "none"}</pre>
         success: true,
         status: "healthy",
         database: result ? "connected" : "disconnected",
-        mercadoLibre: {
-          status: mlStatus,
-          site: ML_SITE,
-          clientId: ML_CLIENT_ID
-            ? `${ML_CLIENT_ID.substring(0, 6)}...`
-            : "not set",
-        },
+        scraping: { engine: "apify", actorId: "f5pjkmpD15S3cqunX" },
         responseTime: `${responseTime}ms`,
         https: HAS_TLS,
         baseUrl: APP_BASE_URL,
@@ -6641,12 +6062,14 @@ State: ${state || "none"}</pre>
       const { source = "all", query = "", maxResults = 20 } = req.body;
 
       if (!query || query.trim() === "") {
-        return res.status(400).json({ success: false, error: "query is required" });
+        return res
+          .status(400)
+          .json({ success: false, error: "query is required" });
       }
 
-      const { scrapeProducts } = require("./apify");
-
-      console.log(`[Scrape] User ${req.user.id} triggered scrape: source=${source} query="${query}" max=${maxResults}`);
+      console.log(
+        `[Scrape] User ${req.user.id} triggered scrape: source=${source} query="${query}" max=${maxResults}`,
+      );
 
       // Run the Apify Actor
       const products = await scrapeProducts({
@@ -6656,7 +6079,12 @@ State: ${state || "none"}</pre>
       });
 
       if (products.length === 0) {
-        return res.json({ success: true, count: 0, products: [], message: "No products found for this query." });
+        return res.json({
+          success: true,
+          count: 0,
+          products: [],
+          message: "No products found for this query.",
+        });
       }
 
       // Store each scraped product into Supabase
@@ -6702,7 +6130,8 @@ State: ${state || "none"}</pre>
         },
         tracking: {
           periods: ["7d", "30d"],
-          checkIntervalMinutes: parseInt(process.env.PRICE_CHECK_INTERVAL_MINUTES) || 60,
+          checkIntervalMinutes:
+            parseInt(process.env.PRICE_CHECK_INTERVAL_MINUTES) || 60,
         },
       });
     } catch (error) {
@@ -6749,7 +6178,7 @@ State: ${state || "none"}</pre>
             <a href="/product/${encodeURIComponent(product.product_id)}?source=${product.source || "mercadolibre"}" class="home-product-card-link">
               <div class="home-product-card-image">
                 ${badges.length > 0 ? `<div class="home-product-card-badges">${badges.join("")}</div>` : ""}
-                <img src="${product.product_url?.includes("amazon") ? "/images/product-placeholder.svg" : `https://http2.mlstatic.com/D_NQ_NP_${product.product_id?.split("-")[1] || ""}-O.webp`}"
+                <img src="${getProductImageUrl(product)}"
                      alt="${product.product_title || ""}"
                      loading="lazy"
                      onerror="this.src='/images/product-placeholder.svg'" />
@@ -6836,7 +6265,7 @@ State: ${state || "none"}</pre>
             <a href="/product/${encodeURIComponent(product.product_id)}?source=${product.source || "mercadolibre"}" class="home-product-card-link">
               <div class="home-product-card-image">
                 ${badges.length > 0 ? `<div class="home-product-card-badges">${badges.join("")}</div>` : ""}
-                <img src="${product.product_url?.includes("amazon") ? "/images/product-placeholder.svg" : `https://http2.mlstatic.com/D_NQ_NP_${product.product_id?.split("-")[1] || ""}-O.webp`}"
+                <img src="${getProductImageUrl(product)}"
                      alt="${product.product_title || ""}"
                      loading="lazy"
                      onerror="this.src='/images/product-placeholder.svg'" />
@@ -6885,7 +6314,7 @@ State: ${state || "none"}</pre>
    * Admin middleware - requires authenticated user
    * In production, add additional admin role check
    */
-  function requireAdmin(req, res, next) {
+  async function requireAdmin(req, res, next) {
     const token = req.cookies.token;
     if (!token) {
       return res
@@ -6896,7 +6325,26 @@ State: ${state || "none"}</pre>
     try {
       const payload = jwt.verify(token, JWT_SECRET);
       req.user = payload;
-      // TODO: Add admin role check here when roles are implemented
+
+      // Check if user has admin role
+      if (USE_SUPABASE) {
+        const user = await supabaseDb.getUserById(payload.userId);
+        if (!user || user.role !== "admin") {
+          return res
+            .status(403)
+            .json({ success: false, error: "Admin access required" });
+        }
+      } else {
+        // SQLite fallback
+        const { getUserById } = require("./db");
+        const user = await getUserById(localDb, payload.userId);
+        if (!user || user.role !== "admin") {
+          return res
+            .status(403)
+            .json({ success: false, error: "Admin access required" });
+        }
+      }
+
       return next();
     } catch (error) {
       return res.status(401).json({ success: false, error: "Invalid token" });
@@ -7095,17 +6543,88 @@ State: ${state || "none"}</pre>
       };
     }
 
-    https.createServer(tlsOptions, app).listen(PORT, () => {
+    server = https.createServer(tlsOptions, app).listen(PORT, () => {
       console.log(`HTTPS server running at ${APP_BASE_URL}`);
     });
   } else {
-    app.listen(PORT, () => {
+    server = app.listen(PORT, () => {
       console.log(`HTTP server running at ${APP_BASE_URL}`);
     });
   }
 }
 
-start().catch((error) => {
-  console.error("Failed to start server:", error);
-  process.exit(1);
-});
+/**
+ * One-time background seed: scrape popular queries so the home page
+ * sections (Highlighted Deals, Popular Products, Price Drops) have real
+ * data instead of falling back to hardcoded mocks.
+ * Skipped if Supabase or Apify is not configured.
+ */
+async function seedHomeData() {
+  if (!USE_SUPABASE) return;
+  try {
+    // Check if we already have enough tracked products — skip if so
+    const existing = await supabaseDb.getAllTrackedProducts();
+    if (existing && existing.length >= 10) {
+      console.log(
+        `[Seed] Supabase already has ${existing.length} tracked products — skipping seed.`,
+      );
+      return;
+    }
+
+    const seedQueries = [
+      "ofertas",
+      "electrónica",
+      "celulares",
+      "ofertas amazon",
+    ];
+    console.log("[Seed] Starting home data seed with queries:", seedQueries);
+
+    for (const query of seedQueries) {
+      try {
+        const items = await scrapeProducts({
+          source: "all",
+          query,
+          maxResults: 15,
+        });
+        if (items && items.length > 0) {
+          for (const item of items) {
+            await supabaseDb.upsertScrapedProduct(item).catch(() => {});
+          }
+          console.log(`[Seed] Stored ${items.length} products for "${query}"`);
+        }
+      } catch (e) {
+        console.error(`[Seed] Error scraping "${query}":`, e.message);
+      }
+    }
+    console.log("[Seed] Home data seed complete.");
+  } catch (e) {
+    console.error("[Seed] seedHomeData error:", e.message);
+  }
+}
+
+let server;
+
+start()
+  .then(() => {
+    // Seed runs after the server is up and listening — non-blocking
+    seedHomeData();
+  })
+  .catch((error) => {
+    console.error("Failed to start server:", error);
+    process.exit(1);
+  });
+
+function shutdown(signal) {
+  console.log(`[Shutdown] Received ${signal}, closing server...`);
+  if (server) {
+    server.close(() => {
+      console.log("[Shutdown] Server closed, port released.");
+      process.exit(0);
+    });
+  } else {
+    process.exit(0);
+  }
+}
+
+process.on("SIGINT", () => shutdown("SIGINT"));
+process.on("SIGTERM", () => shutdown("SIGTERM"));

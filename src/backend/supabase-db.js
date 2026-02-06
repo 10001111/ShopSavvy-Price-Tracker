@@ -16,8 +16,11 @@ let supabase = null;
 function initSupabase() {
   const supabaseUrl = process.env.SUPABASE_URL;
   // Prefer service_role key for server-side (bypasses RLS)
-  const supabaseKey = process.env.SUPABASE_SERVICE_ROLE_KEY || process.env.SUPABASE_ANON_KEY;
-  const keyType = process.env.SUPABASE_SERVICE_ROLE_KEY ? "service_role" : "anon";
+  const supabaseKey =
+    process.env.SUPABASE_SERVICE_ROLE_KEY || process.env.SUPABASE_ANON_KEY;
+  const keyType = process.env.SUPABASE_SERVICE_ROLE_KEY
+    ? "service_role"
+    : "anon";
 
   if (!supabaseUrl || !supabaseKey) {
     console.error("[Supabase] Missing SUPABASE_URL or SUPABASE_ANON_KEY");
@@ -28,7 +31,9 @@ function initSupabase() {
   console.log(`[Supabase] Client initialized (using ${keyType} key)`);
 
   if (keyType === "anon") {
-    console.log("[Supabase] ⚠️  For better reliability, add SUPABASE_SERVICE_ROLE_KEY to .env");
+    console.log(
+      "[Supabase] ⚠️  For better reliability, add SUPABASE_SERVICE_ROLE_KEY to .env",
+    );
   }
 
   return supabase;
@@ -47,13 +52,14 @@ async function checkTableWithRetry(table, maxRetries = 3) {
 
       if (error) {
         // Check if it's a transient network error
-        const isTransient = error.message.includes("fetch failed") ||
-                           error.message.includes("ECONNRESET") ||
-                           error.message.includes("ETIMEDOUT");
+        const isTransient =
+          error.message.includes("fetch failed") ||
+          error.message.includes("ECONNRESET") ||
+          error.message.includes("ETIMEDOUT");
 
         if (isTransient && attempt < maxRetries) {
           // Wait before retry (exponential backoff)
-          await new Promise(resolve => setTimeout(resolve, 100 * attempt));
+          await new Promise((resolve) => setTimeout(resolve, 100 * attempt));
           continue;
         }
 
@@ -63,12 +69,13 @@ async function checkTableWithRetry(table, maxRetries = 3) {
       return { success: true, data };
     } catch (err) {
       // Check if it's a transient error
-      const isTransient = err.message.includes("fetch failed") ||
-                         err.message.includes("ECONNRESET") ||
-                         err.message.includes("ETIMEDOUT");
+      const isTransient =
+        err.message.includes("fetch failed") ||
+        err.message.includes("ECONNRESET") ||
+        err.message.includes("ETIMEDOUT");
 
       if (isTransient && attempt < maxRetries) {
-        await new Promise(resolve => setTimeout(resolve, 100 * attempt));
+        await new Promise((resolve) => setTimeout(resolve, 100 * attempt));
         continue;
       }
 
@@ -83,7 +90,13 @@ async function checkTableWithRetry(table, maxRetries = 3) {
  * Returns { ok: boolean, missingTables: string[], error: string|null }
  */
 async function verifyTables() {
-  const requiredTables = ["users", "login_history", "user_sessions", "tracked_products", "price_history"];
+  const requiredTables = [
+    "users",
+    "login_history",
+    "user_sessions",
+    "tracked_products",
+    "price_history",
+  ];
   const missingTables = [];
   const tableErrors = {};
 
@@ -100,13 +113,16 @@ async function verifyTables() {
 
       // Check for common error patterns that indicate missing table
       const errorMsg = error.message.toLowerCase();
-      if (errorMsg.includes("schema cache") ||
-          errorMsg.includes("does not exist") ||
-          errorMsg.includes("relation") ||
-          errorMsg.includes("permission denied") ||
-          errorMsg.includes("fetch failed") || // Treat persistent fetch failures as table issues
-          error.code === "42P01" || // PostgreSQL: undefined_table
-          error.code === "PGRST204") { // PostgREST: no such table
+      if (
+        errorMsg.includes("schema cache") ||
+        errorMsg.includes("does not exist") ||
+        errorMsg.includes("relation") ||
+        errorMsg.includes("permission denied") ||
+        errorMsg.includes("fetch failed") || // Treat persistent fetch failures as table issues
+        error.code === "42P01" || // PostgreSQL: undefined_table
+        error.code === "PGRST204"
+      ) {
+        // PostgREST: no such table
         missingTables.push(table);
       }
     } else {
@@ -115,16 +131,107 @@ async function verifyTables() {
   }
 
   if (missingTables.length > 0) {
-    console.error(`\n[Supabase] ❌ Problem tables: ${missingTables.join(", ")}`);
+    console.error(
+      `\n[Supabase] ❌ Problem tables: ${missingTables.join(", ")}`,
+    );
     console.error("[Supabase] This could be due to:");
     console.error("[Supabase]   1. Tables not created - run migration SQL");
-    console.error("[Supabase]   2. RLS blocking access - add SUPABASE_SERVICE_ROLE_KEY to .env");
-    console.error("[Supabase]   3. Wrong Supabase project - check SUPABASE_URL");
-    return { ok: false, missingTables, error: `Problem tables: ${missingTables.join(", ")}`, tableErrors };
+    console.error(
+      "[Supabase]   2. RLS blocking access - add SUPABASE_SERVICE_ROLE_KEY to .env",
+    );
+    console.error(
+      "[Supabase]   3. Wrong Supabase project - check SUPABASE_URL",
+    );
+    return {
+      ok: false,
+      missingTables,
+      error: `Problem tables: ${missingTables.join(", ")}`,
+      tableErrors,
+    };
   }
 
   console.log("[Supabase] ✓ All required tables accessible");
-  return { ok: true, missingTables: [], error: null };
+
+  // Check for critical columns from migrations
+  const columnChecks = await verifyMigrationColumns();
+  if (!columnChecks.ok) {
+    console.warn("[Supabase] ⚠️  Some migrations may not be applied:");
+    columnChecks.warnings.forEach((warning) =>
+      console.warn(`[Supabase]   - ${warning}`),
+    );
+  }
+
+  return {
+    ok: true,
+    missingTables: [],
+    error: null,
+    columnWarnings: columnChecks.warnings,
+  };
+}
+
+/**
+ * Verify critical columns from migrations exist
+ * Returns { ok: boolean, warnings: string[] }
+ */
+async function verifyMigrationColumns() {
+  const warnings = [];
+
+  // Check Migration 004: product extended fields
+  try {
+    const { data, error } = await getSupabase()
+      .from("tracked_products")
+      .select("thumbnail, description, seller, rating, condition, currency")
+      .limit(1);
+
+    if (
+      error &&
+      (error.message.includes("does not exist") ||
+        error.message.includes("column"))
+    ) {
+      warnings.push(
+        "Migration 004 (product images/descriptions) may not be applied",
+      );
+    }
+  } catch (e) {
+    // Ignore - table might be empty
+  }
+
+  // Check Migration 005: search_history table
+  try {
+    const { error } = await getSupabase()
+      .from("search_history")
+      .select("id")
+      .limit(1);
+
+    if (error && error.message.includes("does not exist")) {
+      warnings.push("Migration 005 (search history) may not be applied");
+    }
+  } catch (e) {
+    warnings.push("Migration 005 (search history) table not found");
+  }
+
+  // Check Migration 006: user roles
+  try {
+    const { data, error } = await getSupabase()
+      .from("users")
+      .select("role")
+      .limit(1);
+
+    if (
+      error &&
+      (error.message.includes("does not exist") ||
+        error.message.includes("column"))
+    ) {
+      warnings.push("Migration 006 (user roles) may not be applied");
+    }
+  } catch (e) {
+    // Ignore
+  }
+
+  return {
+    ok: warnings.length === 0,
+    warnings,
+  };
 }
 
 /**
@@ -176,7 +283,13 @@ async function getUserById(id) {
 /**
  * Create new user
  */
-async function createUser({ email, passwordHash, verified = false, verificationToken = null, authProvider = "local" }) {
+async function createUser({
+  email,
+  passwordHash,
+  verified = false,
+  verificationToken = null,
+  authProvider = "local",
+}) {
   const { data, error } = await getSupabase()
     .from("users")
     .insert({
@@ -185,7 +298,7 @@ async function createUser({ email, passwordHash, verified = false, verificationT
       verified,
       verification_token: verificationToken,
       auth_provider: authProvider,
-      created_at: new Date().toISOString()
+      created_at: new Date().toISOString(),
     })
     .select()
     .single();
@@ -229,7 +342,9 @@ async function verifyUser(id) {
 async function getAllUsers() {
   const { data, error } = await getSupabase()
     .from("users")
-    .select("id, email, verified, login_count, last_login, auth_provider, created_at")
+    .select(
+      "id, email, verified, login_count, last_login, auth_provider, created_at",
+    )
     .order("created_at", { ascending: false });
 
   if (error) {
@@ -245,7 +360,14 @@ async function getAllUsers() {
 /**
  * Record login attempt
  */
-async function recordLoginAttempt({ userId, email, success, ipAddress, userAgent, authMethod }) {
+async function recordLoginAttempt({
+  userId,
+  email,
+  success,
+  ipAddress,
+  userAgent,
+  authMethod,
+}) {
   // Insert login history record
   const { error: historyError } = await getSupabase()
     .from("login_history")
@@ -256,7 +378,7 @@ async function recordLoginAttempt({ userId, email, success, ipAddress, userAgent
       ip_address: ipAddress,
       user_agent: userAgent,
       auth_method: authMethod,
-      created_at: new Date().toISOString()
+      created_at: new Date().toISOString(),
     });
 
   if (historyError) {
@@ -279,7 +401,7 @@ async function recordLoginAttempt({ userId, email, success, ipAddress, userAgent
       .from("users")
       .update({
         last_login: new Date().toISOString(),
-        login_count: currentCount + 1
+        login_count: currentCount + 1,
       })
       .eq("id", userId);
 
@@ -329,7 +451,22 @@ async function getAllLoginHistory(limit = 50) {
 /**
  * Add product to tracking
  */
-async function addTrackedProduct({ userId, productId, productTitle, productUrl, source, targetPrice, currentPrice, thumbnail, images, description, seller, rating, condition, currency }) {
+async function addTrackedProduct({
+  userId,
+  productId,
+  productTitle,
+  productUrl,
+  source,
+  targetPrice,
+  currentPrice,
+  thumbnail,
+  images,
+  description,
+  seller,
+  rating,
+  condition,
+  currency,
+}) {
   const { data, error } = await getSupabase()
     .from("tracked_products")
     .insert({
@@ -348,7 +485,7 @@ async function addTrackedProduct({ userId, productId, productTitle, productUrl, 
       condition: condition || "new",
       currency: currency || "MXN",
       scraped_at: new Date().toISOString(),
-      created_at: new Date().toISOString()
+      created_at: new Date().toISOString(),
     })
     .select()
     .single();
@@ -379,7 +516,8 @@ async function upsertScrapedProduct(product) {
 
   // Extended fields -- added by migration 004. Included only if migration has run.
   const extended = {
-    thumbnail: product.thumbnail || (product.images && product.images[0]) || null,
+    thumbnail:
+      product.thumbnail || (product.images && product.images[0]) || null,
     images: product.images || [],
     description: product.description || null,
     seller: product.seller || null,
@@ -401,16 +539,34 @@ async function upsertScrapedProduct(product) {
     // Try update with extended fields first; fall back to base-only on column error
     let { data, error } = await getSupabase()
       .from("tracked_products")
-      .update({ product_title: base.product_title, product_url: base.product_url, current_price: base.current_price, last_checked: new Date().toISOString(), ...extended })
+      .update({
+        product_title: base.product_title,
+        product_url: base.product_url,
+        current_price: base.current_price,
+        last_checked: new Date().toISOString(),
+        ...extended,
+      })
       .eq("id", existing.id)
       .select()
       .single();
 
-    if (error && error.message && (error.message.includes("does not exist") || error.message.includes("Could not find"))) {
-      console.log("[Supabase] Migration 004 not yet applied -- using base fields only");
+    if (
+      error &&
+      error.message &&
+      (error.message.includes("does not exist") ||
+        error.message.includes("Could not find"))
+    ) {
+      console.log(
+        "[Supabase] Migration 004 not yet applied -- using base fields only",
+      );
       ({ data, error } = await getSupabase()
         .from("tracked_products")
-        .update({ product_title: base.product_title, product_url: base.product_url, current_price: base.current_price, last_checked: new Date().toISOString() })
+        .update({
+          product_title: base.product_title,
+          product_url: base.product_url,
+          current_price: base.current_price,
+          last_checked: new Date().toISOString(),
+        })
         .eq("id", existing.id)
         .select()
         .single());
@@ -424,7 +580,9 @@ async function upsertScrapedProduct(product) {
     // Record price history if price changed
     if (parseFloat(existing.current_price) !== base.current_price) {
       await addPriceHistory(existing.id, base.current_price);
-      console.log(`[Supabase] Price changed for ${base.product_id}: ${existing.current_price} -> ${base.current_price}`);
+      console.log(
+        `[Supabase] Price changed for ${base.product_id}: ${existing.current_price} -> ${base.current_price}`,
+      );
     }
 
     return data;
@@ -433,12 +591,24 @@ async function upsertScrapedProduct(product) {
   // Insert new -- user_id 1 = system/demo account used for scraper-sourced products
   let { data, error } = await getSupabase()
     .from("tracked_products")
-    .insert({ user_id: 1, ...base, ...extended, created_at: new Date().toISOString() })
+    .insert({
+      user_id: 1,
+      ...base,
+      ...extended,
+      created_at: new Date().toISOString(),
+    })
     .select()
     .single();
 
-  if (error && error.message && (error.message.includes("does not exist") || error.message.includes("Could not find"))) {
-    console.log("[Supabase] Migration 004 not yet applied -- inserting base fields only");
+  if (
+    error &&
+    error.message &&
+    (error.message.includes("does not exist") ||
+      error.message.includes("Could not find"))
+  ) {
+    console.log(
+      "[Supabase] Migration 004 not yet applied -- inserting base fields only",
+    );
     ({ data, error } = await getSupabase()
       .from("tracked_products")
       .insert({ user_id: 1, ...base, created_at: new Date().toISOString() })
@@ -535,6 +705,31 @@ async function getAllTrackedProducts() {
     console.error("[Supabase] getAllTrackedProducts error:", error);
   }
   return data || [];
+}
+
+/**
+ * Look up a single tracked product by its product_id (works for any source).
+ * Returns the row or null.
+ */
+async function getTrackedProductById(productId, source) {
+  let req = getSupabase()
+    .from("tracked_products")
+    .select("*")
+    .eq("product_id", productId);
+
+  if (source && source !== "all") {
+    req = req.eq("source", source);
+  }
+
+  const { data, error } = await req.single();
+  if (error) {
+    // PGRST116 = no rows — not a real error
+    if (error.code !== "PGRST116") {
+      console.error("[Supabase] getTrackedProductById error:", error);
+    }
+    return null;
+  }
+  return data;
 }
 
 /**
@@ -642,13 +837,16 @@ async function getPriceHistory(trackedProductId, options = {}) {
  */
 async function getPriceStatistics(trackedProductId, period = "30d") {
   // Get price history for the period
-  const history = await getPriceHistory(trackedProductId, { period, limit: 1000 });
+  const history = await getPriceHistory(trackedProductId, {
+    period,
+    limit: 1000,
+  });
 
   if (!history || history.length === 0) {
     return null;
   }
 
-  const prices = history.map(h => parseFloat(h.price));
+  const prices = history.map((h) => parseFloat(h.price));
   const currentPrice = prices[0]; // Most recent price (ordered desc)
   const minPrice = Math.min(...prices);
   const maxPrice = Math.max(...prices);
@@ -657,13 +855,14 @@ async function getPriceStatistics(trackedProductId, period = "30d") {
   // Calculate price change from oldest to newest in this period
   const oldestPrice = prices[prices.length - 1];
   const priceChange = currentPrice - oldestPrice;
-  const priceChangePercent = oldestPrice > 0 ? ((priceChange / oldestPrice) * 100) : 0;
+  const priceChangePercent =
+    oldestPrice > 0 ? (priceChange / oldestPrice) * 100 : 0;
 
   // Good Deal logic: current price is at least 5% below average
   const goodDealThreshold = avgPrice * 0.95;
   const isGoodDeal = currentPrice < goodDealThreshold;
   const savingsFromAvg = avgPrice - currentPrice;
-  const savingsPercent = avgPrice > 0 ? ((savingsFromAvg / avgPrice) * 100) : 0;
+  const savingsPercent = avgPrice > 0 ? (savingsFromAvg / avgPrice) * 100 : 0;
 
   return {
     currentPrice,
@@ -676,7 +875,8 @@ async function getPriceStatistics(trackedProductId, period = "30d") {
     savingsFromAvg: isGoodDeal ? Math.round(savingsFromAvg * 100) / 100 : 0,
     savingsPercent: isGoodDeal ? Math.round(savingsPercent * 100) / 100 : 0,
     dataPoints: history.length,
-    periodStart: history.length > 0 ? history[history.length - 1].recorded_at : null,
+    periodStart:
+      history.length > 0 ? history[history.length - 1].recorded_at : null,
     periodEnd: history.length > 0 ? history[0].recorded_at : null,
   };
 }
@@ -717,19 +917,23 @@ async function getHighlightedDeals(limit = 10) {
     // Calculate stats for each unique product
     const dealsWithStats = [];
     for (const product of productMap.values()) {
-      const history = await getPriceHistory(product.id, { period: "30d", limit: 100 });
+      const history = await getPriceHistory(product.id, {
+        period: "30d",
+        limit: 100,
+      });
 
       // Need at least 2 data points to make a meaningful comparison;
       // a single entry would trivially satisfy current <= min.
       if (history && history.length >= 2) {
-        const prices = history.map(h => parseFloat(h.price));
+        const prices = history.map((h) => parseFloat(h.price));
         const currentPrice = parseFloat(product.current_price);
         const minPrice = Math.min(...prices);
         const avgPrice = prices.reduce((sum, p) => sum + p, 0) / prices.length;
 
         const isBestPrice = currentPrice <= minPrice;
         const isGoodDeal = currentPrice < avgPrice * 0.95;
-        const savingsPercent = avgPrice > 0 ? ((avgPrice - currentPrice) / avgPrice) * 100 : 0;
+        const savingsPercent =
+          avgPrice > 0 ? ((avgPrice - currentPrice) / avgPrice) * 100 : 0;
 
         if (isBestPrice || isGoodDeal) {
           dealsWithStats.push({
@@ -740,7 +944,7 @@ async function getHighlightedDeals(limit = 10) {
             isGoodDeal,
             savingsPercent: Math.round(savingsPercent * 100) / 100,
             savingsAmount: Math.round((avgPrice - currentPrice) * 100) / 100,
-            dataPoints: history.length
+            dataPoints: history.length,
           });
         }
       }
@@ -763,7 +967,11 @@ async function getHighlightedDeals(limit = 10) {
  * @param {string} options.category - Filter by category (optional)
  * @param {boolean} options.dealsOnly - Only return products that are deals
  */
-async function getPopularProducts({ limit = 8, category = "", dealsOnly = false } = {}) {
+async function getPopularProducts({
+  limit = 8,
+  category = "",
+  dealsOnly = false,
+} = {}) {
   try {
     // Get all tracked products
     const { data: products, error } = await getSupabase()
@@ -791,13 +999,14 @@ async function getPopularProducts({ limit = 8, category = "", dealsOnly = false 
     // Convert to array and sort by popularity
     let popularProducts = Array.from(productCounts.values())
       .sort((a, b) => b.count - a.count)
-      .map(item => ({ ...item.product, trackCount: item.count }));
+      .map((item) => ({ ...item.product, trackCount: item.count }));
 
     // Filter by category if specified
     if (category) {
-      popularProducts = popularProducts.filter(p =>
-        p.product_title?.toLowerCase().includes(category.toLowerCase()) ||
-        p.source?.toLowerCase() === category.toLowerCase()
+      popularProducts = popularProducts.filter(
+        (p) =>
+          p.product_title?.toLowerCase().includes(category.toLowerCase()) ||
+          p.source?.toLowerCase() === category.toLowerCase(),
       );
     }
 
@@ -805,11 +1014,15 @@ async function getPopularProducts({ limit = 8, category = "", dealsOnly = false 
     if (dealsOnly) {
       const dealsFiltered = [];
       for (const product of popularProducts) {
-        const history = await getPriceHistory(product.id, { period: "30d", limit: 50 });
+        const history = await getPriceHistory(product.id, {
+          period: "30d",
+          limit: 50,
+        });
         if (history && history.length > 0) {
-          const prices = history.map(h => parseFloat(h.price));
+          const prices = history.map((h) => parseFloat(h.price));
           const currentPrice = parseFloat(product.current_price);
-          const avgPrice = prices.reduce((sum, p) => sum + p, 0) / prices.length;
+          const avgPrice =
+            prices.reduce((sum, p) => sum + p, 0) / prices.length;
           const minPrice = Math.min(...prices);
 
           const isGoodDeal = currentPrice < avgPrice * 0.95;
@@ -822,7 +1035,9 @@ async function getPopularProducts({ limit = 8, category = "", dealsOnly = false 
               minPrice,
               isGoodDeal,
               isBestPrice,
-              savingsPercent: Math.round(((avgPrice - currentPrice) / avgPrice) * 100 * 100) / 100
+              savingsPercent:
+                Math.round(((avgPrice - currentPrice) / avgPrice) * 100 * 100) /
+                100,
             });
           }
         }
@@ -844,7 +1059,11 @@ async function getPopularProducts({ limit = 8, category = "", dealsOnly = false 
  * @param {string} options.category - Filter by category (optional)
  * @param {number} options.limit - Max products to return
  */
-async function getTopPriceDrops({ period = "recent", category = "", limit = 8 } = {}) {
+async function getTopPriceDrops({
+  period = "recent",
+  category = "",
+  limit = 8,
+} = {}) {
   try {
     // Determine time range based on period
     let hoursBack;
@@ -889,17 +1108,25 @@ async function getTopPriceDrops({ period = "recent", category = "", limit = 8 } 
     const priceDrops = [];
     for (const product of productMap.values()) {
       // Filter by category if specified
-      if (category && !product.product_title?.toLowerCase().includes(category.toLowerCase())) {
+      if (
+        category &&
+        !product.product_title?.toLowerCase().includes(category.toLowerCase())
+      ) {
         continue;
       }
 
-      const history = await getPriceHistory(product.id, { period: period === "weekly" ? "7d" : "30d", limit: 100 });
+      const history = await getPriceHistory(product.id, {
+        period: period === "weekly" ? "7d" : "30d",
+        limit: 100,
+      });
 
       if (history && history.length >= 2) {
         const currentPrice = parseFloat(product.current_price);
 
         // Find the oldest price in our period
-        const pricesInPeriod = history.filter(h => new Date(h.recorded_at) >= cutoffDate);
+        const pricesInPeriod = history.filter(
+          (h) => new Date(h.recorded_at) >= cutoffDate,
+        );
 
         if (pricesInPeriod.length > 0) {
           const oldestInPeriod = pricesInPeriod[pricesInPeriod.length - 1];
@@ -914,7 +1141,7 @@ async function getTopPriceDrops({ period = "recent", category = "", limit = 8 } 
               previousPrice: periodStartPrice,
               dropAmount: Math.round(dropAmount * 100) / 100,
               dropPercent: Math.round(dropPercent * 100) / 100,
-              periodStart: oldestInPeriod.recorded_at
+              periodStart: oldestInPeriod.recorded_at,
             });
           }
         }
@@ -952,15 +1179,126 @@ async function getDiscountsByCategory() {
 
     // Define category keywords and their display info
     const categoryDefinitions = [
-      { key: "electronics", keywords: ["phone", "laptop", "computer", "tablet", "tv", "audio", "headphone", "speaker", "celular", "computadora", "televisor", "bocina"], icon: "📱", nameEn: "Electronics", nameEs: "Electrónica" },
-      { key: "home", keywords: ["home", "kitchen", "furniture", "decor", "hogar", "cocina", "mueble", "decoración"], icon: "🏠", nameEn: "Home & Kitchen", nameEs: "Hogar y Cocina" },
-      { key: "fashion", keywords: ["clothing", "shoes", "fashion", "watch", "jewelry", "ropa", "zapatos", "moda", "reloj", "joyería"], icon: "👗", nameEn: "Fashion", nameEs: "Moda" },
-      { key: "sports", keywords: ["sport", "fitness", "exercise", "outdoor", "deporte", "ejercicio", "aire libre"], icon: "⚽", nameEn: "Sports & Outdoors", nameEs: "Deportes" },
-      { key: "beauty", keywords: ["beauty", "cosmetic", "skincare", "perfume", "belleza", "cosmético", "cuidado piel"], icon: "💄", nameEn: "Beauty", nameEs: "Belleza" },
-      { key: "toys", keywords: ["toy", "game", "puzzle", "lego", "juguete", "juego"], icon: "🎮", nameEn: "Toys & Games", nameEs: "Juguetes" },
-      { key: "books", keywords: ["book", "kindle", "reading", "libro", "lectura"], icon: "📚", nameEn: "Books", nameEs: "Libros" },
-      { key: "automotive", keywords: ["car", "auto", "vehicle", "motor", "carro", "vehículo", "coche"], icon: "🚗", nameEn: "Automotive", nameEs: "Automotriz" },
-      { key: "other", keywords: [], icon: "📦", nameEn: "Other", nameEs: "Otros" }
+      {
+        key: "electronics",
+        keywords: [
+          "phone",
+          "laptop",
+          "computer",
+          "tablet",
+          "tv",
+          "audio",
+          "headphone",
+          "speaker",
+          "celular",
+          "computadora",
+          "televisor",
+          "bocina",
+        ],
+        icon: "📱",
+        nameEn: "Electronics",
+        nameEs: "Electrónica",
+      },
+      {
+        key: "home",
+        keywords: [
+          "home",
+          "kitchen",
+          "furniture",
+          "decor",
+          "hogar",
+          "cocina",
+          "mueble",
+          "decoración",
+        ],
+        icon: "🏠",
+        nameEn: "Home & Kitchen",
+        nameEs: "Hogar y Cocina",
+      },
+      {
+        key: "fashion",
+        keywords: [
+          "clothing",
+          "shoes",
+          "fashion",
+          "watch",
+          "jewelry",
+          "ropa",
+          "zapatos",
+          "moda",
+          "reloj",
+          "joyería",
+        ],
+        icon: "👗",
+        nameEn: "Fashion",
+        nameEs: "Moda",
+      },
+      {
+        key: "sports",
+        keywords: [
+          "sport",
+          "fitness",
+          "exercise",
+          "outdoor",
+          "deporte",
+          "ejercicio",
+          "aire libre",
+        ],
+        icon: "⚽",
+        nameEn: "Sports & Outdoors",
+        nameEs: "Deportes",
+      },
+      {
+        key: "beauty",
+        keywords: [
+          "beauty",
+          "cosmetic",
+          "skincare",
+          "perfume",
+          "belleza",
+          "cosmético",
+          "cuidado piel",
+        ],
+        icon: "💄",
+        nameEn: "Beauty",
+        nameEs: "Belleza",
+      },
+      {
+        key: "toys",
+        keywords: ["toy", "game", "puzzle", "lego", "juguete", "juego"],
+        icon: "🎮",
+        nameEn: "Toys & Games",
+        nameEs: "Juguetes",
+      },
+      {
+        key: "books",
+        keywords: ["book", "kindle", "reading", "libro", "lectura"],
+        icon: "📚",
+        nameEn: "Books",
+        nameEs: "Libros",
+      },
+      {
+        key: "automotive",
+        keywords: [
+          "car",
+          "auto",
+          "vehicle",
+          "motor",
+          "carro",
+          "vehículo",
+          "coche",
+        ],
+        icon: "🚗",
+        nameEn: "Automotive",
+        nameEs: "Automotriz",
+      },
+      {
+        key: "other",
+        keywords: [],
+        icon: "📦",
+        nameEn: "Other",
+        nameEs: "Otros",
+      },
     ];
 
     // Categorize products and find max discounts
@@ -971,7 +1309,7 @@ async function getDiscountsByCategory() {
         ...cat,
         maxDiscount: 0,
         productCount: 0,
-        bestDealProduct: null
+        bestDealProduct: null,
       });
     }
 
@@ -982,17 +1320,20 @@ async function getDiscountsByCategory() {
 
       // Find matching category
       for (const cat of categoryDefinitions) {
-        if (cat.keywords.some(kw => title.includes(kw))) {
+        if (cat.keywords.some((kw) => title.includes(kw))) {
           matchedCategory = cat.key;
           break;
         }
       }
 
       // Get price stats for this product
-      const history = await getPriceHistory(product.id, { period: "30d", limit: 50 });
+      const history = await getPriceHistory(product.id, {
+        period: "30d",
+        limit: 50,
+      });
 
       if (history && history.length > 0) {
-        const prices = history.map(h => parseFloat(h.price));
+        const prices = history.map((h) => parseFloat(h.price));
         const currentPrice = parseFloat(product.current_price);
         const avgPrice = prices.reduce((sum, p) => sum + p, 0) / prices.length;
 
@@ -1007,7 +1348,7 @@ async function getDiscountsByCategory() {
             catStat.bestDealProduct = {
               ...product,
               avgPrice: Math.round(avgPrice * 100) / 100,
-              discountPercent: Math.round(discountPercent)
+              discountPercent: Math.round(discountPercent),
             };
           }
         }
@@ -1016,8 +1357,9 @@ async function getDiscountsByCategory() {
 
     // Convert to array - show ALL categories, even if they have no products yet
     // This allows users to browse all available categories
-    const results = Array.from(categoryStats.values())
-      .sort((a, b) => b.maxDiscount - a.maxDiscount);
+    const results = Array.from(categoryStats.values()).sort(
+      (a, b) => b.maxDiscount - a.maxDiscount,
+    );
 
     return results;
   } catch (err) {
@@ -1051,15 +1393,84 @@ async function getProductsByCategory(categoryKey, options = {}) {
 
     // Define category keywords (same as getDiscountsByCategory)
     const categoryDefinitions = {
-      electronics: { keywords: ["phone", "laptop", "computer", "tablet", "tv", "audio", "headphone", "speaker", "celular", "computadora", "televisor", "bocina"] },
-      home: { keywords: ["home", "kitchen", "furniture", "decor", "hogar", "cocina", "mueble", "decoración"] },
-      fashion: { keywords: ["clothing", "shoes", "fashion", "watch", "jewelry", "ropa", "zapatos", "moda", "reloj", "joyería"] },
-      sports: { keywords: ["sport", "fitness", "exercise", "outdoor", "deporte", "ejercicio", "aire libre"] },
-      beauty: { keywords: ["beauty", "cosmetic", "skincare", "perfume", "belleza", "cosmético", "cuidado piel"] },
+      electronics: {
+        keywords: [
+          "phone",
+          "laptop",
+          "computer",
+          "tablet",
+          "tv",
+          "audio",
+          "headphone",
+          "speaker",
+          "celular",
+          "computadora",
+          "televisor",
+          "bocina",
+        ],
+      },
+      home: {
+        keywords: [
+          "home",
+          "kitchen",
+          "furniture",
+          "decor",
+          "hogar",
+          "cocina",
+          "mueble",
+          "decoración",
+        ],
+      },
+      fashion: {
+        keywords: [
+          "clothing",
+          "shoes",
+          "fashion",
+          "watch",
+          "jewelry",
+          "ropa",
+          "zapatos",
+          "moda",
+          "reloj",
+          "joyería",
+        ],
+      },
+      sports: {
+        keywords: [
+          "sport",
+          "fitness",
+          "exercise",
+          "outdoor",
+          "deporte",
+          "ejercicio",
+          "aire libre",
+        ],
+      },
+      beauty: {
+        keywords: [
+          "beauty",
+          "cosmetic",
+          "skincare",
+          "perfume",
+          "belleza",
+          "cosmético",
+          "cuidado piel",
+        ],
+      },
       toys: { keywords: ["toy", "game", "puzzle", "lego", "juguete", "juego"] },
       books: { keywords: ["book", "kindle", "reading", "libro", "lectura"] },
-      automotive: { keywords: ["car", "auto", "vehicle", "motor", "carro", "vehículo", "coche"] },
-      other: { keywords: [] }
+      automotive: {
+        keywords: [
+          "car",
+          "auto",
+          "vehicle",
+          "motor",
+          "carro",
+          "vehículo",
+          "coche",
+        ],
+      },
+      other: { keywords: [] },
     };
 
     const categoryDef = categoryDefinitions[categoryKey];
@@ -1079,25 +1490,30 @@ async function getProductsByCategory(categoryKey, options = {}) {
         // "Other" includes products that don't match any specific category
         isMatch = !Object.entries(categoryDefinitions)
           .filter(([key]) => key !== "other")
-          .some(([_, def]) => def.keywords.some(kw => title.includes(kw)));
+          .some(([_, def]) => def.keywords.some((kw) => title.includes(kw)));
       } else {
         // Match against category keywords
-        isMatch = categoryDef.keywords.some(kw => title.includes(kw));
+        isMatch = categoryDef.keywords.some((kw) => title.includes(kw));
       }
 
       if (isMatch) {
         // Get price stats for this product
-        const history = await getPriceHistory(product.id, { period: "30d", limit: 50 });
+        const history = await getPriceHistory(product.id, {
+          period: "30d",
+          limit: 50,
+        });
 
         if (history && history.length > 0) {
-          const prices = history.map(h => parseFloat(h.price));
+          const prices = history.map((h) => parseFloat(h.price));
           const currentPrice = parseFloat(product.current_price);
-          const avgPrice = prices.reduce((sum, p) => sum + p, 0) / prices.length;
+          const avgPrice =
+            prices.reduce((sum, p) => sum + p, 0) / prices.length;
           const minPrice = Math.min(...prices);
 
           const isBestPrice = currentPrice <= minPrice;
           const isGoodDeal = currentPrice < avgPrice * 0.95;
-          const savingsPercent = avgPrice > 0 ? ((avgPrice - currentPrice) / avgPrice) * 100 : 0;
+          const savingsPercent =
+            avgPrice > 0 ? ((avgPrice - currentPrice) / avgPrice) * 100 : 0;
           const savingsAmount = avgPrice - currentPrice;
 
           const productWithStats = {
@@ -1107,7 +1523,7 @@ async function getProductsByCategory(categoryKey, options = {}) {
             isBestPrice,
             isGoodDeal,
             savingsPercent: Math.round(savingsPercent),
-            savingsAmount: Math.round(savingsAmount * 100) / 100
+            savingsAmount: Math.round(savingsAmount * 100) / 100,
           };
 
           // Apply dealsOnly filter if requested
@@ -1122,7 +1538,9 @@ async function getProductsByCategory(categoryKey, options = {}) {
     }
 
     // Sort by savings percentage (best deals first)
-    categoryProducts.sort((a, b) => (b.savingsPercent || 0) - (a.savingsPercent || 0));
+    categoryProducts.sort(
+      (a, b) => (b.savingsPercent || 0) - (a.savingsPercent || 0),
+    );
 
     return categoryProducts.slice(0, limit);
   } catch (err) {
@@ -1147,7 +1565,7 @@ async function getProductCategories() {
     }
 
     // Get unique sources
-    const sources = [...new Set(products.map(p => p.source).filter(Boolean))];
+    const sources = [...new Set(products.map((p) => p.source).filter(Boolean))];
     return sources;
   } catch (err) {
     console.error("[Supabase] getProductCategories exception:", err);
@@ -1166,7 +1584,7 @@ async function createDemoAccounts() {
   const demoUsers = [
     { email: "demo@shopsavvy.com", password: "demo1234" },
     { email: "test@example.com", password: "test1234" },
-    { email: "admin@shopsavvy.com", password: "admin1234" }
+    { email: "admin@shopsavvy.com", password: "admin1234" },
   ];
 
   for (const user of demoUsers) {
@@ -1177,7 +1595,7 @@ async function createDemoAccounts() {
         email: user.email,
         passwordHash,
         verified: true,
-        authProvider: "local"
+        authProvider: "local",
       });
       console.log(`[Supabase] Created demo account: ${user.email}`);
     }
@@ -1227,7 +1645,7 @@ function createDbInterface() {
           passwordHash: params[1], // Already hashed
           verified: params[2] || false,
           verificationToken: params[3] || null,
-          authProvider: params[4] || "local"
+          authProvider: params[4] || "local",
         });
       }
 
@@ -1261,7 +1679,7 @@ function createDbInterface() {
       }
       console.warn("[Supabase] Unhandled query:", query);
       return [];
-    }
+    },
   };
 }
 
@@ -1286,7 +1704,7 @@ async function recordSearch(userId, query, source = "all", resultCount = 0) {
       query: query.trim().toLowerCase(),
       source: source || "all",
       result_count: resultCount,
-      created_at: new Date().toISOString()
+      created_at: new Date().toISOString(),
     });
   if (error) {
     console.error("[Supabase] recordSearch error:", error.message);
@@ -1316,7 +1734,7 @@ async function getUserSearchHistory(userId, limit = 10) {
   // Deduplicate while preserving order
   const seen = new Set();
   const unique = [];
-  for (const row of (data || [])) {
+  for (const row of data || []) {
     if (!seen.has(row.query)) {
       seen.add(row.query);
       unique.push(row.query);
@@ -1353,7 +1771,7 @@ async function getProductsByUserInterests(queries, limit = 12) {
       .limit(limit);
 
     if (error) continue;
-    for (const row of (data || [])) {
+    for (const row of data || []) {
       if (!seen.has(row.product_id)) {
         seen.add(row.product_id);
         results.push(row);
@@ -1385,6 +1803,7 @@ module.exports = {
   addTrackedProduct,
   upsertScrapedProduct,
   getTrackedProducts,
+  getTrackedProductById,
   searchTrackedProducts,
   removeTrackedProduct,
   getAllTrackedProducts,
@@ -1405,5 +1824,5 @@ module.exports = {
   getUserSearchHistory,
   getProductsByUserInterests,
   // Setup
-  createDemoAccounts
+  createDemoAccounts,
 };

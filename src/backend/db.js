@@ -91,25 +91,46 @@ async function initDb() {
   // Add new columns to existing users table if they don't exist
   try {
     await db.exec(`ALTER TABLE users ADD COLUMN last_login TEXT`);
-  } catch (e) { /* column already exists */ }
+  } catch (e) {
+    /* column already exists */
+  }
 
   try {
     await db.exec(`ALTER TABLE users ADD COLUMN login_count INTEGER DEFAULT 0`);
-  } catch (e) { /* column already exists */ }
+  } catch (e) {
+    /* column already exists */
+  }
 
   try {
-    await db.exec(`ALTER TABLE users ADD COLUMN auth_provider TEXT DEFAULT 'local'`);
-  } catch (e) { /* column already exists */ }
+    await db.exec(
+      `ALTER TABLE users ADD COLUMN auth_provider TEXT DEFAULT 'local'`,
+    );
+  } catch (e) {
+    /* column already exists */
+  }
 
   // Add username column for profile customization
   try {
     await db.exec(`ALTER TABLE users ADD COLUMN username TEXT`);
-  } catch (e) { /* column already exists */ }
+  } catch (e) {
+    /* column already exists */
+  }
 
   // Add profile_picture_url column for avatar storage
   try {
     await db.exec(`ALTER TABLE users ADD COLUMN profile_picture_url TEXT`);
-  } catch (e) { /* column already exists */ }
+  } catch (e) {
+    /* column already exists */
+  }
+
+  // Add role column for admin access control
+  try {
+    await db.exec(
+      `ALTER TABLE users ADD COLUMN role TEXT NOT NULL DEFAULT 'user'`,
+    );
+  } catch (e) {
+    /* column already exists */
+  }
 
   // Create demo accounts if they don't exist
   await createDemoAccounts(db);
@@ -120,38 +141,83 @@ async function initDb() {
 // Create demo accounts for testing
 async function createDemoAccounts(db) {
   const demoUsers = [
-    { email: "demo@ofertaradar.com", password: "demo1234", verified: 1 },
-    { email: "test@example.com", password: "test1234", verified: 1 },
-    { email: "admin@ofertaradar.com", password: "admin1234", verified: 1 },
+    {
+      email: "demo@ofertaradar.com",
+      password: "demo1234",
+      verified: 1,
+      role: "user",
+    },
+    {
+      email: "test@example.com",
+      password: "test1234",
+      verified: 1,
+      role: "user",
+    },
+    {
+      email: "admin@ofertaradar.com",
+      password: "admin1234",
+      verified: 1,
+      role: "admin",
+    },
   ];
 
   for (const user of demoUsers) {
-    const existing = await db.get("SELECT id FROM users WHERE email = ?", user.email);
+    const existing = await db.get(
+      "SELECT id FROM users WHERE email = ?",
+      user.email,
+    );
     if (!existing) {
       const passwordHash = await bcrypt.hash(user.password, 10);
       await db.run(
-        `INSERT INTO users (email, password_hash, verified, created_at, auth_provider)
-         VALUES (?, ?, ?, ?, ?)`,
-        [user.email, passwordHash, user.verified, new Date().toISOString(), "local"]
+        `INSERT INTO users (email, password_hash, verified, created_at, auth_provider, role)
+         VALUES (?, ?, ?, ?, ?, ?)`,
+        [
+          user.email,
+          passwordHash,
+          user.verified,
+          new Date().toISOString(),
+          "local",
+          user.role,
+        ],
       );
-      console.log(`[Demo] Created demo account: ${user.email}`);
+      console.log(`[Demo] Created demo account: ${user.email} (${user.role})`);
+    } else {
+      // Update existing admin account to have admin role
+      if (user.role === "admin") {
+        await db.run(`UPDATE users SET role = ? WHERE email = ?`, [
+          user.role,
+          user.email,
+        ]);
+        console.log(`[Demo] Updated ${user.email} to admin role`);
+      }
     }
   }
 }
 
 // Helper to record login attempt
-async function recordLoginAttempt(db, { userId, email, success, ipAddress, userAgent, authMethod }) {
+async function recordLoginAttempt(
+  db,
+  { userId, email, success, ipAddress, userAgent, authMethod },
+) {
   await db.run(
     `INSERT INTO login_history (user_id, email, success, ip_address, user_agent, auth_method, created_at)
      VALUES (?, ?, ?, ?, ?, ?, ?)`,
-    [userId, email, success ? 1 : 0, ipAddress, userAgent, authMethod, new Date().toISOString()]
+    [
+      userId,
+      email,
+      success ? 1 : 0,
+      ipAddress,
+      userAgent,
+      authMethod,
+      new Date().toISOString(),
+    ],
   );
 
   // Update user's last_login and login_count if successful
   if (success && userId) {
     await db.run(
       `UPDATE users SET last_login = ?, login_count = login_count + 1 WHERE id = ?`,
-      [new Date().toISOString(), userId]
+      [new Date().toISOString(), userId],
     );
   }
 }
@@ -160,8 +226,16 @@ async function recordLoginAttempt(db, { userId, email, success, ipAddress, userA
 async function getLoginHistory(db, userId, limit = 10) {
   return db.all(
     `SELECT * FROM login_history WHERE user_id = ? ORDER BY created_at DESC LIMIT ?`,
-    [userId, limit]
+    [userId, limit],
   );
 }
 
-module.exports = { initDb, recordLoginAttempt, getLoginHistory };
+// Helper to get user by ID
+async function getUserById(db, userId) {
+  return db.get(
+    `SELECT id, email, verified, role, created_at, last_login, login_count, auth_provider FROM users WHERE id = ?`,
+    [userId],
+  );
+}
+
+module.exports = { initDb, recordLoginAttempt, getLoginHistory, getUserById };
