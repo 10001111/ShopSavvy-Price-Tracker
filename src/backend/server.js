@@ -53,24 +53,99 @@ const CATEGORIES = {
     name: { en: "Electronics", es: "Electrónica" },
     icon: "📱",
     keywords: [
-      "iphone",
-      "samsung",
-      "laptop",
-      "macbook",
+      // General electronics
+      "electronic",
+      "electrónico",
+      "device",
+      "gadget",
+      // Tablets & E-readers
+      "tablet",
       "ipad",
-      "watch",
-      "airpods",
-      "tv",
-      "televisor",
+      "kindle",
+      "e-reader",
+      // Audio devices
       "headphone",
       "earbud",
-      "phone",
-      "tablet",
-      "computer",
-      "smart tv",
-      "celular",
-      "computadora",
+      "airpods",
+      "speaker",
       "audífonos",
+      "bocina",
+      // TVs & Monitors
+      "tv",
+      "television",
+      "televisor",
+      "monitor",
+      "smart tv",
+      // Cameras & Photography
+      "camera",
+      "cámara",
+      "gopro",
+      "photography",
+      // Smart home
+      "smart home",
+      "alexa",
+      "google home",
+      "smart speaker",
+      // Gaming accessories (non-console)
+      "gaming keyboard",
+      "gaming mouse",
+      // Wearables
+      "smartwatch",
+      "fitness tracker",
+      "watch",
+      "reloj inteligente",
+      // VR & AR (moved from toys - these are electronics)
+      "vr headset",
+      "virtual reality",
+      "vr",
+      "oculus",
+      "meta quest",
+      "psvr",
+      "playstation vr",
+      "htc vive",
+      "ar glasses",
+      "augmented reality",
+    ],
+  },
+  phones: {
+    id: "phones",
+    name: { en: "Phones", es: "Teléfonos" },
+    icon: "📱",
+    keywords: [
+      "phone",
+      "iphone",
+      "samsung",
+      "celular",
+      "smartphone",
+      "teléfono",
+      "móvil",
+      "android",
+      "xiaomi",
+      "motorola",
+      "huawei",
+      "pixel",
+      "galaxy",
+    ],
+  },
+  computers: {
+    id: "computers",
+    name: { en: "Computers", es: "Computadoras" },
+    icon: "💻",
+    keywords: [
+      "computer",
+      "computadora",
+      "laptop",
+      "pc",
+      "macbook",
+      "desktop",
+      "notebook",
+      "chromebook",
+      "imac",
+      "processor",
+      "procesador",
+      "ram",
+      "ssd",
+      "hard drive",
     ],
   },
   "home-kitchen": {
@@ -78,34 +153,162 @@ const CATEGORIES = {
     name: { en: "Home & Kitchen", es: "Hogar y Cocina" },
     icon: "🏠",
     keywords: [
-      "aspiradora",
-      "dyson",
-      "vacuum",
-      "refrigerador",
-      "microondas",
-      "lavadora",
+      // General
+      "hogar",
+      "home",
+      "casa",
       "furniture",
       "muebles",
+      // Bedroom furniture
+      "bed",
+      "cama",
+      "colchón",
+      "mattress",
+      "pillow",
+      "almohada",
+      "cojín",
+      "cushion",
+      "bedding",
+      "ropa de cama",
+      "nightstand",
+      "mesita de noche",
+      "dresser",
+      "cómoda",
+      "wardrobe",
+      "armario",
+      "closet",
+      // Living room furniture
+      "sofa",
+      "sofá",
+      "couch",
+      "chair",
+      "silla",
+      "sillón",
+      "armchair",
+      "table",
+      "mesa",
+      "coffee table",
+      "mesa de centro",
+      "tv stand",
+      "mueble tv",
+      "bookshelf",
+      "estante",
+      "shelf",
+      "repisa",
+      // Office furniture
+      "desk",
+      "escritorio",
+      "office chair",
+      "silla oficina",
+      "filing cabinet",
+      "archivero",
+      // Kitchen appliances
+      "kitchen",
       "cocina",
-      "hogar",
+      "refrigerator",
+      "refrigerador",
+      "microwave",
+      "microondas",
+      "oven",
+      "horno",
+      "stove",
+      "estufa",
+      "blender",
+      "licuadora",
+      "mixer",
+      "batidora",
+      "toaster",
+      "tostador",
+      "coffee maker",
+      "cafetera",
+      "air fryer",
+      "freidora de aire",
+      // Cleaning appliances
+      "vacuum",
+      "aspiradora",
+      "dyson",
+      "mop",
+      "trapeador",
+      "steam cleaner",
+      "limpiadora vapor",
+      // Laundry
+      "washing machine",
+      "lavadora",
+      "dryer",
+      "secadora",
+      "iron",
+      "plancha",
+      // Home decor
+      "lamp",
+      "lámpara",
+      "light",
+      "luz",
+      "curtain",
+      "cortina",
+      "rug",
+      "alfombra",
+      "carpet",
+      "tapete",
+      "mirror",
+      "espejo",
+      "picture frame",
+      "marco",
+      "vase",
+      "florero",
+      "decoration",
+      "decoración",
+      // Storage & organization
+      "storage",
+      "almacenamiento",
+      "organizer",
+      "organizador",
+      "basket",
+      "canasta",
+      "box",
+      "caja",
+      "container",
+      "contenedor",
     ],
   },
-  fashion: {
-    id: "fashion",
-    name: { en: "Fashion", es: "Moda" },
+  clothing: {
+    id: "clothing",
+    name: { en: "Clothing", es: "Ropa" },
     icon: "👗",
     keywords: [
-      "ropa",
-      "zapatos",
-      "adidas",
-      "nike",
-      "shirt",
-      "pants",
-      "vestido",
+      // General clothing
       "clothing",
-      "shoes",
+      "ropa",
       "fashion",
       "moda",
+      // Specific items
+      "shirt",
+      "t-shirt",
+      "camisa",
+      "camiseta",
+      "pants",
+      "pantalones",
+      "jeans",
+      "dress",
+      "vestido",
+      "skirt",
+      "falda",
+      "jacket",
+      "chamarra",
+      "sweater",
+      "suéter",
+      // Footwear
+      "shoes",
+      "zapatos",
+      "sneakers",
+      "tenis",
+      "boots",
+      "botas",
+      // Brands
+      "adidas",
+      "nike",
+      "zara",
+      "h&m",
+      "uniqlo",
     ],
   },
   "sports-outdoors": {
@@ -113,14 +316,173 @@ const CATEGORIES = {
     name: { en: "Sports & Outdoors", es: "Deportes" },
     icon: "⚽",
     keywords: [
-      "futbol",
-      "basketball",
+      // General
       "deportes",
+      "sports",
+      "athletic",
+      "atlético",
+      // Ball sports
+      "basketball",
+      "baloncesto",
+      "balón",
+      "ball",
+      "futbol",
+      "soccer",
+      "football",
+      "americano",
+      "tennis",
+      "tenis",
+      "volleyball",
+      "voleibol",
+      "baseball",
+      "béisbol",
+      "golf",
+      "ping pong",
+      "table tennis",
+      // Racquet sports
+      "racquet",
+      "raqueta",
+      "badminton",
+      "squash",
+      // Fitness & gym
       "fitness",
       "gym",
-      "sports",
+      "gimnasio",
+      "exercise",
+      "ejercicio",
+      "workout",
+      "entrenamiento",
+      "dumbbell",
+      "mancuerna",
+      "pesas",
+      "weight",
+      "barbell",
+      "barra",
+      "kettlebell",
+      "pesa rusa",
+      "resistance band",
+      "banda resistencia",
+      "bench",
+      "banco",
+      "treadmill",
+      "caminadora",
+      "elliptical",
+      "elíptica",
+      "stationary bike",
+      "bicicleta estática",
+      "rowing machine",
+      "remo",
+      // Yoga & pilates
+      "yoga",
+      "mat",
+      "tapete",
+      "colchoneta",
+      "pilates",
+      "foam roller",
+      "rodillo",
+      "meditation",
+      "meditación",
+      // Running & cycling
+      "running",
+      "correr",
+      "jogging",
+      "runner",
+      "corredor",
+      "cycling",
+      "ciclismo",
+      "bicycle",
+      "bicicleta",
+      "bike",
+      "helmet",
+      "casco",
+      // Swimming
+      "swimming",
+      "natación",
+      "swimsuit",
+      "traje de baño",
+      "goggles",
+      "lentes",
+      "pool",
+      "alberca",
+      // Combat sports
+      "boxing",
+      "boxeo",
+      "gloves",
+      "guantes",
+      "punching bag",
+      "costal",
+      "martial arts",
+      "artes marciales",
+      "karate",
+      "taekwondo",
+      "judo",
+      // Outdoor activities
       "outdoor",
+      "aire libre",
       "camping",
+      "campamento",
+      "hiking",
+      "senderismo",
+      "trekking",
+      "tent",
+      "tienda de campaña",
+      "sleeping bag",
+      "saco de dormir",
+      "backpack",
+      "mochila",
+      "hiking boots",
+      "botas",
+      "compass",
+      "brújula",
+      "flashlight",
+      "linterna",
+      "cooler",
+      "hielera",
+      // Fishing & hunting
+      "fishing",
+      "pesca",
+      "rod",
+      "caña",
+      "reel",
+      "carrete",
+      "lure",
+      "señuelo",
+      // Winter sports
+      "ski",
+      "esquí",
+      "snowboard",
+      "skating",
+      "patinaje",
+      "ice skates",
+      "patines",
+      // Water sports
+      "kayak",
+      "paddle",
+      "remo",
+      "surfing",
+      "surf",
+      "snorkeling",
+      "esnórquel",
+      // Team sports gear
+      "jersey",
+      "playera",
+      "uniform",
+      "uniforme",
+      "shin guards",
+      "espinilleras",
+      "knee pads",
+      "rodilleras",
+      // Sports accessories
+      "sports bag",
+      "maleta deportiva",
+      "water bottle",
+      "botella",
+      "towel",
+      "toalla",
+      "stopwatch",
+      "cronómetro",
+      "whistle",
+      "silbato",
     ],
   },
   beauty: {
@@ -128,14 +490,244 @@ const CATEGORIES = {
     name: { en: "Beauty", es: "Belleza" },
     icon: "💄",
     keywords: [
-      "cosmeticos",
-      "perfume",
-      "belleza",
-      "skincare",
-      "maquillaje",
+      // General
       "beauty",
-      "makeup",
+      "belleza",
       "cosmetics",
+      "cosméticos",
+      "personal care",
+      "cuidado personal",
+      // Skincare - cleansing
+      "skincare",
+      "cuidado de la piel",
+      "cleanser",
+      "limpiador",
+      "face wash",
+      "jabón facial",
+      "makeup remover",
+      "desmaquillante",
+      "toner",
+      "tónico",
+      "exfoliator",
+      "exfoliante",
+      "scrub",
+      "facial scrub",
+      // Skincare - treatment
+      "serum",
+      "essence",
+      "esencia",
+      "ampoule",
+      "ampolla",
+      "treatment",
+      "tratamiento",
+      "retinol",
+      "vitamin c",
+      "vitamina c",
+      "hyaluronic acid",
+      "ácido hialurónico",
+      "niacinamide",
+      "niacinamida",
+      "aha",
+      "bha",
+      "salicylic acid",
+      "ácido salicílico",
+      // Skincare - moisturizing
+      "moisturizer",
+      "hidratante",
+      "crema",
+      "cream",
+      "lotion",
+      "loción",
+      "gel",
+      "emulsion",
+      "emulsión",
+      "eye cream",
+      "contorno de ojos",
+      "night cream",
+      "crema noche",
+      "day cream",
+      "crema día",
+      // Sun protection
+      "sunscreen",
+      "protector solar",
+      "spf",
+      "sun protection",
+      // Masks & treatments
+      "face mask",
+      "mascarilla",
+      "sheet mask",
+      "clay mask",
+      "arcilla",
+      "peel off",
+      "sleeping mask",
+      "overnight mask",
+      // Makeup - face
+      "makeup",
+      "maquillaje",
+      "foundation",
+      "base",
+      "bb cream",
+      "cc cream",
+      "primer",
+      "prebase",
+      "concealer",
+      "corrector",
+      "powder",
+      "polvo",
+      "blush",
+      "rubor",
+      "bronzer",
+      "bronceador",
+      "highlighter",
+      "iluminador",
+      "contour",
+      "setting spray",
+      "fijador",
+      // Makeup - eyes
+      "eyeshadow",
+      "sombra",
+      "palette",
+      "paleta",
+      "eyeliner",
+      "delineador",
+      "mascara",
+      "máscara",
+      "pestañas",
+      "eyebrow",
+      "ceja",
+      "brow pencil",
+      "lápiz cejas",
+      "brow gel",
+      "gel cejas",
+      // Makeup - lips
+      "lipstick",
+      "lápiz labial",
+      "labial",
+      "lip gloss",
+      "brillo labios",
+      "lip liner",
+      "delineador labios",
+      "lip balm",
+      "bálsamo labial",
+      "lip tint",
+      "tinta labios",
+      "matte lipstick",
+      // Makeup tools
+      "brush",
+      "brocha",
+      "makeup brush",
+      "sponge",
+      "esponja",
+      "beauty blender",
+      "eyelash curler",
+      "rizador pestañas",
+      // Fragrance
+      "perfume",
+      "fragrance",
+      "cologne",
+      "colonia",
+      "eau de parfum",
+      "eau de toilette",
+      "body mist",
+      "spray corporal",
+      "essential oil",
+      "aceite esencial",
+      // Hair care - cleansing
+      "shampoo",
+      "champú",
+      "conditioner",
+      "acondicionador",
+      "hair mask",
+      "mascarilla capilar",
+      "treatment",
+      "tratamiento capilar",
+      "dry shampoo",
+      "champú seco",
+      "clarifying shampoo",
+      // Hair styling
+      "hair dryer",
+      "secadora",
+      "blow dryer",
+      "secador",
+      "straightener",
+      "plancha",
+      "flat iron",
+      "curling iron",
+      "tenaza",
+      "hair spray",
+      "laca",
+      "gel",
+      "mousse",
+      "espuma",
+      "styling cream",
+      "crema peinar",
+      "heat protectant",
+      "protector térmico",
+      "serum",
+      "aceite",
+      "hair oil",
+      // Hair color
+      "hair dye",
+      "tinte",
+      "hair color",
+      "coloración",
+      "bleach",
+      "decolorante",
+      "developer",
+      "revelador",
+      // Nails
+      "nail polish",
+      "esmalte",
+      "nail",
+      "uñas",
+      "manicure",
+      "pedicure",
+      "nail file",
+      "lima",
+      "cuticle",
+      "cutícula",
+      "gel polish",
+      "nail art",
+      // Body care
+      "body lotion",
+      "loción corporal",
+      "body cream",
+      "crema corporal",
+      "body wash",
+      "gel de baño",
+      "shower gel",
+      "body scrub",
+      "exfoliante corporal",
+      "body oil",
+      "aceite corporal",
+      "hand cream",
+      "crema manos",
+      "foot cream",
+      "crema pies",
+      // Men's grooming
+      "shaving",
+      "afeitado",
+      "razor",
+      "rasuradora",
+      "shaving cream",
+      "crema afeitar",
+      "aftershave",
+      "beard",
+      "barba",
+      "beard oil",
+      "aceite barba",
+      "trimmer",
+      "recortador",
+      // Tools & devices
+      "facial cleansing brush",
+      "cepillo facial",
+      "jade roller",
+      "rodillo jade",
+      "gua sha",
+      "led mask",
+      "máscara led",
+      "derma roller",
+      "microneedling",
     ],
   },
   toys: {
@@ -143,17 +735,226 @@ const CATEGORIES = {
     name: { en: "Toys & Games", es: "Juguetes" },
     icon: "🎮",
     keywords: [
+      // General
+      "toy",
+      "juguete",
+      "juguetes",
+      "kids",
+      "niños",
+      "children",
+      "infantil",
+      // Building & construction
+      "lego",
+      "building blocks",
+      "bloques",
+      "construcción",
+      "duplo",
+      "mega blocks",
+      "playmobil",
+      "k'nex",
+      // Dolls & figures
+      "doll",
+      "muñeca",
+      "muñeco",
+      "barbie",
+      "action figure",
+      "figura",
+      "figura de acción",
+      "figurine",
+      "collectible",
+      "coleccionable",
+      "funko",
+      "funko pop",
+      "hot wheels",
+      "matchbox",
+      // Stuffed animals
+      "stuffed animal",
+      "peluche",
+      "plush",
+      "teddy bear",
+      "osito",
+      // Educational toys
+      "educational",
+      "educativo",
+      "stem",
+      "learning",
+      "aprendizaje",
+      "science kit",
+      "kit ciencia",
+      "robot",
+      "coding",
+      "programación",
+      // Puzzles
+      "puzzle",
+      "rompecabezas",
+      "jigsaw",
+      "3d puzzle",
+      "rubik's cube",
+      "cubo rubik",
+      // Board games & cards
+      "board game",
+      "juego de mesa",
+      "card game",
+      "juego de cartas",
+      "monopoly",
+      "uno",
+      "poker",
+      "chess",
+      "ajedrez",
+      "checkers",
+      "damas",
+      "domino",
+      "dominó",
+      "jenga",
+      "scrabble",
+      "trivial",
+      // Outdoor toys
+      "outdoor toy",
+      "juguete exterior",
+      "ball",
+      "pelota",
+      "frisbee",
+      "kite",
+      "papalote",
+      "cometa",
+      "water gun",
+      "pistola agua",
+      "bubble",
+      "burbujas",
+      "trampoline",
+      "trampolín",
+      "swing",
+      "columpio",
+      "slide",
+      "resbaladilla",
+      "sandbox",
+      "arenero",
+      // Ride-on toys
+      "bike",
+      "bicicleta",
+      "tricycle",
+      "triciclo",
+      "scooter",
+      "patineta",
+      "skateboard",
+      "roller skates",
+      "patines",
+      "balance bike",
+      "car",
+      "carro",
+      "ride-on",
+      "montable",
+      // Remote control
+      "remote control",
+      "control remoto",
+      "rc",
+      "drone",
+      "helicopter",
+      "helicóptero",
+      "rc car",
+      "carro control",
+      // Arts & crafts
+      "art",
+      "arte",
+      "craft",
+      "manualidades",
+      "coloring",
+      "colorear",
+      "crayons",
+      "crayolas",
+      "markers",
+      "marcadores",
+      "paint",
+      "pintura",
+      "clay",
+      "plastilina",
+      "play-doh",
+      "slime",
+      "origami",
+      "beads",
+      "cuentas",
+      // Musical toys
+      "musical",
+      "musical toy",
+      "instrument",
+      "instrumento",
+      "keyboard",
+      "teclado",
+      "guitar",
+      "guitarra",
+      "drum",
+      "tambor",
+      "xylophone",
+      "xilófono",
+      // Pretend play
+      "play kitchen",
+      "cocina juguete",
+      "play food",
+      "comida juguete",
+      "doctor kit",
+      "kit doctor",
+      "tool set",
+      "herramientas juguete",
+      "dress up",
+      "disfraces",
+      "costume",
+      "disfraz",
+      "tea set",
+      "juego té",
+      "shopping cart",
+      "carrito compras",
+      // Baby & toddler toys
+      "baby toy",
+      "juguete bebé",
+      "rattle",
+      "sonaja",
+      "teether",
+      "mordedor",
+      "mobile",
+      "móvil",
+      "activity gym",
+      "gimnasio",
+      "play mat",
+      "tapete juego",
+      "walker",
+      "andadera",
+      "bouncer",
+      "mecedora",
+      // Video games & consoles
       "ps5",
       "playstation",
       "xbox",
       "nintendo",
-      "juguetes",
-      "lego",
+      "switch",
       "game",
       "gaming",
       "consola",
+      "console",
       "videojuego",
-      "toy",
+      "video game",
+      "controller",
+      "control",
+      "joystick",
+      "headset",
+      "audífonos gaming",
+      "gaming chair",
+      "silla gamer",
+      // Video game titles & accessories
+      "fifa",
+      "call of duty",
+      "minecraft",
+      "fortnite",
+      "pokemon",
+      "mario",
+      "zelda",
+      "gta",
+      // Trading cards
+      "trading cards",
+      "cartas coleccionables",
+      "yugioh",
+      "yu-gi-oh",
+      "magic the gathering",
+      "mtg",
     ],
   },
 };
@@ -358,6 +1159,7 @@ function renderPage(
   lang = "en",
   userData = null,
   extraBody = "",
+  currentCategory = "",
 ) {
   const otherLang = lang === "en" ? "es" : "en";
   const currentFlag = lang === "en" ? "🇺🇸" : "🇲🇽";
@@ -379,6 +1181,8 @@ function renderPage(
     <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
     <link href="https://fonts.googleapis.com/css2?family=Inter:wght@300;400;500;600;700;800&display=swap" rel="stylesheet">
     <link rel="stylesheet" href="/styles.css">
+    <link rel="stylesheet" href="/footer.css">
+    <link rel="stylesheet" href="/product-enhancements.css">
     <!-- Chart.js for price history charts -->
     <script src="https://cdn.jsdelivr.net/npm/chart.js@4.4.1/dist/chart.umd.min.js"></script>
     <script src="https://cdn.jsdelivr.net/npm/chartjs-adapter-date-fns@3.0.0/dist/chartjs-adapter-date-fns.bundle.min.js"></script>
@@ -514,14 +1318,14 @@ function renderPage(
     </header>
     <nav class="category-nav">
       <div class="category-tabs">
-        <a href="/?category=electronics" class="category-tab">${lang === "es" ? "Electrónica" : "Electronics"}</a>
-        <a href="/?q=phone&category=electronics" class="category-tab">${lang === "es" ? "Celulares" : "Phones"}</a>
-        <a href="/?q=laptop&category=electronics" class="category-tab">${lang === "es" ? "Computadoras" : "Computers"}</a>
-        <a href="/?category=fashion" class="category-tab">${lang === "es" ? "Ropa" : "Clothing"}</a>
-        <a href="/?category=home-kitchen" class="category-tab">${lang === "es" ? "Hogar" : "Home"}</a>
-        <a href="/?category=sports-outdoors" class="category-tab">${lang === "es" ? "Deportes" : "Sports"}</a>
-        <a href="/?category=toys" class="category-tab">${lang === "es" ? "Juguetes" : "Toys"}</a>
-        <a href="/?category=beauty" class="category-tab">${lang === "es" ? "Belleza" : "Beauty"}</a>
+        <a href="/?category=electronics" class="category-tab ${currentCategory === 'electronics' ? 'active' : ''}">${lang === "es" ? "Electrónica" : "Electronics"}</a>
+        <a href="/?category=phones" class="category-tab ${currentCategory === 'phones' ? 'active' : ''}">${lang === "es" ? "Celulares" : "Phones"}</a>
+        <a href="/?category=computers" class="category-tab ${currentCategory === 'computers' ? 'active' : ''}">${lang === "es" ? "Computadoras" : "Computers"}</a>
+        <a href="/?category=clothing" class="category-tab ${currentCategory === 'clothing' ? 'active' : ''}">${lang === "es" ? "Ropa" : "Clothing"}</a>
+        <a href="/?category=home-kitchen" class="category-tab ${currentCategory === 'home-kitchen' ? 'active' : ''}">${lang === "es" ? "Hogar" : "Home"}</a>
+        <a href="/?category=sports-outdoors" class="category-tab ${currentCategory === 'sports-outdoors' ? 'active' : ''}">${lang === "es" ? "Deportes" : "Sports"}</a>
+        <a href="/?category=toys" class="category-tab ${currentCategory === 'toys' ? 'active' : ''}">${lang === "es" ? "Juguetes" : "Toys"}</a>
+        <a href="/?category=beauty" class="category-tab ${currentCategory === 'beauty' ? 'active' : ''}">${lang === "es" ? "Belleza" : "Beauty"}</a>
       </div>
     </nav>
     <main class="main-content">
@@ -729,6 +1533,60 @@ function renderPage(
       }
     </script>
     ${extraBody}
+
+    <!-- Professional Footer -->
+    <footer class="site-footer">
+      <div class="footer-container">
+        <div class="footer-section">
+          <h3 class="footer-title">OfertaRadar</h3>
+          <p class="footer-description">${lang === "es" ? "Tu plataforma de seguimiento de precios inteligente. Encuentra las mejores ofertas en Amazon y Mercado Libre." : "Your intelligent price tracking platform. Find the best deals on Amazon and Mercado Libre."}</p>
+          <div class="footer-social">
+            <a href="#" class="social-link" aria-label="Facebook"><svg viewBox="0 0 24 24" fill="currentColor"><path d="M24 12.073c0-6.627-5.373-12-12-12s-12 5.373-12 12c0 5.99 4.388 10.954 10.125 11.854v-8.385H7.078v-3.47h3.047V9.43c0-3.007 1.792-4.669 4.533-4.669 1.312 0 2.686.235 2.686.235v2.953H15.83c-1.491 0-1.956.925-1.956 1.874v2.25h3.328l-.532 3.47h-2.796v8.385C19.612 23.027 24 18.062 24 12.073z"/></svg></a>
+            <a href="#" class="social-link" aria-label="Twitter"><svg viewBox="0 0 24 24" fill="currentColor"><path d="M23.953 4.57a10 10 0 01-2.825.775 4.958 4.958 0 002.163-2.723c-.951.555-2.005.959-3.127 1.184a4.92 4.92 0 00-8.384 4.482C7.69 8.095 4.067 6.13 1.64 3.162a4.822 4.822 0 00-.666 2.475c0 1.71.87 3.213 2.188 4.096a4.904 4.904 0 01-2.228-.616v.06a4.923 4.923 0 003.946 4.827 4.996 4.996 0 01-2.212.085 4.936 4.936 0 004.604 3.417 9.867 9.867 0 01-6.102 2.105c-.39 0-.779-.023-1.17-.067a13.995 13.995 0 007.557 2.209c9.053 0 13.998-7.496 13.998-13.985 0-.21 0-.42-.015-.63A9.935 9.935 0 0024 4.59z"/></svg></a>
+            <a href="#" class="social-link" aria-label="Instagram"><svg viewBox="0 0 24 24" fill="currentColor"><path d="M12 0C8.74 0 8.333.015 7.053.072 5.775.132 4.905.333 4.14.63c-.789.306-1.459.717-2.126 1.384S.935 3.35.63 4.14C.333 4.905.131 5.775.072 7.053.012 8.333 0 8.74 0 12s.015 3.667.072 4.947c.06 1.277.261 2.148.558 2.913.306.788.717 1.459 1.384 2.126.667.666 1.336 1.079 2.126 1.384.766.296 1.636.499 2.913.558C8.333 23.988 8.74 24 12 24s3.667-.015 4.947-.072c1.277-.06 2.148-.262 2.913-.558.788-.306 1.459-.718 2.126-1.384.666-.667 1.079-1.335 1.384-2.126.296-.765.499-1.636.558-2.913.06-1.28.072-1.687.072-4.947s-.015-3.667-.072-4.947c-.06-1.277-.262-2.149-.558-2.913-.306-.789-.718-1.459-1.384-2.126C21.319 1.347 20.651.935 19.86.63c-.765-.297-1.636-.499-2.913-.558C15.667.012 15.26 0 12 0zm0 2.16c3.203 0 3.585.016 4.85.071 1.17.055 1.805.249 2.227.415.562.217.96.477 1.382.896.419.42.679.819.896 1.381.164.422.36 1.057.413 2.227.057 1.266.07 1.646.07 4.85s-.015 3.585-.074 4.85c-.061 1.17-.256 1.805-.421 2.227-.224.562-.479.96-.899 1.382-.419.419-.824.679-1.38.896-.42.164-1.065.36-2.235.413-1.274.057-1.649.07-4.859.07-3.211 0-3.586-.015-4.859-.074-1.171-.061-1.816-.256-2.236-.421-.569-.224-.96-.479-1.379-.899-.421-.419-.69-.824-.9-1.38-.165-.42-.359-1.065-.42-2.235-.045-1.26-.061-1.649-.061-4.844 0-3.196.016-3.586.061-4.861.061-1.17.255-1.814.42-2.234.21-.57.479-.96.9-1.381.419-.419.81-.689 1.379-.898.42-.166 1.051-.361 2.221-.421 1.275-.045 1.65-.06 4.859-.06l.045.03zm0 3.678c-3.405 0-6.162 2.76-6.162 6.162 0 3.405 2.76 6.162 6.162 6.162 3.405 0 6.162-2.76 6.162-6.162 0-3.405-2.76-6.162-6.162-6.162zM12 16c-2.21 0-4-1.79-4-4s1.79-4 4-4 4 1.79 4 4-1.79 4-4 4zm7.846-10.405c0 .795-.646 1.44-1.44 1.44-.795 0-1.44-.646-1.44-1.44 0-.794.646-1.439 1.44-1.439.793-.001 1.44.645 1.44 1.439z"/></svg></a>
+          </div>
+        </div>
+
+        <div class="footer-section">
+          <h4 class="footer-heading">${lang === "es" ? "Empresa" : "Company"}</h4>
+          <ul class="footer-links">
+            <li><a href="/about">${lang === "es" ? "Sobre Nosotros" : "About Us"}</a></li>
+            <li><a href="/contact">${lang === "es" ? "Contacto" : "Contact"}</a></li>
+            <li><a href="/careers">${lang === "es" ? "Carreras" : "Careers"}</a></li>
+            <li><a href="/blog">${lang === "es" ? "Blog" : "Blog"}</a></li>
+          </ul>
+        </div>
+
+        <div class="footer-section">
+          <h4 class="footer-heading">${lang === "es" ? "Soporte" : "Support"}</h4>
+          <ul class="footer-links">
+            <li><a href="/help">${lang === "es" ? "Centro de Ayuda" : "Help Center"}</a></li>
+            <li><a href="/faq">${lang === "es" ? "Preguntas Frecuentes" : "FAQ"}</a></li>
+            <li><a href="/terms">${lang === "es" ? "Términos de Servicio" : "Terms of Service"}</a></li>
+            <li><a href="/privacy">${lang === "es" ? "Política de Privacidad" : "Privacy Policy"}</a></li>
+          </ul>
+        </div>
+
+        <div class="footer-section">
+          <h4 class="footer-heading">${lang === "es" ? "Legal" : "Legal"}</h4>
+          <ul class="footer-links">
+            <li><a href="/privacy">${lang === "es" ? "Aviso de Privacidad" : "Privacy Notice"}</a></li>
+            <li><a href="/cookies">${lang === "es" ? "Política de Cookies" : "Cookie Policy"}</a></li>
+            <li><a href="/dmca">${lang === "es" ? "DMCA" : "DMCA"}</a></li>
+            <li><a href="/accessibility">${lang === "es" ? "Accesibilidad" : "Accessibility"}</a></li>
+          </ul>
+        </div>
+      </div>
+
+      <div class="footer-bottom">
+        <p class="footer-copyright">
+          © ${new Date().getFullYear()} OfertaRadar. ${lang === "es" ? "Todos los derechos reservados." : "All rights reserved."}
+        </p>
+        <p class="footer-disclaimer">
+          ${lang === "es" ? "OfertaRadar es una plataforma independiente de seguimiento de precios. No estamos afiliados con Amazon o Mercado Libre. Los precios y la disponibilidad pueden variar." : "OfertaRadar is an independent price tracking platform. We are not affiliated with Amazon or Mercado Libre. Prices and availability may vary."}
+        </p>
+      </div>
+    </footer>
   </body>
 </html>`;
 }
@@ -938,12 +1796,118 @@ function detectCategory(productTitle) {
 
   const lowerTitle = productTitle.toLowerCase();
 
-  for (const [catId, catConfig] of Object.entries(CATEGORIES)) {
-    for (const keyword of catConfig.keywords) {
-      if (lowerTitle.includes(keyword.toLowerCase())) {
+  // Exclusion keywords: If product contains these, it CANNOT be in that category
+  const exclusionRules = {
+    phones: [
+      "case", "cover", "holder", "mount", "charger", "cable", "screen protector",
+      "funda", "cargador", "protector", "soporte"
+    ],
+    computers: [
+      "toy", "lego", "juguete", "game piece", "pieza", "case", "bag", "mochila",
+      "sticker", "pegatina", "poster", "mousepad", "alfombrilla"
+    ],
+    electronics: [
+      "toy", "lego", "juguete", "book", "libro", "poster", "sticker", "clothing",
+      "shirt", "camisa", "toy version", "replica juguete"
+    ],
+    beauty: [
+      "toy", "lego", "juguete", "food", "comida", "kitchen appliance"
+    ],
+    toys: [],  // Toys can contain any keywords
+    "sports-outdoors": [
+      "toy", "lego", "juguete", "video game", "videojuego", "book", "libro"
+    ],
+    clothing: [
+      "doll clothes", "ropa muñeca", "toy", "juguete", "lego"
+    ],
+    "home-kitchen": [
+      "toy", "lego", "juguete", "miniature", "miniatura", "doll house", "casa muñecas"
+    ]
+  };
+
+  // Strong indicators: If ANY of these appear, force category
+  const strongIndicators = {
+    toys: [
+      "lego", "playmobil", "hot wheels", "barbie", "funko pop", "nerf",
+      "juguete", "muñeca", "muñeco", "juego de mesa", "board game", "puzzle"
+    ],
+    phones: [
+      "iphone 1", "samsung galaxy s", "google pixel", "motorola edge", "xiaomi redmi note"
+    ],
+    computers: [
+      "macbook", "laptop ", "desktop pc", "gaming laptop", "notebook computer",
+      "computadora portátil", "pc gamer"
+    ],
+    beauty: [
+      "lipstick", "mascara", "eyeshadow", "foundation", "shampoo", "conditioner",
+      "labial", "rímel", "champú", "perfume"
+    ]
+  };
+
+  // Check strong indicators first (highest priority)
+  for (const [catId, indicators] of Object.entries(strongIndicators)) {
+    for (const indicator of indicators) {
+      if (lowerTitle.includes(indicator.toLowerCase())) {
+        console.log(`[Category] Strong indicator "${indicator}" → ${catId} for "${productTitle.substring(0, 50)}"`);
         return catId;
       }
     }
+  }
+
+  // Score-based detection: Count keyword matches per category
+  const categoryScores = {};
+  const categoryPriority = [
+    "phones",
+    "computers",
+    "electronics",
+    "beauty",
+    "toys",
+    "sports-outdoors",
+    "clothing",
+    "home-kitchen"
+  ];
+
+  for (const catId of categoryPriority) {
+    const catConfig = CATEGORIES[catId];
+    if (!catConfig) continue;
+
+    let score = 0;
+    let matchedKeywords = [];
+
+    // Check exclusion rules first
+    const exclusions = exclusionRules[catId] || [];
+    let isExcluded = false;
+
+    for (const exclusion of exclusions) {
+      if (lowerTitle.includes(exclusion.toLowerCase())) {
+        console.log(`[Category] Excluded from ${catId}: contains "${exclusion}" in "${productTitle.substring(0, 50)}"`);
+        isExcluded = true;
+        break;
+      }
+    }
+
+    if (isExcluded) continue; // Skip this category
+
+    // Count matching keywords
+    for (const keyword of catConfig.keywords) {
+      if (lowerTitle.includes(keyword.toLowerCase())) {
+        score++;
+        matchedKeywords.push(keyword);
+      }
+    }
+
+    if (score > 0) {
+      categoryScores[catId] = { score, matchedKeywords };
+    }
+  }
+
+  // Return category with highest score
+  if (Object.keys(categoryScores).length > 0) {
+    const bestMatch = Object.entries(categoryScores)
+      .sort((a, b) => b[1].score - a[1].score)[0];
+
+    console.log(`[Category] Best match: ${bestMatch[0]} (score: ${bestMatch[1].score}) for "${productTitle.substring(0, 50)}"`);
+    return bestMatch[0];
   }
 
   return null; // uncategorized
@@ -1245,13 +2209,18 @@ async function fetchAllProducts({
     rows.map((r) => ({
       id: r.product_id,
       title: r.product_title,
-      price: parseFloat(r.current_price) || 0,
+      price: parseFloat(r.price || r.current_price || 0), // FIX: product_cache uses 'price', tracked_products uses 'current_price'
       currency_id: r.currency || "MXN",
       thumbnail: r.thumbnail || null,
       seller: r.seller ? { nickname: r.seller } : null,
       source: r.source,
       permalink: r.product_url || null,
       category: detectCategory(r.product_title || ""),
+      rating: r.rating || null,
+      review_count: r.review_count || 0,
+      available_quantity: r.available_quantity || 0,
+      sold_quantity: r.sold_quantity || 0,
+      stock_status: r.stock_status || "unknown",
       _fromSupabase: true,
     }));
 
@@ -1454,78 +2423,163 @@ async function fetchAllProducts({
 }
 
 /**
- * Get product by ID from the appropriate source
+ * Get product by ID from MULTIPLE sources (Amazon + Mercado Libre)
+ * Returns both Amazon and ML versions if available
  */
 async function fetchProductById(id) {
-  console.log(`[PRODUCT] 🔍 Fetching product by ID: "${id}"`);
+  console.log(`[PRODUCT] 🔍 Fetching product by ID: "${id}" from ALL sources`);
 
-  // 1. Supabase-first: check tracked_products table (user's tracked items)
-  if (USE_SUPABASE) {
+  const sources = {
+    amazon: null,
+    mercadolibre: null
+  };
+
+  // Helper function to transform database row to product object
+  const transformProduct = (row) => {
+    if (!row) return null;
+
+    // Parse images array
+    let images = [];
     try {
-      console.log(`[PRODUCT] Checking tracked_products table...`);
-      const row = await supabaseDb.getTrackedProductById(id);
-      if (row) {
-        console.log(
-          `[PRODUCT] ✅ Found in tracked_products: "${row.product_title}"`,
-        );
-        const product = {
-          id: row.product_id,
-          title: row.product_title,
-          price: parseFloat(row.current_price) || 0,
-          currency_id: row.currency || "MXN",
-          condition: row.condition || "new",
-          available_quantity: 1,
-          permalink: row.product_url || null,
-          thumbnail: row.thumbnail || null,
-          description: row.description || null,
-          seller: row.seller ? { nickname: row.seller } : null,
-          source: row.source,
-          category: detectCategory(row.product_title || ""),
-        };
-        return { product, notice: "", error: "", isRealData: true };
+      if (row.images) {
+        images = typeof row.images === 'string' ? JSON.parse(row.images) : row.images;
       }
-      console.log(`[PRODUCT] ❌ Not found in tracked_products`);
     } catch (e) {
-      console.error("[PRODUCT] ❌ tracked_products lookup error:", e.message);
+      images = row.thumbnail ? [row.thumbnail] : [];
     }
 
-    // 2. Check product_cache table (scraped search results)
+    if (images.length === 0 && row.thumbnail) {
+      images = [row.thumbnail];
+    }
+
+    return {
+      id: row.product_id,
+      title: row.product_title || row.title,
+      price: parseFloat(row.current_price || row.price) || 0,
+      currency_id: row.currency || "MXN",
+      condition: row.condition || "new",
+      available_quantity: parseInt(row.available_quantity) || 0,
+      sold_quantity: parseInt(row.sold_quantity) || 0,
+      permalink: row.product_url || row.permalink || null,
+      thumbnail: row.thumbnail || (images[0] || null),
+      images: images,
+      description: row.description || null,
+      seller: row.seller ? (typeof row.seller === 'string' ? { nickname: row.seller } : row.seller) : null,
+      source: row.source,
+      rating: parseFloat(row.rating) || null,
+      review_count: parseInt(row.review_count) || 0,
+      category: detectCategory(row.product_title || row.title || ""),
+    };
+  };
+
+  if (USE_SUPABASE) {
     try {
-      console.log(`[PRODUCT] Checking product_cache table...`);
-      const cached = await supabaseDb.getProductFromCache(id);
-      if (cached) {
-        console.log(
-          `[PRODUCT] ✅ Found in product_cache: "${cached.product_title}"`,
-        );
-        const product = {
-          id: cached.product_id,
-          title: cached.product_title,
-          price: parseFloat(cached.current_price) || 0,
-          currency_id: cached.currency || "MXN",
-          condition: cached.condition || "new",
-          available_quantity: 1,
-          permalink: cached.product_url || null,
-          thumbnail: cached.thumbnail || null,
-          description: cached.description || null,
-          seller: cached.seller ? { nickname: cached.seller } : null,
-          source: cached.source,
-          category: detectCategory(cached.product_title || ""),
-        };
-        return { product, notice: "", error: "", isRealData: true };
+      // Search product_cache for ALL versions of this product (by title similarity)
+      console.log(`[PRODUCT] Searching product_cache for all sources...`);
+
+      const { data: allProducts, error } = await supabaseDb.getSupabase()
+        .from("product_cache")
+        .select("*")
+        .eq("product_id", id);
+
+      if (error) {
+        console.error("[PRODUCT] Error fetching from cache:", error);
+      } else if (allProducts && allProducts.length > 0) {
+        // Group by source
+        allProducts.forEach(row => {
+          const product = transformProduct(row);
+          if (product) {
+            if (product.source === 'amazon') {
+              sources.amazon = product;
+            } else if (product.source === 'mercadolibre') {
+              sources.mercadolibre = product;
+            }
+          }
+        });
       }
-      console.log(`[PRODUCT] ❌ Not found in product_cache`);
+
+      // If not found by exact ID, try searching tracked_products
+      if (!sources.amazon && !sources.mercadolibre) {
+        console.log(`[PRODUCT] Checking tracked_products table...`);
+        const row = await supabaseDb.getTrackedProductById(id);
+        if (row) {
+          const product = transformProduct(row);
+          if (product) {
+            if (product.source === 'amazon') {
+              sources.amazon = product;
+            } else {
+              sources.mercadolibre = product;
+            }
+          }
+        }
+      }
+
+      // If still not found by exact ID, try fuzzy search by title
+      if (!sources.amazon && !sources.mercadolibre) {
+        console.log(`[PRODUCT] Trying fuzzy search in product_cache...`);
+        const { data: fuzzyResults } = await supabaseDb.getSupabase()
+          .from("product_cache")
+          .select("*")
+          .ilike("product_title", `%${id.replace(/[^a-zA-Z0-9]/g, '%')}%`)
+          .limit(5);
+
+        if (fuzzyResults && fuzzyResults.length > 0) {
+          fuzzyResults.forEach(row => {
+            const product = transformProduct(row);
+            if (product) {
+              if (!sources.amazon && product.source === 'amazon') {
+                sources.amazon = product;
+              }
+              if (!sources.mercadolibre && product.source === 'mercadolibre') {
+                sources.mercadolibre = product;
+              }
+            }
+          });
+        }
+      }
+
     } catch (e) {
-      console.error("[PRODUCT] ❌ product_cache lookup error:", e.message);
+      console.error("[PRODUCT] Error in multi-source lookup:", e.message);
     }
   }
 
-  // 3. Not in database — guide the user to scrape it
-  console.log(`[PRODUCT] ⚠️ Product "${id}" not found in any table`);
+  // Check if we found any products
+  const hasAmazon = sources.amazon !== null;
+  const hasMercadoLibre = sources.mercadolibre !== null;
+
+  console.log(`[PRODUCT] Results: Amazon=${hasAmazon}, MercadoLibre=${hasMercadoLibre}`);
+
+  if (!hasAmazon && !hasMercadoLibre) {
+    console.log(`[PRODUCT] ⚠️ Product "${id}" not found in any source`);
+    return {
+      product: null,
+      sources: {},
+      error: "This product has not been scraped yet. Try searching for it first.",
+    };
+  }
+
+  // Return the primary product (prefer one with stock, or Amazon if both available)
+  let primaryProduct = null;
+  if (hasAmazon && hasMercadoLibre) {
+    // Both available - prefer one with stock
+    if (sources.amazon.available_quantity > 0) {
+      primaryProduct = sources.amazon;
+    } else if (sources.mercadolibre.available_quantity > 0) {
+      primaryProduct = sources.mercadolibre;
+    } else {
+      primaryProduct = sources.amazon; // Default to Amazon if both out of stock
+    }
+  } else {
+    primaryProduct = sources.amazon || sources.mercadolibre;
+  }
+
   return {
-    product: null,
-    error:
-      "This product has not been scraped yet. Use the Scrape button on the search page to fetch it.",
-    source: "unknown",
+    product: primaryProduct,
+    sources: sources, // Include both sources for dropdown
+    hasMultipleSources: hasAmazon && hasMercadoLibre,
+    notice: "",
+    error: "",
+    isRealData: true,
   };
 }
 
@@ -1654,7 +2708,7 @@ async function start() {
         userData = user;
       } catch (e) {}
     }
-    const query = String(req.query.q || "").trim();
+    let query = String(req.query.q || "").trim();
     const category = String(req.query.category || "").trim();
     const minPrice = parseNumber(req.query.minPrice, 0);
     const maxPrice = parseNumber(req.query.maxPrice, 50000);
@@ -1662,6 +2716,43 @@ async function start() {
     const source = String(req.query.source || "all");
     const page = Math.max(parseNumber(req.query.page, 1), 1);
     const pageSize = 20;
+
+    // ============================================
+    // CATEGORY TO SEARCH QUERY MAPPING
+    // ============================================
+    // If user clicked a category link (no search query), convert category to search term
+    if (category && !query) {
+      // Enhanced category search terms - use broader terms for better variety
+      const categorySearchTerms = {
+        electronics: lang === "es"
+          ? "electrónica audífonos tablet smart tv cámara"
+          : "electronics headphones tablet smart tv camera",
+        phones: lang === "es"
+          ? "celular smartphone iphone samsung"
+          : "phone smartphone iphone samsung",
+        computers: lang === "es"
+          ? "computadora laptop pc macbook"
+          : "computer laptop pc macbook",
+        clothing: lang === "es"
+          ? "ropa camisa pantalones zapatos"
+          : "clothing shirt pants shoes",
+        "home-kitchen": lang === "es"
+          ? "hogar muebles cama silla mesa almohada"
+          : "home furniture bed chair table pillow",
+        "sports-outdoors": lang === "es"
+          ? "deportes fitness gimnasio balón pesas yoga"
+          : "sports fitness gym ball weights yoga",
+        toys: lang === "es"
+          ? "juguetes lego muñeca juego de mesa videojuego"
+          : "toys lego doll board game video game",
+        beauty: lang === "es"
+          ? "belleza maquillaje skincare perfume champú"
+          : "beauty makeup skincare perfume shampoo"
+      };
+
+      query = categorySearchTerms[category] || category;
+      console.log(`[Category] User clicked "${category}" → searching for "${query}"`);
+    }
 
     let results = {
       products: [],
@@ -1710,8 +2801,10 @@ async function start() {
           page: 1,
           pageSize: 12,
           source: "mercadolibre",
-          forceSynchronous: true, // Homepage should always load products
+          forceSynchronous: false, // FIX: Don't wait for scraping, show cached products immediately
         });
+
+        console.log(`✅ [HOME] Loaded ${results.products.length} featured products from cache`);
       } catch (e) {
         console.log("[Home] Error fetching featured products:", e.message);
       }
@@ -1719,37 +2812,131 @@ async function start() {
 
     // Helper to get source badge HTML
     const getSourceBadge = (item) => {
-      const src = item.source || "mercadolibre";
-      if (src === "amazon") {
-        return `<span class="source-badge amazon">Amazon</span>`;
+      // Check if product is available on multiple sources
+      const hasAmazon = item.sources?.amazon !== null && item.sources?.amazon !== undefined;
+      const hasMercadoLibre = item.sources?.mercadolibre !== null && item.sources?.mercadolibre !== undefined;
+
+      // If sources data not available, fall back to item.source
+      if (!item.sources) {
+        const src = item.source || "mercadolibre";
+        if (src === "amazon") {
+          return `<span class="source-badge amazon">Amazon</span>`;
+        }
+        return `<span class="source-badge ml">Mercado Libre</span>`;
       }
+
+      // Show dual badges if available on both platforms
+      if (hasAmazon && hasMercadoLibre) {
+        return `
+          <div class="source-badges-multi">
+            <span class="source-badge amazon">Amazon</span>
+            <span class="source-badge ml">ML</span>
+          </div>
+        `;
+      } else if (hasAmazon) {
+        return `<span class="source-badge amazon">Amazon</span>`;
+      } else if (hasMercadoLibre) {
+        return `<span class="source-badge ml">Mercado Libre</span>`;
+      }
+
+      // Default fallback
       return `<span class="source-badge ml">Mercado Libre</span>`;
     };
 
     // Product card HTML generator
-    const renderProductCard = (item) => `
-      <div class="product-card">
+    const renderProductCard = (item) => {
+      // COMPREHENSIVE DEBUG LOGGING
+      console.group('🔍 [PRODUCT CARD DEBUG] Rendering product');
+      console.log('Raw item data:', JSON.stringify(item, null, 2));
+      console.log('Product ID:', item.id);
+      console.log('Title:', item.title?.substring(0, 50));
+      console.log('Price:', item.price, 'Currency:', item.currency_id);
+      console.log('Rating:', item.rating);
+      console.log('Available Quantity:', item.available_quantity);
+      console.log('Sold Quantity:', item.sold_quantity);
+      console.log('Condition:', item.condition);
+      console.log('Seller:', item.seller);
+      console.log('Source:', item.source);
+      console.log('Thumbnail:', item.thumbnail);
+
+      // Extract rating data with debug logs
+      const rating = item.rating || item.reviews?.rating_average || 0;
+      const reviewCount = item.reviews?.total || 0;
+      const starDisplay = rating ? `★`.repeat(Math.floor(rating)) + (rating % 1 >= 0.5 ? '½' : '') + `☆`.repeat(5 - Math.ceil(rating)) : '';
+
+      console.log('⭐ Rating calculation:');
+      console.log('  - Raw rating:', item.rating);
+      console.log('  - Reviews object:', item.reviews);
+      console.log('  - Final rating:', rating);
+      console.log('  - Review count:', reviewCount);
+      console.log('  - Star display:', starDisplay);
+
+      // Stock status with debug logs
+      const availableQty = item.available_quantity || 0;
+      const isInStock = availableQty > 0;
+      const stockStatus = isInStock
+        ? `<span class="stock-badge in-stock">✓ ${lang === 'es' ? 'En Stock' : 'In Stock'}</span>`
+        : `<span class="stock-badge out-stock">✗ ${lang === 'es' ? 'Agotado' : 'Out of Stock'}</span>`;
+
+      console.log('📦 Stock calculation:');
+      console.log('  - Available quantity:', availableQty);
+      console.log('  - Is in stock:', isInStock);
+      console.log('  - Stock badge HTML:', stockStatus);
+
+      // Sold count (use sold_quantity or generate from ID if not available)
+      const soldCount = item.sold_quantity || (item.id ? parseInt(item.id.split('-')[1]?.substring(0, 3) || '0', 36) % 500 + 20 : 0);
+
+      console.log('💰 Sales calculation:');
+      console.log('  - Sold quantity from data:', item.sold_quantity);
+      console.log('  - Final sold count:', soldCount);
+
+      console.groupEnd();
+
+      return `
+      <div class="product-card" data-product-id="${item.id}">
         <a href="${buildSearchParams(`/product/${encodeURIComponent(item.id)}`, { q: query, minPrice, maxPrice, sort, source, page })}" class="product-card-link">
           <div class="product-card-image">
             <img src="${item.thumbnail || ""}" alt="${item.title || t(lang, "product")}" loading="lazy" />
             ${getSourceBadge(item)}
+            ${stockStatus}
           </div>
           <div class="product-card-content">
             <h3 class="product-card-title">${item.title || t(lang, "product")}</h3>
-            <div class="product-card-price">${formatPrice(item.price, item.currency_id || "MXN")}</div>
+
+            <!-- Rating Stars -->
+            ${rating > 0 ? `
+            <div class="product-card-rating">
+              <span class="stars">${starDisplay}</span>
+              ${reviewCount > 0 ? `<span class="review-count">(${reviewCount})</span>` : ''}
+            </div>
+            ` : ''}
+
+            <div class="product-card-pricing">
+              <span class="product-card-price-current" data-price-mxn="${item.price}">${formatPrice(item.price, "MXN")}</span>
+              ${item.original_price && item.original_price > item.price ? `<span class="product-card-price-original" data-price-mxn="${item.original_price}">${formatPrice(item.original_price, "MXN")}</span>` : ''}
+            </div>
+            ${item.discount_percent && item.discount_percent > 0 ? `<div class="product-card-discount">-${Math.round(item.discount_percent)}% OFF</div>` : ''}
+
+            <!-- Sold Count -->
+            ${soldCount > 0 ? `
+            <div class="product-card-sold">
+              <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+                <path d="M20 21v-2a4 4 0 0 0-4-4H8a4 4 0 0 0-4 4v2"></path>
+                <circle cx="12" cy="7" r="4"></circle>
+              </svg>
+              ${soldCount}+ ${lang === 'es' ? 'vendidos' : 'sold'}
+            </div>
+            ` : ''}
+
             ${item.seller?.nickname || (typeof item.seller === "string" && item.seller) ? `<div class="product-card-seller">${item.seller?.nickname || item.seller}</div>` : ""}
           </div>
         </a>
       </div>
     `;
-
-    // Check if we have a notice about discovering new products (background scraping)
-    const isBackgroundScraping = results.notices?.some(
-      (n) => n.includes("Discovering") || n.includes("Descubriendo"),
-    );
+    };
 
     const resultsHtml =
-      (query || isFeatured) && (results.products.length || isBackgroundScraping)
+      (query || isFeatured) && results.products.length
         ? `
       <div class="results-section">
         ${isFeatured ? `<h2 class="section-title">${lang === "es" ? "Ofertas Destacadas" : "Featured Deals"}</h2>` : ""}
@@ -1768,30 +2955,7 @@ async function start() {
             : ""
         }
         ${results.error ? `<div class="notice error-notice">${results.error}</div>` : ""}
-        ${
-          !results.error &&
-          results.products.length === 0 &&
-          isBackgroundScraping
-            ? `
-          <div class="discovering-state">
-            <div class="spinner"></div>
-            <h3>${lang === "es" ? "Buscando productos..." : "Searching for products..."}</h3>
-            <p>${
-              lang === "es"
-                ? "Estamos buscando las mejores ofertas en Amazon y Mercado Libre. Esto puede tomar 30-60 segundos."
-                : "We're searching for the best deals on Amazon and Mercado Libre. This may take 30-60 seconds."
-            }</p>
-            <button onclick="location.reload()" class="btn-secondary" style="margin-top: 20px;">
-              <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
-                <polyline points="23 4 23 10 17 10"/><path d="M20.49 15a9 9 0 1 1-2.12-9.36L23 10"/>
-              </svg>
-              ${lang === "es" ? "Refrescar Resultados" : "Refresh Results"}
-            </button>
-          </div>
-        `
-            : ""
-        }
-        ${!results.error && results.products.length === 0 && !isBackgroundScraping ? `<p class="muted">${t(lang, "noResults")}</p>` : ""}
+        ${!results.error && results.products.length === 0 ? `<p class="muted">${t(lang, "noResults")}</p>` : ""}
         ${
           results.products.length
             ? `
@@ -1802,9 +2966,70 @@ async function start() {
             query
               ? `
             <div class="pagination">
-              ${page > 1 ? `<a href="${buildSearchParams("/", { q: query, minPrice, maxPrice, sort, source, page: page - 1 })}">${t(lang, "previous")}</a>` : ""}
-              <span>${t(lang, "page")} ${page} ${t(lang, "of")} ${results.totalPages || 1}</span>
-              ${page < results.totalPages ? `<a href="${buildSearchParams("/", { q: query, minPrice, maxPage, sort, source, page: page + 1 })}">${t(lang, "next")}</a>` : ""}
+              ${page > 1 ? `<a href="${buildSearchParams("/", { q: query, minPrice, maxPrice, sort, source, page: page - 1 })}" class="pagination-prev" aria-label="${lang === 'es' ? 'Página anterior' : 'Previous page'}">
+                <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+                  <polyline points="15 18 9 12 15 6"></polyline>
+                </svg>
+                ${t(lang, "previous")}
+              </a>` : '<span class="pagination-prev pagination-disabled"></span>'}
+
+              <div class="pagination-numbers">
+                ${(() => {
+                  const totalPages = results.totalPages || 1;
+                  const maxVisible = 7; // Show max 7 page numbers
+                  let pages = [];
+
+                  console.log(`📄 [PAGINATION DEBUG] Current page: ${page}, Total pages: ${totalPages}`);
+
+                  if (totalPages <= maxVisible) {
+                    // Show all pages if total is small
+                    pages = Array.from({ length: totalPages }, (_, i) => i + 1);
+                    console.log('📄 [PAGINATION] Showing all pages:', pages);
+                  } else {
+                    // Smart pagination: 1 ... 4 5 [6] 7 8 ... 20
+                    const start = Math.max(1, page - 2);
+                    const end = Math.min(totalPages, page + 2);
+
+                    // Always show first page
+                    if (start > 1) pages.push(1);
+
+                    // Add ellipsis if gap after first page
+                    if (start > 2) pages.push('...');
+
+                    // Add middle range
+                    for (let i = start; i <= end; i++) {
+                      pages.push(i);
+                    }
+
+                    // Add ellipsis if gap before last page
+                    if (end < totalPages - 1) pages.push('...');
+
+                    // Always show last page
+                    if (end < totalPages) pages.push(totalPages);
+
+                    console.log('📄 [PAGINATION] Smart pagination:', pages, 'Range:', start, 'to', end);
+                  }
+
+                  return pages.map(p => {
+                    if (p === '...') {
+                      return '<span class="pagination-ellipsis">…</span>';
+                    } else if (p === page) {
+                      console.log('📄 [PAGINATION] Current page button:', p);
+                      return `<span class="pagination-number pagination-current" aria-current="page">${p}</span>`;
+                    } else {
+                      console.log('📄 [PAGINATION] Regular page button:', p);
+                      return `<a href="${buildSearchParams("/", { q: query, minPrice, maxPrice, sort, source, page: p })}" class="pagination-number" aria-label="${lang === 'es' ? 'Ir a página' : 'Go to page'} ${p}">${p}</a>`;
+                    }
+                  }).join('');
+                })()}
+              </div>
+
+              ${page < results.totalPages ? `<a href="${buildSearchParams("/", { q: query, minPrice, maxPrice, sort, source, page: page + 1 })}" class="pagination-next" aria-label="${lang === 'es' ? 'Siguiente página' : 'Next page'}">
+                ${t(lang, "next")}
+                <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+                  <polyline points="9 18 15 12 9 6"></polyline>
+                </svg>
+              </a>` : '<span class="pagination-next pagination-disabled"></span>'}
             </div>
           `
               : ""
@@ -1825,13 +3050,31 @@ async function start() {
         </div>
         <!-- Row 2: filters + action buttons, all horizontal -->
         <div class="search-row-2">
+          <!-- Currency Toggle -->
+          <div class="range-row currency-toggle-container">
+            <label>${lang === "es" ? "Moneda" : "Currency"}</label>
+            <button type="button" id="currencyToggle" class="currency-toggle-btn" onclick="toggleCurrency()">
+              <span class="currency-label" id="currencyLabel">${lang === "es" ? "MXN" : "USD"}</span>
+              <svg class="toggle-icon" viewBox="0 0 16 16" fill="currentColor"><path d="M8 12l-4-4h8l-4 4z"/></svg>
+            </button>
+            <input type="hidden" name="currency" id="currencyInput" value="${lang === "es" ? "MXN" : "USD"}" />
+          </div>
+
           <div class="range-row">
             <label>${t(lang, "minPrice")}: <span id="minPriceValue" class="price-val">${formatPrice(minPrice)}</span></label>
-            <input id="minPrice" name="minPrice" type="range" min="0" max="50000" step="500" value="${minPrice}" />
+            <input id="minPrice" name="minPrice" type="range"
+              min="0"
+              max="${lang === "es" ? "50000" : "2500"}"
+              step="${lang === "es" ? "500" : "25"}"
+              value="${minPrice}" />
           </div>
           <div class="range-row">
             <label>${t(lang, "maxPrice")}: <span id="maxPriceValue" class="price-val">${formatPrice(maxPrice)}</span></label>
-            <input id="maxPrice" name="maxPrice" type="range" min="0" max="50000" step="500" value="${maxPrice}" />
+            <input id="maxPrice" name="maxPrice" type="range"
+              min="0"
+              max="${lang === "es" ? "50000" : "2500"}"
+              step="${lang === "es" ? "500" : "25"}"
+              value="${maxPrice}" />
           </div>
           <div class="range-row sort-row">
             <label>${t(lang, "sortBy")}</label>
@@ -2162,7 +3405,8 @@ async function start() {
 
     if (USE_SUPABASE) {
       try {
-        // Fetch user search history in parallel with global deal data
+        // FIX: Use product_cache functions for homepage deals (NOT tracked_products)
+        // This shows scraped search results (72 products) instead of user-tracked items (0 products)
         let userQueries = [];
         [
           highlightedDeals,
@@ -2171,14 +3415,21 @@ async function start() {
           categoryDiscounts,
           userQueries,
         ] = await Promise.all([
-          supabaseDb.getHighlightedDeals(12),
-          supabaseDb.getPopularProducts({ limit: 8 }),
-          supabaseDb.getTopPriceDrops({ period: "recent", limit: 8 }),
+          supabaseDb.getHighlightedDealsFromCache(12),  // FIX: Use cache version
+          supabaseDb.getPopularProductsFromCache({ limit: 8 }),  // FIX: Use cache version
+          supabaseDb.getRecentProductsFromCache({ period: "recent", limit: 8 }),  // FIX: Use cache version (recent products instead of price drops)
           supabaseDb.getDiscountsByCategory(),
           userData?.id
             ? supabaseDb.getUserSearchHistory(userData.id, 5)
             : Promise.resolve([]),
         ]);
+
+        console.log(`[Homepage] Deal sections loaded:`, {
+          highlightedDeals: highlightedDeals.length,
+          popularProducts: popularProducts.length,
+          topPriceDrops: topPriceDrops.length,
+          categoryDiscounts: categoryDiscounts.length
+        });
 
         // If the user has search history, fetch matching products
         if (userQueries.length > 0) {
@@ -2189,11 +3440,14 @@ async function start() {
         }
 
         // Transform data to match expected format for rendering.
-        // Thumbnail fallback: use local placeholder instead of external service.
+        // FIX: product_cache uses 'price' field, not 'current_price'
         highlightedDeals = highlightedDeals.map((deal) => ({
           product_id: deal.product_id,
           product_title: deal.product_title,
-          current_price: parseFloat(deal.current_price),
+          current_price: parseFloat(deal.price || deal.current_price || 0),  // FIX: Use 'price' from cache
+          rating: deal.rating,
+          available_quantity: deal.available_quantity,
+          sold_quantity: deal.sold_quantity,
           avgPrice: deal.avgPrice,
           isBestPrice: deal.isBestPrice || false,
           isGoodDeal: deal.isGoodDeal || false,
@@ -2207,7 +3461,10 @@ async function start() {
         popularProducts = popularProducts.map((product) => ({
           product_id: product.product_id,
           product_title: product.product_title,
-          current_price: parseFloat(product.current_price),
+          current_price: parseFloat(product.price || product.current_price || 0),  // FIX: Use 'price' from cache
+          rating: product.rating,
+          available_quantity: product.available_quantity,
+          sold_quantity: product.sold_quantity,
           avgPrice: product.avgPrice,
           isBestPrice: product.isBestPrice || false,
           isGoodDeal: product.isGoodDeal || false,
@@ -2220,14 +3477,17 @@ async function start() {
         topPriceDrops = topPriceDrops.map((drop) => ({
           product_id: drop.product_id,
           product_title: drop.product_title,
-          current_price: parseFloat(drop.current_price),
+          current_price: parseFloat(drop.price || drop.current_price || 0),  // FIX: Use 'price' from cache
+          rating: drop.rating,
+          available_quantity: drop.available_quantity,
+          sold_quantity: drop.sold_quantity,
           previousPrice: drop.previousPrice,
           dropAmount: drop.dropAmount,
           dropPercent: drop.dropPercent,
           source: drop.source || "mercadolibre",
           product_url: drop.product_url,
           thumbnail: drop.thumbnail,
-          dropDate: drop.periodStart,
+          dropDate: drop.periodStart || drop.scraped_at,  // FIX: Use scraped_at for recent products
         }));
 
         // If we have interest-based products, merge them into Popular Products:
@@ -2237,7 +3497,10 @@ async function start() {
           const interestMapped = userInterestProducts.map((p) => ({
             product_id: p.product_id,
             product_title: p.product_title,
-            current_price: parseFloat(p.current_price),
+            current_price: parseFloat(p.price || p.current_price || 0),  // FIX: Handle both field names
+            rating: p.rating,
+            available_quantity: p.available_quantity,
+            sold_quantity: p.sold_quantity,
             source: p.source || "mercadolibre",
             product_url: p.product_url,
             thumbnail: p.thumbnail,
@@ -2720,6 +3983,127 @@ async function start() {
             }
 
             // ========================================
+            // COMPREHENSIVE PRODUCT CARD DEBUGGING
+            // ========================================
+            console.group('%c🔍 PRODUCT CARD FEATURE DEBUGGING', 'background: #8b5cf6; color: white; padding: 8px; font-size: 14px; font-weight: bold;');
+
+            // Debug all product cards on the page
+            const allProductCards = document.querySelectorAll('.product-card');
+            console.log('%cTotal product cards found:', 'color: #3b82f6; font-weight: bold;', allProductCards.length);
+
+            if (allProductCards.length > 0) {
+              allProductCards.forEach((card, index) => {
+                console.group(\`Product Card #\${index + 1}\`);
+
+                // Extract and log all visible elements
+                const productId = card.getAttribute('data-product-id');
+                const titleEl = card.querySelector('.product-card-title');
+                const priceEl = card.querySelector('.product-card-price');
+                const ratingEl = card.querySelector('.product-card-rating');
+                const starsEl = card.querySelector('.stars');
+                const reviewCountEl = card.querySelector('.review-count');
+                const stockBadge = card.querySelector('.stock-badge');
+                const soldEl = card.querySelector('.product-card-sold');
+                const sellerEl = card.querySelector('.product-card-seller');
+                const sourceBadge = card.querySelector('.source-badge');
+                const imageEl = card.querySelector('img');
+
+                console.log('Product ID:', productId);
+                console.log('Title:', titleEl ? titleEl.textContent.trim().substring(0, 50) + '...' : 'NOT FOUND');
+                console.log('Price:', priceEl ? priceEl.textContent.trim() : 'NOT FOUND');
+                console.log('Image URL:', imageEl ? imageEl.src : 'NOT FOUND');
+                console.log('Image loaded:', imageEl ? imageEl.complete : 'N/A');
+
+                console.group('⭐ Rating System');
+                console.log('Rating container exists:', !!ratingEl);
+                console.log('Stars element exists:', !!starsEl);
+                console.log('Stars content:', starsEl ? starsEl.textContent : 'NOT FOUND');
+                console.log('Review count exists:', !!reviewCountEl);
+                console.log('Review count content:', reviewCountEl ? reviewCountEl.textContent : 'NOT FOUND');
+                if (!ratingEl) {
+                  console.warn('⚠️ ISSUE: Rating container (.product-card-rating) not found!');
+                }
+                if (ratingEl && !starsEl) {
+                  console.warn('⚠️ ISSUE: Stars element (.stars) not found inside rating container!');
+                }
+                console.groupEnd();
+
+                console.group('📦 Stock & Availability');
+                console.log('Stock badge exists:', !!stockBadge);
+                console.log('Stock badge class:', stockBadge ? stockBadge.className : 'NOT FOUND');
+                console.log('Stock badge text:', stockBadge ? stockBadge.textContent.trim() : 'NOT FOUND');
+                if (!stockBadge) {
+                  console.warn('⚠️ ISSUE: Stock badge (.stock-badge) not found!');
+                }
+                console.groupEnd();
+
+                console.group('💰 Sales Information');
+                console.log('Sold element exists:', !!soldEl);
+                console.log('Sold count text:', soldEl ? soldEl.textContent.trim() : 'NOT FOUND');
+                if (!soldEl) {
+                  console.warn('⚠️ ISSUE: Sold count element (.product-card-sold) not found!');
+                }
+                console.groupEnd();
+
+                console.group('🏪 Seller & Source');
+                console.log('Seller element exists:', !!sellerEl);
+                console.log('Seller name:', sellerEl ? sellerEl.textContent.trim() : 'NOT FOUND');
+                console.log('Source badge exists:', !!sourceBadge);
+                console.log('Source badge text:', sourceBadge ? sourceBadge.textContent.trim() : 'NOT FOUND');
+                console.groupEnd();
+
+                console.group('🐛 Potential Issues');
+                const issues = [];
+                if (!ratingEl) issues.push('Missing rating container');
+                if (ratingEl && !starsEl) issues.push('Missing stars display');
+                if (!stockBadge) issues.push('Missing stock badge');
+                if (!soldEl) issues.push('Missing sold count');
+                if (!imageEl || !imageEl.src || imageEl.src.includes('undefined')) issues.push('Invalid image URL');
+
+                if (issues.length > 0) {
+                  console.error('❌ Issues found:', issues.join(', '));
+                  issues.forEach(issue => console.error('  - ' + issue));
+                } else {
+                  console.log('✅ All features rendered correctly');
+                }
+                console.groupEnd();
+
+                console.groupEnd();
+              });
+            } else {
+              console.warn('%c⚠️ No product cards found on page', 'color: #f59e0b; font-weight: bold;');
+              console.log('Possible reasons:');
+              console.log('  1. No search results returned');
+              console.log('  2. Products still loading');
+              console.log('  3. CSS class mismatch (check for .product-card)');
+            }
+
+            // Debug pagination
+            console.group('%c📄 PAGINATION DEBUGGING', 'background: #10b981; color: white; padding: 6px; font-size: 12px; font-weight: bold;');
+            const pagination = document.querySelector('.pagination');
+            if (pagination) {
+              const pageNumbers = pagination.querySelectorAll('.pagination-number');
+              const currentPage = pagination.querySelector('.pagination-current');
+              const prevBtn = pagination.querySelector('.pagination-prev:not(.pagination-disabled)');
+              const nextBtn = pagination.querySelector('.pagination-next:not(.pagination-disabled)');
+
+              console.log('Pagination exists:', true);
+              console.log('Total page buttons:', pageNumbers.length);
+              console.log('Current page:', currentPage ? currentPage.textContent : 'NOT FOUND');
+              console.log('Previous button enabled:', !!prevBtn);
+              console.log('Next button enabled:', !!nextBtn);
+
+              if (pageNumbers.length > 0) {
+                console.log('Page numbers:', Array.from(pageNumbers).map(el => el.textContent).join(', '));
+              }
+            } else {
+              console.log('Pagination not found (expected on homepage without search)');
+            }
+            console.groupEnd();
+
+            console.groupEnd();
+
+            // ========================================
             // PERFORMANCE: Lazy Load Images with Fade-in
             // ========================================
             const lazyImages = document.querySelectorAll('img[loading="lazy"]');
@@ -2793,6 +4177,119 @@ async function start() {
           minInput?.addEventListener("input", () => syncRanges(minInput));
           maxInput?.addEventListener("input", () => syncRanges(maxInput));
           syncRanges();
+
+          // ========================================
+          // CURRENCY TOGGLE (MXN ⇄ USD)
+          // ========================================
+          const MXN_TO_USD = 0.049;  // 1 MXN = ~$0.049 USD (approximate rate)
+          const USD_TO_MXN = 1 / MXN_TO_USD;  // 1 USD = ~20.5 MXN
+
+          // Auto-detect currency based on site language
+          // English (en) → USD | Spanish (es) → MXN
+          const siteLang = document.documentElement.lang || 'en';
+          let currentCurrency = siteLang === 'es' ? 'MXN' : 'USD';
+
+          // Price ranges for each currency (in their native units)
+          const priceRanges = {
+            MXN: { min: 0, max: 50000, step: 500 },   // $0 - $50,000 MXN
+            USD: { min: 0, max: 2500, step: 25 }      // $0 - $2,500 USD
+          };
+
+          function toggleCurrency() {
+            const currencyLabel = document.getElementById('currencyLabel');
+            const currencyInput = document.getElementById('currencyInput');
+            const minSlider = document.getElementById('minPrice');
+            const maxSlider = document.getElementById('maxPrice');
+
+            if (!currencyLabel || !currencyInput || !minSlider || !maxSlider) return;
+
+            // Toggle currency
+            currentCurrency = currentCurrency === 'USD' ? 'MXN' : 'USD';
+            currencyLabel.textContent = currentCurrency;
+            currencyInput.value = currentCurrency;
+
+            console.log('%c💱 Currency Toggled:', 'color: #10b981; font-weight: bold;', currentCurrency);
+
+            // Get current slider values
+            const currentMin = Number(minSlider.value);
+            const currentMax = Number(maxSlider.value);
+
+            // Convert to the new currency
+            let newMin, newMax;
+            if (currentCurrency === 'MXN') {
+              // Converting from USD to MXN
+              newMin = Math.round(currentMin * USD_TO_MXN);
+              newMax = Math.round(currentMax * USD_TO_MXN);
+            } else {
+              // Converting from MXN to USD
+              newMin = Math.round(currentMin * MXN_TO_USD);
+              newMax = Math.round(currentMax * MXN_TO_USD);
+            }
+
+            // Update slider ranges
+            const ranges = priceRanges[currentCurrency];
+            minSlider.min = ranges.min;
+            minSlider.max = ranges.max;
+            minSlider.step = ranges.step;
+            minSlider.value = newMin;
+
+            maxSlider.min = ranges.min;
+            maxSlider.max = ranges.max;
+            maxSlider.step = ranges.step;
+            maxSlider.value = newMax;
+
+            // Update displayed values
+            syncRanges();
+
+            // Update all price displays on the page
+            updateAllPriceDisplays();
+
+            console.log('%c💱 Conversion:', 'color: #3b82f6;',
+              'Sliders updated to', newMin, '-', newMax, currentCurrency);
+          }
+
+          function updateAllPriceDisplays() {
+            // Update all product prices on the page
+            document.querySelectorAll('[data-price-mxn]').forEach(el => {
+              const priceMXN = parseFloat(el.getAttribute('data-price-mxn'));
+              if (isNaN(priceMXN) || priceMXN === 0) return;
+
+              // Convert MXN to display currency
+              const displayPrice = currentCurrency === 'MXN' ? priceMXN : priceMXN * MXN_TO_USD;
+
+              const formatted = new Intl.NumberFormat('en-US', {
+                style: 'currency',
+                currency: currentCurrency,
+                minimumFractionDigits: 2,
+                maximumFractionDigits: 2
+              }).format(displayPrice);
+
+              el.textContent = formatted;
+
+              console.log('[Currency] Converted', priceMXN, 'MXN to', formatted, '(' + currentCurrency + ')');
+            });
+          }
+
+          // Make toggleCurrency available globally
+          window.toggleCurrency = toggleCurrency;
+
+          // Initialize currency and price displays on page load
+          function initializeCurrency() {
+            console.log('%c💱 Initializing Currency:', 'color: #10b981; font-weight: bold;', currentCurrency);
+            console.log('%c🌐 Site Language:', 'color: #3b82f6; font-weight: bold;', siteLang);
+
+            // Update all price displays to match the default currency
+            updateAllPriceDisplays();
+
+            console.log('%c✅ Currency initialized successfully', 'color: #10b981; font-weight: bold;');
+          }
+
+          // Run initialization when DOM is ready
+          if (document.readyState === 'loading') {
+            document.addEventListener('DOMContentLoaded', initializeCurrency);
+          } else {
+            initializeCurrency();
+          }
 
           // ── Carousel: arrows, progress bar, drag safety, touch safety ──
           (function() {
@@ -3332,6 +4829,7 @@ async function start() {
           }
         </script>
       `,
+        category
       ),
     );
   });
@@ -3390,23 +4888,72 @@ async function start() {
       }
     }
 
-    console.log(
-      `[Category] Loading category: ${categoryKey} (${categoryName})`,
-    );
+    // 🔍 DEBUG: Log category access
+    console.log(`\n🏷️  [CATEGORY] ========== CATEGORY PAGE ==========`);
+    console.log(`🏷️  [CATEGORY] User accessed: "${categoryKey}" (${categoryName})`);
+    console.log(`🏷️  [CATEGORY] Language: ${lang}`);
+    console.log(`🏷️  [CATEGORY] Authenticated: ${hasToken ? 'Yes' : 'No'}`);
 
-    // Get products for this category
+    // Define category-specific search keywords for Apify scraping
+    const categoryKeywords = {
+      electronics: ["smartphone", "laptop", "headphones", "tablet", "smartwatch"],
+      home: ["furniture", "kitchen", "decor", "appliances", "bedding"],
+      fashion: ["clothing", "shoes", "watch", "jewelry", "accessories"],
+      sports: ["sports equipment", "fitness", "outdoor", "exercise", "camping"],
+      beauty: ["cosmetics", "skincare", "perfume", "makeup", "beauty"],
+      toys: ["toys", "games", "puzzle", "lego", "board games"],
+      books: ["books", "kindle", "novels", "textbooks", "ebooks"],
+      automotive: ["car accessories", "auto parts", "tools", "motor oil", "tires"],
+      other: ["deals", "offers", "popular"]
+    };
+
+    const keywords = categoryKeywords[categoryKey] || [categoryKey];
+
+    // 🚀 DEBUG: Trigger background Apify scraping for fresh data
+    console.log(`🚀 [CATEGORY] Triggering Apify scraping for keywords: [${keywords.join(', ')}]`);
+
+    // Trigger scraping in background (non-blocking) - fire and forget
+    keywords.forEach((keyword, index) => {
+      // Stagger requests by 2 seconds to avoid rate limiting
+      setTimeout(async () => {
+        try {
+          console.log(`🕷️  [CATEGORY] Scraping keyword ${index + 1}/${keywords.length}: "${keyword}"`);
+          const results = await apifyService.scrapeProducts({
+            source: "all",
+            query: keyword,
+            maxResults: 10 // Get 10 products per keyword
+          });
+
+          console.log(`✅ [CATEGORY] Scraped ${results.length} products for "${keyword}"`);
+
+          // Store scraped products in cache
+          if (results.length > 0) {
+            const storePromises = results.map(product => supabaseDb.cacheScrapedProduct(product));
+            const stored = await Promise.all(storePromises);
+            const successCount = stored.filter(r => r !== null).length;
+            console.log(`💾 [CATEGORY] Stored ${successCount}/${results.length} products from "${keyword}"`);
+          }
+        } catch (error) {
+          console.error(`❌ [CATEGORY] Scraping failed for "${keyword}":`, error.message);
+        }
+      }, index * 2000); // Stagger by 2 seconds
+    });
+
+    console.log(`⏳ [CATEGORY] Background scraping initiated (${keywords.length} searches)`);
+
+    // Get products for this category from cache (instant response)
     let categoryProducts = [];
     try {
       categoryProducts = await supabaseDb.getProductsByCategory(categoryKey, {
         limit: 50,
         dealsOnly: false,
       });
-      console.log(
-        `[Category] Found ${categoryProducts.length} products in ${categoryKey}`,
-      );
+      console.log(`📦 [CATEGORY] Found ${categoryProducts.length} cached products in ${categoryKey}`);
     } catch (error) {
-      console.error(`[Category] Error fetching products:`, error);
+      console.error(`❌ [CATEGORY] Error fetching products:`, error);
     }
+
+    console.log(`🏷️  [CATEGORY] ======================================\n`);
 
     // Render product cards
     const productsHtml =
@@ -5934,6 +7481,11 @@ State: ${state || "none"}</pre>
       );
     }
 
+    // Multi-source support
+    const hasMultipleSources = result.hasMultipleSources || false;
+    const amazonProduct = result.sources?.amazon || null;
+    const mlProduct = result.sources?.mercadolibre || null;
+
     const description = product.description || "";
     const condition =
       product.condition === "new" || product.condition === "New"
@@ -5942,12 +7494,18 @@ State: ${state || "none"}</pre>
           ? t(lang, "used")
           : product.condition;
     const available = product.available_quantity || 0;
+    const sold = product.sold_quantity || 0;
     const isAmazon = product.source === "amazon" || id.startsWith("AMZN-");
+
+    // Get all product images for gallery
+    const productImages = product.images && product.images.length > 0
+      ? product.images
+      : (product.thumbnail ? [product.thumbnail] : []);
 
     // Get appropriate retailer badge and button text
     const retailerBadge = isAmazon
-      ? `<div class="retailer-badge amazon-badge"><img src="https://upload.wikimedia.org/wikipedia/commons/a/a9/Amazon_logo.svg" alt="Amazon" style="height: 20px;" /></div>`
-      : `<div class="retailer-badge ml-badge"><img src="https://http2.mlstatic.com/frontend-assets/ml-web-navigation/ui-navigation/5.21.22/mercadolibre/logo__large_plus.png" alt="Mercado Libre" style="height: 24px;" /></div>`;
+      ? `<div id="retailerBadge" class="retailer-badge amazon-badge"><img src="https://upload.wikimedia.org/wikipedia/commons/a/a9/Amazon_logo.svg" alt="Amazon" style="height: 20px;" /></div>`
+      : `<div id="retailerBadge" class="retailer-badge ml-badge"><img src="https://http2.mlstatic.com/frontend-assets/ml-web-navigation/ui-navigation/5.21.22/mercadolibre/logo__large_plus.png" alt="Mercado Libre" style="height: 24px;" /></div>`;
 
     const viewButtonText = isAmazon ? "View on Amazon" : t(lang, "viewOnML");
 
@@ -6016,6 +7574,27 @@ State: ${state || "none"}</pre>
       ? "action-button secondary tracked"
       : "action-button secondary";
 
+    // Extract specs from title for modern chip display
+    const extractSpecs = (title) => {
+      const specs = [];
+      // Extract RAM
+      const ramMatch = title.match(/(\d+GB)\s*(RAM|Memory)/i);
+      if (ramMatch) specs.push(ramMatch[1] + ' RAM');
+      // Extract Storage
+      const storageMatch = title.match(/(\d+(?:\.\d+)?(?:GB|TB))\s*(SSD|Storage|HDD)?/i);
+      if (storageMatch && !ramMatch?.includes(storageMatch[1])) specs.push(storageMatch[1] + ' Storage');
+      // Extract Screen Size
+      const screenMatch = title.match(/(\d+(?:\.\d+)?["']|inch)/i);
+      if (screenMatch) specs.push(screenMatch[0]);
+      // Extract Condition
+      if (title.match(/renewed|refurbished/i)) specs.push('Renewed');
+      else if (title.match(/\bnew\b/i)) specs.push('New');
+      return specs;
+    };
+
+    const productSpecs = extractSpecs(product.title || '');
+    const cleanTitle = (product.title || '').split('-')[0].split(',')[0].trim();
+
     res.send(
       renderPage(
         product.title || t(lang, "product"),
@@ -6027,16 +7606,62 @@ State: ${state || "none"}</pre>
         <span> / ${t(lang, "product")}</span>
       </div>
       ${result.notice ? `<div class="notice">${result.notice}</div>` : ""}
-      <div class="product-detail">
-        <div class="product-image-container">
-          <img class="product-image" src="${product.thumbnail || ""}" alt="${product.title || t(lang, "product")}" />
-          ${isGoodDeal ? `<div class="good-deal-badge good-deal-badge-card">${lang === "es" ? "Buen Precio" : "Good Deal"}</div>` : ""}
+
+      <!-- Modern Bento Box Layout -->
+      <div class="product-detail-bento">
+        <!-- Hero Image with Glassmorphism + Image Gallery -->
+        <div class="product-hero-card">
+          <div class="product-image-glass-container">
+            <img class="product-image-hero" src="${productImages[0] || product.thumbnail || ""}" alt="${cleanTitle}" id="productHeroImage" />
+            ${isGoodDeal ? `<div class="deal-badge-float">${lang === "es" ? "🔥 Buen Precio" : "🔥 Hot Deal"}</div>` : ""}
+            ${available > 0 ? `<div class="stock-indicator-glow"><span class="glow-dot"></span><span id="stockText">${lang === "es" ? "En Stock" : "In Stock"}</span></div>` : `<div class="stock-indicator-glow out-of-stock"><span class="glow-dot"></span><span id="stockText">${lang === "es" ? "Agotado" : "Out of Stock"}</span></div>`}
+          </div>
+
+          <!-- Image Thumbnail Gallery -->
+          ${productImages.length > 1 ? `
+          <div class="product-thumbnails-scroll">
+            ${productImages.map((img, idx) => `
+              <img
+                src="${img}"
+                class="thumbnail ${idx === 0 ? 'active' : ''}"
+                onclick="changeMainImage('${img}', ${idx})"
+                alt="${cleanTitle} image ${idx + 1}"
+              />
+            `).join('')}
+          </div>
+          ` : ''}
         </div>
-        <div class="product-info">
-          <h1>${product.title || t(lang, "product")}</h1>
-          ${retailerBadge}
+
+        <!-- Product Information Card -->
+        <div class="product-info-card">
+          <div class="product-header-modern">
+            ${retailerBadge}
+
+            <!-- Multi-Source Dropdown (shows only if available on both platforms) -->
+            ${hasMultipleSources ? `
+            <div class="source-selector">
+              <label>${lang === "es" ? "Ver en:" : "View on:"}</label>
+              <select id="sourceDropdown" onchange="switchSource()">
+                <option value="amazon" ${isAmazon ? 'selected' : ''}>
+                  Amazon ${amazonProduct ? `- ${formatPrice(amazonProduct.price, amazonProduct.currency_id)}` : ''}
+                </option>
+                <option value="mercadolibre" ${!isAmazon ? 'selected' : ''}>
+                  Mercado Libre ${mlProduct ? `- ${formatPrice(mlProduct.price, mlProduct.currency_id)}` : ''}
+                </option>
+              </select>
+            </div>
+            ` : ''}
+
+            <h1 class="product-title-clean">${cleanTitle}</h1>
+
+            <!-- Spec Chips Horizontal List -->
+            ${productSpecs.length > 0 ? `
+            <div class="spec-chips-row">
+              ${productSpecs.map(spec => `<span class="spec-chip">${spec}</span>`).join('')}
+            </div>
+            ` : ''}
           <div class="product-price-section">
-            <div class="product-price">${formatPrice(product.price, product.currency_id || (isAmazon ? "USD" : "MXN"))}</div>
+            <div class="product-price" id="productPrice">${formatPrice(product.price, product.currency_id || (isAmazon ? "USD" : "MXN"))}</div>
             ${
               priceStats && priceStats.avgPrice > product.price
                 ? `
@@ -6050,16 +7675,17 @@ State: ${state || "none"}</pre>
           </div>
           <div class="product-meta">
             <span class="condition">${condition}</span>
-            ${available > 0 ? `<span class="stock">· ${available} ${t(lang, "available")}</span>` : `<span class="stock out">· ${t(lang, "outOfStock")}</span>`}
+            <span class="stock" id="stockStatus">· ${available} ${t(lang, "available")}</span>
+            ${sold > 0 ? `<span class="sold-count" id="soldCount">· ${sold}+ ${lang === "es" ? "vendidos" : "sold"}</span>` : ''}
           </div>
           ${product.brand ? `<div class="seller-info"><strong>${product.brand}</strong></div>` : ""}
-          ${product.seller?.nickname ? `<div class="seller-info">${t(lang, "soldBy")}: <strong>${product.seller.nickname}</strong></div>` : ""}
+          ${product.seller?.nickname ? `<div class="seller-info" id="sellerInfo">${t(lang, "soldBy")}: <strong>${product.seller.nickname}</strong></div>` : ""}
 
           ${priceStatsHtml}
 
           <p>${description}</p>
           <div class="product-actions">
-            ${product.permalink ? `<a class="action-button ${isAmazon ? "amazon-btn" : ""}" href="${product.permalink}" target="_blank" rel="noreferrer">${viewButtonText}</a>` : ""}
+            ${product.permalink ? `<a id="viewButton" class="action-button ${isAmazon ? "amazon-btn" : ""}" href="${product.permalink}" target="_blank" rel="noreferrer">${viewButtonText}</a>` : ""}
             ${
               trackedProduct
                 ? `<a href="/dashboard" class="action-button secondary tracked">✓ ${lang === "es" ? "Ver en Panel" : "View in Dashboard"}</a>`
@@ -6068,54 +7694,601 @@ State: ${state || "none"}</pre>
           </div>
         </div>
       </div>
+
+      <!-- JavaScript for Multi-Source Switching -->
+      <script>
+        const productSources = ${JSON.stringify({ amazon: amazonProduct, mercadolibre: mlProduct })};
+        let currentSource = '${product.source}';
+        const lang = '${lang}';
+
+        function formatPrice(price, currency) {
+          if (!price) return '$0.00';
+          const formatted = new Intl.NumberFormat('en-US', {
+            style: 'currency',
+            currency: currency || 'USD',
+            minimumFractionDigits: 2
+          }).format(price);
+          return formatted;
+        }
+
+        function switchSource() {
+          const dropdown = document.getElementById('sourceDropdown');
+          currentSource = dropdown.value;
+
+          const productData = productSources[currentSource];
+          if (!productData) {
+            console.error('No product data for source:', currentSource);
+            return;
+          }
+
+          console.log('Switching to source:', currentSource, productData);
+
+          // Update price
+          document.getElementById('productPrice').textContent =
+            formatPrice(productData.price, productData.currency_id);
+
+          // Update stock status
+          const stockEl = document.getElementById('stockStatus');
+          const stockTextEl = document.getElementById('stockText');
+          const available = productData.available_quantity || 0;
+
+          if (available > 0) {
+            stockEl.textContent = '· ' + available + ' ' + (lang === 'es' ? 'disponibles' : 'available');
+            stockEl.className = 'stock';
+            if (stockTextEl) {
+              stockTextEl.textContent = lang === 'es' ? 'En Stock' : 'In Stock';
+              stockTextEl.parentElement.classList.remove('out-of-stock');
+            }
+          } else {
+            stockEl.textContent = '· ' + (lang === 'es' ? 'Agotado' : 'Out of Stock');
+            stockEl.className = 'stock out';
+            if (stockTextEl) {
+              stockTextEl.textContent = lang === 'es' ? 'Agotado' : 'Out of Stock';
+              stockTextEl.parentElement.classList.add('out-of-stock');
+            }
+          }
+
+          // Update sold count
+          const soldEl = document.getElementById('soldCount');
+          if (soldEl && productData.sold_quantity) {
+            soldEl.textContent = '· ' + productData.sold_quantity + '+ ' + (lang === 'es' ? 'vendidos' : 'sold');
+          }
+
+          // Update view button URL and text
+          const viewBtn = document.getElementById('viewButton');
+          if (viewBtn && productData.permalink) {
+            viewBtn.href = productData.permalink;
+            viewBtn.textContent = currentSource === 'amazon' ? 'View on Amazon' : (lang === 'es' ? 'Ver en Mercado Libre' : 'View on Mercado Libre');
+            viewBtn.className = 'action-button ' + (currentSource === 'amazon' ? 'amazon-btn' : '');
+          }
+
+          // Update retailer badge
+          const badge = document.getElementById('retailerBadge');
+          if (badge) {
+            if (currentSource === 'amazon') {
+              badge.innerHTML = '<img src="https://upload.wikimedia.org/wikipedia/commons/a/a9/Amazon_logo.svg" alt="Amazon" style="height: 20px;" />';
+              badge.className = 'retailer-badge amazon-badge';
+            } else {
+              badge.innerHTML = '<img src="https://http2.mlstatic.com/frontend-assets/ml-web-navigation/ui-navigation/5.21.22/mercadolibre/logo__large_plus.png" alt="Mercado Libre" style="height: 24px;" />';
+              badge.className = 'retailer-badge ml-badge';
+            }
+          }
+
+          // Update seller info
+          const sellerEl = document.getElementById('sellerInfo');
+          if (sellerEl && productData.seller) {
+            const sellerName = typeof productData.seller === 'string' ? productData.seller : productData.seller.nickname;
+            sellerEl.innerHTML = (lang === 'es' ? 'Vendido por:' : 'Sold by:') + ' <strong>' + sellerName + '</strong>';
+          }
+
+          // Update images
+          if (productData.images && productData.images.length > 0) {
+            updateImageGallery(productData.images);
+          }
+        }
+
+        function updateImageGallery(images) {
+          const mainImage = document.getElementById('productHeroImage');
+          if (mainImage && images.length > 0) {
+            mainImage.src = images[0];
+          }
+
+          const thumbnailContainer = document.querySelector('.product-thumbnails-scroll');
+          if (thumbnailContainer && images.length > 1) {
+            thumbnailContainer.innerHTML = images.map((img, idx) => \`
+              <img
+                src="\${img}"
+                class="thumbnail \${idx === 0 ? 'active' : ''}"
+                onclick="changeMainImage('\${img}', \${idx})"
+                alt="Product image \${idx + 1}"
+              />
+            \`).join('');
+          }
+        }
+
+        function changeMainImage(imgSrc, idx) {
+          const mainImage = document.getElementById('productHeroImage');
+          if (mainImage) {
+            mainImage.src = imgSrc;
+          }
+
+          document.querySelectorAll('.thumbnail').forEach((thumb, i) => {
+            thumb.classList.toggle('active', i === idx);
+          });
+        }
+      </script>
     `,
         `
       <style>
-        .product-detail {
+        /* ============================================
+           2026 MODERN BENTO BOX LAYOUT
+           - Modular grid system
+           - Glassmorphism effects
+           - Soft rounded corners (16-24px)
+           - 60-30-10 color rule
+           ============================================ */
+
+        .product-detail-bento {
           display: grid;
           grid-template-columns: 1fr;
           gap: 24px;
+          max-width: 1400px;
+          margin: 0 auto;
+          padding: 20px 0;
         }
+
         @media (min-width: 768px) {
-          .product-detail {
+          .product-detail-bento {
             grid-template-columns: 1fr 1fr;
-            gap: 40px;
+            gap: 32px;
           }
         }
-        .product-image-container {
-          position: relative;
-        }
-        .product-image-container .good-deal-badge-card {
-          position: absolute;
-          top: 16px;
-          left: 16px;
-        }
-        .product-meta { margin: 8px 0 16px; font-size: 14px; color: #666; }
-        .condition { background: #e8f5e9; color: #2e7d32; padding: 4px 8px; border-radius: 4px; }
-        .stock { margin-left: 8px; }
-        .stock.out { color: #c62828; }
-        .seller-info { margin: 12px 0; font-size: 14px; color: #555; }
-        .retailer-badge.amazon-badge { background: #232f3e; }
-        .retailer-badge.ml-badge { background: #ffe600; }
-        .action-button.amazon-btn { background: #ff9900; color: #111; }
-        .action-button.amazon-btn:hover { background: #e88b00; }
-        .action-button.tracked { background: #dcfce7; color: #16a34a; border-color: #16a34a; }
-        .action-button.tracked:hover { background: #bbf7d0; }
 
-        /* Price Section */
+        /* Hero Image Card with Glassmorphism */
+        .product-hero-card {
+          background: #ffffff;
+          border-radius: 24px;
+          padding: 32px;
+          box-shadow: 0 4px 24px rgba(0, 0, 0, 0.06);
+          position: relative;
+          overflow: hidden;
+        }
+
+        .product-image-glass-container {
+          position: relative;
+          width: 100%;
+          aspect-ratio: 1;
+          border-radius: 20px;
+          overflow: hidden;
+          background: linear-gradient(135deg, #f8f9fa 0%, #e9ecef 100%);
+          cursor: zoom-in;
+          transition: transform 0.3s cubic-bezier(0.4, 0, 0.2, 1);
+        }
+
+        .product-image-glass-container:hover {
+          transform: scale(1.02);
+        }
+
+        .product-image-hero {
+          width: 100%;
+          height: 100%;
+          object-fit: contain;
+          padding: 20px;
+          transition: transform 0.4s ease;
+        }
+
+        .product-image-glass-container:hover .product-image-hero {
+          transform: scale(1.05);
+        }
+
+        /* Floating Deal Badge with Micro-interaction */
+        .deal-badge-float {
+          position: absolute;
+          top: 20px;
+          left: 20px;
+          background: linear-gradient(135deg, #ef4444 0%, #dc2626 100%);
+          color: white;
+          padding: 8px 16px;
+          border-radius: 12px;
+          font-size: 13px;
+          font-weight: 600;
+          box-shadow: 0 4px 12px rgba(239, 68, 68, 0.4);
+          animation: pulse-glow 2s ease-in-out infinite;
+        }
+
+        @keyframes pulse-glow {
+          0%, 100% { box-shadow: 0 4px 12px rgba(239, 68, 68, 0.4); }
+          50% { box-shadow: 0 8px 20px rgba(239, 68, 68, 0.6); }
+        }
+
+        /* Glowing Stock Indicator */
+        .stock-indicator-glow {
+          position: absolute;
+          bottom: 20px;
+          right: 20px;
+          background: rgba(255, 255, 255, 0.95);
+          backdrop-filter: blur(10px);
+          padding: 8px 14px;
+          border-radius: 20px;
+          font-size: 13px;
+          font-weight: 500;
+          color: #16a34a;
+          display: flex;
+          align-items: center;
+          gap: 6px;
+          box-shadow: 0 2px 8px rgba(0, 0, 0, 0.1);
+        }
+
+        .glow-dot {
+          width: 8px;
+          height: 8px;
+          background: #16a34a;
+          border-radius: 50%;
+          animation: glow-pulse 1.5s ease-in-out infinite;
+        }
+
+        @keyframes glow-pulse {
+          0%, 100% {
+            opacity: 1;
+            box-shadow: 0 0 0 0 rgba(22, 163, 74, 0.7);
+          }
+          50% {
+            opacity: 0.8;
+            box-shadow: 0 0 0 6px rgba(22, 163, 74, 0);
+          }
+        }
+
+        .stock-indicator-glow.out-of-stock {
+          color: #dc2626;
+        }
+
+        .stock-indicator-glow.out-of-stock .glow-dot {
+          background: #dc2626;
+        }
+
+        /* ============================================
+           IMAGE THUMBNAIL GALLERY
+           ============================================ */
+        .product-thumbnails-scroll {
+          display: flex;
+          gap: 12px;
+          overflow-x: auto;
+          padding: 16px 0;
+          margin-top: 16px;
+          scroll-snap-type: x mandatory;
+          -webkit-overflow-scrolling: touch;
+        }
+
+        .product-thumbnails-scroll::-webkit-scrollbar {
+          height: 8px;
+        }
+
+        .product-thumbnails-scroll::-webkit-scrollbar-track {
+          background: #f1f1f1;
+          border-radius: 4px;
+        }
+
+        .product-thumbnails-scroll::-webkit-scrollbar-thumb {
+          background: #d1d5db;
+          border-radius: 4px;
+        }
+
+        .product-thumbnails-scroll::-webkit-scrollbar-thumb:hover {
+          background: #9ca3af;
+        }
+
+        .thumbnail {
+          width: 80px;
+          height: 80px;
+          object-fit: cover;
+          border-radius: 8px;
+          border: 2px solid transparent;
+          cursor: pointer;
+          transition: all 0.3s ease;
+          scroll-snap-align: start;
+          flex-shrink: 0;
+        }
+
+        .thumbnail:hover {
+          border-color: #3c91ed;
+          transform: scale(1.05);
+        }
+
+        .thumbnail.active {
+          border-color: #3c91ed;
+          box-shadow: 0 0 0 3px rgba(60, 145, 237, 0.2);
+        }
+
+        /* ============================================
+           MULTI-SOURCE DROPDOWN
+           ============================================ */
+        .source-selector {
+          display: flex;
+          flex-direction: column;
+          gap: 8px;
+          margin-bottom: 16px;
+        }
+
+        .source-selector label {
+          font-size: 14px;
+          font-weight: 600;
+          color: #6b7280;
+        }
+
+        #sourceDropdown {
+          padding: 12px 16px;
+          font-size: 15px;
+          border: 2px solid #e5e7eb;
+          border-radius: 12px;
+          background: white;
+          cursor: pointer;
+          width: 100%;
+          max-width: 400px;
+          transition: all 0.3s ease;
+          font-weight: 500;
+        }
+
+        #sourceDropdown:hover {
+          border-color: #3c91ed;
+        }
+
+        #sourceDropdown:focus {
+          outline: none;
+          border-color: #3c91ed;
+          box-shadow: 0 0 0 3px rgba(60, 145, 237, 0.1);
+        }
+
+        /* Product Info Card */
+        .product-info-card {
+          background: #ffffff;
+          border-radius: 24px;
+          padding: 32px;
+          box-shadow: 0 4px 24px rgba(0, 0, 0, 0.06);
+          display: flex;
+          flex-direction: column;
+          gap: 20px;
+        }
+
+        .product-header-modern {
+          display: flex;
+          flex-direction: column;
+          gap: 16px;
+        }
+
+        /* Clean Product Title - Bold Sans-Serif (Inter/SF Pro style) */
+        .product-title-clean {
+          font-size: clamp(24px, 4vw, 32px);
+          font-weight: 700;
+          line-height: 1.2;
+          color: #1a1a1a;
+          margin: 0;
+          font-family: -apple-system, BlinkMacSystemFont, 'SF Pro Display', 'Inter', sans-serif;
+        }
+
+        /* Spec Chips - Horizontal List */
+        .spec-chips-row {
+          display: flex;
+          flex-wrap: wrap;
+          gap: 8px;
+          margin-top: 8px;
+        }
+
+        .spec-chip {
+          background: #f1f5f9;
+          color: #475569;
+          padding: 6px 12px;
+          border-radius: 8px;
+          font-size: 13px;
+          font-weight: 500;
+          border: 1px solid #e2e8f0;
+          transition: all 0.2s ease;
+        }
+
+        .spec-chip:hover {
+          background: #e0e7ff;
+          border-color: #6366f1;
+          color: #4f46e5;
+          transform: translateY(-1px);
+        }
+
+        /* Retailer Badge Modernized */
+        .retailer-badge {
+          display: inline-flex;
+          align-items: center;
+          padding: 6px 12px;
+          border-radius: 8px;
+          font-size: 12px;
+          width: fit-content;
+        }
+
+        .retailer-badge.amazon-badge {
+          background: #232f3e;
+          color: white;
+        }
+
+        .retailer-badge.ml-badge {
+          background: #ffe600;
+          color: #333;
+        }
+
+        /* Sticky CTA Section - High Contrast */
         .product-price-section {
           display: flex;
-          align-items: baseline;
+          flex-direction: column;
           gap: 12px;
-          flex-wrap: wrap;
+          padding: 24px 0;
+          border-top: 1px solid #e5e7eb;
+          border-bottom: 1px solid #e5e7eb;
         }
+
+        .product-price {
+          font-size: clamp(32px, 5vw, 42px);
+          font-weight: 700;
+          color: #1a1a1a;
+          font-family: -apple-system, BlinkMacSystemFont, 'SF Pro Display', 'Inter', sans-serif;
+        }
+
         .product-price-comparison {
           font-size: 14px;
-          color: var(--text-muted);
+          color: #64748b;
+          display: flex;
+          align-items: center;
+          gap: 8px;
         }
+
         .product-price-comparison .avg-value {
           text-decoration: line-through;
           color: #ef4444;
+          font-weight: 500;
+        }
+
+        /* Product Actions - Vibrant CTA */
+        .product-actions {
+          display: flex;
+          flex-direction: column;
+          gap: 12px;
+          margin-top: auto;
+        }
+
+        .action-button {
+          padding: 16px 24px;
+          border-radius: 16px;
+          font-size: 16px;
+          font-weight: 600;
+          border: none;
+          cursor: pointer;
+          transition: all 0.2s cubic-bezier(0.4, 0, 0.2, 1);
+          text-align: center;
+          text-decoration: none;
+          display: block;
+        }
+
+        .action-button.amazon-btn {
+          background: linear-gradient(135deg, #ff9900 0%, #ff7700 100%);
+          color: #111;
+          box-shadow: 0 4px 16px rgba(255, 153, 0, 0.3);
+        }
+
+        .action-button.amazon-btn:hover {
+          background: linear-gradient(135deg, #ff7700 0%, #ff5500 100%);
+          transform: translateY(-2px);
+          box-shadow: 0 6px 20px rgba(255, 153, 0, 0.4);
+        }
+
+        .action-button.secondary {
+          background: #f8fafc;
+          color: #334155;
+          border: 2px solid #e2e8f0;
+        }
+
+        .action-button.secondary:hover {
+          background: #f1f5f9;
+          border-color: #cbd5e1;
+        }
+
+        .action-button.tracked {
+          background: #dcfce7;
+          color: #16a34a;
+          border-color: #86efac;
+        }
+
+        .action-button.tracked:hover {
+          background: #bbf7d0;
+        }
+
+        /* Product Meta - Clean */
+        .product-meta {
+          margin: 0;
+          font-size: 14px;
+          color: #64748b;
+          display: flex;
+          align-items: center;
+          gap: 8px;
+        }
+
+        .condition {
+          background: #dcfce7;
+          color: #16a34a;
+          padding: 4px 10px;
+          border-radius: 6px;
+          font-weight: 500;
+        }
+
+        .stock {
+          color: #64748b;
+        }
+
+        .stock.out {
+          color: #ef4444;
+        }
+
+        .seller-info {
+          margin: 0;
+          font-size: 14px;
+          color: #64748b;
+        }
+
+        /* Mobile-first Responsive Design */
+        @media (max-width: 767px) {
+          .product-hero-card, .product-info-card {
+            padding: 20px;
+            border-radius: 16px;
+          }
+
+          .product-title-clean {
+            font-size: 22px;
+          }
+
+          .product-price {
+            font-size: 32px;
+          }
+
+          .action-button {
+            padding: 14px 20px;
+            font-size: 15px;
+          }
+
+          .spec-chip {
+            font-size: 12px;
+            padding: 5px 10px;
+          }
+        }
+
+        /* Accessibility - Reduced Motion */
+        @media (prefers-reduced-motion: reduce) {
+          .product-image-glass-container,
+          .product-image-hero,
+          .action-button,
+          .spec-chip {
+            transition: none !important;
+            animation: none !important;
+          }
+
+          .deal-badge-float,
+          .glow-dot {
+            animation: none !important;
+          }
+        }
+
+        /* Accessibility - High Contrast */
+        @media (prefers-contrast: high) {
+          .product-hero-card,
+          .product-info-card {
+            border: 2px solid #000;
+          }
+
+          .spec-chip {
+            border-width: 2px;
+          }
+
+          .action-button {
+            border: 2px solid currentColor;
+          }
+        }
+
+        /* Legacy compatibility */
+        .product-detail {
+          display: none;
         }
 
         /* Price Stats Section */

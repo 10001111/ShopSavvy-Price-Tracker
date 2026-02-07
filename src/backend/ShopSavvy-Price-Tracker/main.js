@@ -1,5 +1,5 @@
 const { Actor } = require("apify");
-const { CheerioCrawler } = require("crawlee");
+const { CheerioCrawler, PlaywrightCrawler } = require("crawlee");
 
 // Wrap everything in an async IIFE with top-level error handling.
 // The .then() pattern swallows errors on Apify's LIMITED_PERMISSIONS runtime.

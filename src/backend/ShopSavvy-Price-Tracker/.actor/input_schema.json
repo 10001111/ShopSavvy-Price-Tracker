@@ -1,0 +1,42 @@
+{
+  "title": "ShopSavvy Price Tracker Input",
+  "description": "Scrape product data from Amazon and Mercado Libre Mexico including prices, images, and details.",
+  "type": "object",
+  "schemaVersion": 1,
+  "properties": {
+    "source": {
+      "title": "Source",
+      "description": "Which e-commerce store to scrape: amazon, mercadolibre, or all.",
+      "type": "string",
+      "editor": "select",
+      "default": "all",
+      "enum": ["amazon", "mercadolibre", "all"],
+      "enumTitles": ["Amazon", "Mercado Libre", "All Stores"]
+    },
+    "query": {
+      "title": "Search Query",
+      "description": "The product search keyword (e.g. iPhone 15, Samsung Galaxy S24). Used to build search URLs.",
+      "type": "string",
+      "editor": "textfield",
+      "default": ""
+    },
+    "productUrls": {
+      "title": "Product URLs",
+      "description": "Direct product page URLs to scrape. Used for price re-checks on already tracked products. If provided, query is ignored.",
+      "type": "array",
+      "editor": "requestListSources",
+      "prefill": [],
+      "default": []
+    },
+    "maxResults": {
+      "title": "Max Results Per Source",
+      "description": "Maximum number of products to return per source store.",
+      "type": "integer",
+      "editor": "number",
+      "minimum": 1,
+      "maximum": 100,
+      "prefill": 20,
+      "default": 20
+    }
+  }
+}

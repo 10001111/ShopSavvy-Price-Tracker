@@ -46,42 +46,91 @@ function buildCacheKey({ source, query, productUrls }) {
  */
 async function scrapeProducts({ source = "all", query = "", productUrls = [], maxResults = 20 }) {
   const apify = getClient();
+
+  // 🔧 TEMPORARY: Force Amazon-only until Mercado Libre browser scraper is ready
+  if (source === "all") {
+    console.log(`[APIFY] Converting "all" to "amazon" (Mercado Libre temporarily disabled)`);
+    source = "amazon";
+  }
+  if (source === "mercadolibre") {
+    console.log(`[APIFY] ⚠️  Mercado Libre scraper temporarily disabled (requires browser-based scraping)`);
+    console.log(`[APIFY] Suggestion: Use "amazon" or "all" for now`);
+    return [];
+  }
+
   const cacheKey = buildCacheKey({ source, query, productUrls });
+
+  // 🔍 DEBUG: Log scraping request details
+  console.log(`\n🕷️  [APIFY] ========== SCRAPING REQUEST ==========`);
+  console.log(`🕷️  [APIFY] Source: ${source}`);
+  console.log(`🕷️  [APIFY] Query: "${query}"`);
+  console.log(`🕷️  [APIFY] Product URLs: ${productUrls.length > 0 ? productUrls.length : 'none'}`);
+  console.log(`🕷️  [APIFY] Max Results: ${maxResults}`);
+  console.log(`🕷️  [APIFY] Cache Key: ${cacheKey}`);
 
   // Check Redis cache first
   const cached = await getCache(cacheKey);
   if (cached) {
-    console.log("[Apify] Cache hit:", cacheKey);
+    console.log(`✅ [APIFY] Cache hit! Returning ${cached.length} cached products`);
+    console.log(`🕷️  [APIFY] ========================================\n`);
     return cached;
   }
 
-  console.log("[Apify] Starting Actor run...", { source, query, productUrls, maxResults });
+  console.log(`⚠️  [APIFY] Cache miss - starting fresh scrape`);
+  console.log(`🚀 [APIFY] Calling Apify Actor ID: ${ACTOR_ID}`);
+
+  const startTime = Date.now();
 
   // Start the Actor and wait for it to finish
   const run = await apify.actor(ACTOR_ID).call(
     { source, query, productUrls, maxResults },
     {
+      build: "1.0.4", // Latest build with improved debugging
       waitSecs: 300, // wait up to 5 minutes
       memory: 512,
     }
   );
 
-  console.log("[Apify] Actor run finished. Status:", run.status, "| Run ID:", run.id);
+  const duration = ((Date.now() - startTime) / 1000).toFixed(2);
+
+  console.log(`🕷️  [APIFY] Actor run finished in ${duration}s`);
+  console.log(`🕷️  [APIFY] Run ID: ${run.id}`);
+  console.log(`🕷️  [APIFY] Status: ${run.status}`);
 
   if (run.status !== "SUCCEEDED") {
-    console.error("[Apify] Actor run did not succeed:", run.status);
+    console.error(`❌ [APIFY] Actor run FAILED with status: ${run.status}`);
+    console.error(`❌ [APIFY] Run details:`, JSON.stringify(run, null, 2));
+    console.log(`🕷️  [APIFY] ========================================\n`);
     return [];
   }
 
   // Pull results from the run's dataset
   const { items } = await apify.dataset(run.defaultDatasetId).listItems();
-  console.log("[Apify] Scraped", items.length, "products");
+  console.log(`✅ [APIFY] Successfully scraped ${items.length} products`);
+
+  // 🔍 DEBUG: Show sample product data
+  if (items.length > 0) {
+    const sample = items[0];
+    console.log(`📦 [APIFY] Sample product:`, {
+      id: sample.id,
+      title: sample.title?.substring(0, 50) + '...',
+      price: sample.price,
+      source: sample.source,
+      available_quantity: sample.available_quantity,
+      sold_quantity: sample.sold_quantity,
+      rating: sample.rating
+    });
+  }
 
   // Cache the results
   if (items.length > 0) {
     await setCache(cacheKey, items, CACHE_TTL);
+    console.log(`💾 [APIFY] Cached ${items.length} products (TTL: ${CACHE_TTL}s)`);
+  } else {
+    console.warn(`⚠️  [APIFY] No products found - not caching`);
   }
 
+  console.log(`🕷️  [APIFY] ========================================\n`);
   return items;
 }
 
@@ -101,7 +150,7 @@ async function recheckPrices(productUrls) {
 
   const run = await apify.actor(ACTOR_ID).call(
     { source: "all", query: "", productUrls, maxResults: productUrls.length },
-    { waitSecs: 300, memory: 512 }
+    { build: "1.0.4", waitSecs: 300, memory: 512 }
   );
 
   if (run.status !== "SUCCEEDED") {

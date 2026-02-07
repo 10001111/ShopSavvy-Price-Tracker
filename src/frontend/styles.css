@@ -49,6 +49,7 @@ body {
     text-rendering: optimizeSpeed;
     -webkit-font-smoothing: antialiased;
     -moz-osx-font-smoothing: grayscale;
+    /* Removed global zoom - using responsive design instead */
 }
 
 /* Lazy load images with blur-up */
@@ -871,7 +872,8 @@ body {
     flex: 1;
     padding: 20px var(--mobile-padding);
     width: 100%;
-    max-width: 100%;
+    max-width: 1400px;
+    margin: 0 auto;
     overflow-x: hidden;
 }
 
@@ -1375,6 +1377,65 @@ button:active,
     color: var(--text-primary);
 }
 
+/* ========================================
+   CURRENCY TOGGLE BUTTON
+   ======================================== */
+.currency-toggle-container {
+    flex: 0 1 120px !important;
+    min-width: 100px !important;
+}
+
+.currency-toggle-btn {
+    display: flex;
+    align-items: center;
+    justify-content: space-between;
+    gap: 8px;
+    padding: 9px 12px;
+    font-size: 0.82rem;
+    font-weight: 600;
+    border-radius: 10px;
+    border: 1px solid var(--border-color);
+    background: var(--bg-card);
+    color: var(--text-primary);
+    cursor: pointer;
+    transition: all 0.2s cubic-bezier(0.4, 0, 0.2, 1);
+    width: 100%;
+}
+
+.currency-toggle-btn:hover {
+    border-color: var(--accent-primary);
+    background: var(--accent-light);
+    transform: translateY(-1px);
+}
+
+.currency-toggle-btn:active {
+    transform: translateY(0);
+}
+
+.currency-toggle-btn:focus {
+    outline: none;
+    border-color: var(--accent-primary);
+    box-shadow: 0 0 0 3px var(--accent-light);
+}
+
+.currency-label {
+    font-weight: 700;
+    color: var(--accent-primary);
+    letter-spacing: 0.025em;
+}
+
+.toggle-icon {
+    width: 14px;
+    height: 14px;
+    opacity: 0.6;
+    transition: transform 0.2s ease;
+}
+
+.currency-toggle-btn:hover .toggle-icon {
+    transform: translateY(2px);
+    opacity: 1;
+}
+
 /* sort dropdown — lighter, matches row aesthetic */
 .sort-row {
     flex: 0 1 180px;
@@ -1554,6 +1615,32 @@ button:active,
 .source-badge.amazon {
     background: #ff9900;
     color: #111;
+}
+
+/* Dual Source Badges Container */
+.source-badges-multi {
+    display: flex;
+    gap: 4px;
+    align-items: center;
+}
+
+.source-badges-multi .source-badge {
+    font-size: 9px;
+    padding: 3px 6px;
+    margin: 0;
+}
+
+/* Mobile responsive for dual badges */
+@media (max-width: 640px) {
+    .source-badges-multi {
+        flex-direction: row;
+        gap: 3px;
+    }
+
+    .source-badges-multi .source-badge {
+        font-size: 8px;
+        padding: 2px 5px;
+    }
 }
 
 .card a {
@@ -1920,49 +2007,143 @@ button:active,
 }
 
 /* ==========================================
-   PAGINATION
+   PAGINATION - Modern Numbered Design
    ========================================== */
 .pagination {
     display: flex;
-    flex-direction: column;
-    gap: 10px;
+    flex-direction: row;
+    flex-wrap: wrap;
+    gap: 8px;
     align-items: center;
-    margin-top: 20px;
+    justify-content: center;
+    margin: 32px 0;
     padding: 16px 0;
 }
 
-.pagination a {
-    padding: 12px 20px;
-    background: #ffffff;
-    border: 1px solid #7ebde9;
+/* Pagination numbers container */
+.pagination-numbers {
+    display: flex;
+    gap: 4px;
+    align-items: center;
+    flex-wrap: wrap;
+    justify-content: center;
+}
+
+/* Individual page number button */
+.pagination-number {
+    min-width: 40px;
+    height: 40px;
+    padding: 0 12px;
+    background: var(--bg-secondary);
+    border: 1px solid var(--border-color);
     border-radius: var(--radius-md);
     text-decoration: none;
-    color: #050c18;
+    color: var(--text-primary);
     font-weight: 500;
     font-size: 14px;
-    min-height: 44px;
-    display: flex;
+    display: inline-flex;
     align-items: center;
     justify-content: center;
-    width: 100%;
+    transition: all 0.2s ease;
+    cursor: pointer;
 }
 
-.pagination a:hover {
-    background: #3c91ed;
+.pagination-number:hover {
+    background: var(--primary-color);
     color: #ffffff;
-    border-color: #3c91ed;
+    border-color: var(--primary-color);
+    transform: translateY(-2px);
+    box-shadow: 0 4px 8px rgba(60, 145, 237, 0.2);
 }
 
-.pagination a:active {
-    background: #294e90;
+/* Current page (active state) */
+.pagination-number.pagination-current {
+    background: var(--primary-color);
     color: #ffffff;
+    border-color: var(--primary-color);
+    font-weight: 600;
+    cursor: default;
+    box-shadow: 0 2px 8px rgba(60, 145, 237, 0.3);
 }
 
-.pagination span {
-    color: #666;
-    font-size: 13px;
-    order: -1;
-    padding: 8px 0;
+/* Ellipsis (…) */
+.pagination-ellipsis {
+    min-width: 40px;
+    height: 40px;
+    display: inline-flex;
+    align-items: center;
+    justify-content: center;
+    color: var(--text-muted);
+    font-size: 16px;
+    pointer-events: none;
+}
+
+/* Previous/Next buttons */
+.pagination-prev,
+.pagination-next {
+    padding: 10px 16px;
+    background: var(--bg-secondary);
+    border: 1px solid var(--border-color);
+    border-radius: var(--radius-md);
+    text-decoration: none;
+    color: var(--text-primary);
+    font-weight: 500;
+    font-size: 14px;
+    display: inline-flex;
+    align-items: center;
+    gap: 6px;
+    transition: all 0.2s ease;
+    white-space: nowrap;
+}
+
+.pagination-prev:hover,
+.pagination-next:hover {
+    background: var(--primary-color);
+    color: #ffffff;
+    border-color: var(--primary-color);
+    transform: translateY(-2px);
+    box-shadow: 0 4px 8px rgba(60, 145, 237, 0.2);
+}
+
+.pagination-prev svg,
+.pagination-next svg {
+    flex-shrink: 0;
+}
+
+/* Disabled state for prev/next */
+.pagination-disabled {
+    padding: 10px 16px;
+    background: transparent;
+    border: 1px solid transparent;
+    color: transparent;
+    cursor: default;
+    pointer-events: none;
+    visibility: hidden;
+}
+
+/* Mobile adjustments */
+@media (max-width: 640px) {
+    .pagination {
+        gap: 6px;
+    }
+
+    .pagination-number {
+        min-width: 36px;
+        height: 36px;
+        font-size: 13px;
+    }
+
+    .pagination-prev,
+    .pagination-next {
+        padding: 8px 12px;
+        font-size: 13px;
+    }
+
+    /* Hide prev/next text on very small screens, keep icons */
+    .pagination-prev,
+    .pagination-next {
+        gap: 4px;
+    }
 }
 
 /* ==========================================
@@ -2301,19 +2482,7 @@ button:active,
         height: 180px;
     }
 
-    .pagination {
-        flex-direction: row;
-        justify-content: center;
-    }
-
-    .pagination span {
-        order: 0;
-    }
-
-    .pagination a {
-        width: auto;
-        min-width: 140px;
-    }
+    /* Pagination is already row-based by default, no changes needed */
 }
 
 /* ==========================================
@@ -5214,18 +5383,31 @@ body {
     margin-bottom: 6px;
 }
 
-.product-card-price {
-    font-size: 1.15rem;
+.product-card-price,
+.product-card-price-current {
+    font-size: 1.25rem;
     font-weight: 800;
-    color: #16a34a; /* emerald */
+    color: #16a34a; /* GREEN - current/discount price */
     display: inline;
 }
 
 .product-card-price-original {
-    font-size: 0.78rem;
-    color: var(--text-muted);
+    font-size: 0.95rem;
+    font-weight: 600;
+    color: #dc2626; /* RED - original price */
     text-decoration: line-through;
-    opacity: 0.7;
+    opacity: 0.85;
+}
+
+.product-card-discount {
+    display: inline-block;
+    padding: 2px 8px;
+    background: #16a34a;
+    color: white;
+    font-size: 0.75rem;
+    font-weight: 700;
+    border-radius: 4px;
+    margin-left: 4px;
 }
 
 /* Savings pill */
@@ -5392,4 +5574,225 @@ body {
         font-size: 0.7rem;
         padding: 8px 6px;
     }
+}
+/* ==========================================
+   PROFESSIONAL FOOTER
+   Privacy & Copyright Information
+   ========================================== */
+
+.site-footer {
+    background: linear-gradient(180deg, var(--bg-primary) 0%, var(--bg-secondary) 100%);
+    border-top: 1px solid var(--border-color);
+    padding: 60px 20px 30px;
+    margin-top: 80px;
+    color: var(--text-secondary);
+}
+
+.footer-container {
+    max-width: 1200px;
+    margin: 0 auto;
+    display: grid;
+    grid-template-columns: repeat(auto-fit, minmax(250px, 1fr));
+    gap: 40px;
+    margin-bottom: 40px;
+}
+
+.footer-section {
+    display: flex;
+    flex-direction: column;
+    gap: 16px;
+}
+
+.footer-title {
+    font-size: 1.5rem;
+    font-weight: 700;
+    color: var(--text-primary);
+    margin: 0;
+    background: var(--gradient-cta);
+    -webkit-background-clip: text;
+    -webkit-text-fill-color: transparent;
+    background-clip: text;
+}
+
+.footer-description {
+    font-size: 0.9rem;
+    line-height: 1.6;
+    color: var(--text-secondary);
+    margin: 0;
+}
+
+.footer-social {
+    display: flex;
+    gap: 12px;
+    margin-top: 8px;
+}
+
+.social-link {
+    width: 36px;
+    height: 36px;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    background: var(--bg-tertiary);
+    border-radius: 8px;
+    color: var(--text-secondary);
+    transition: all var(--transition-fast);
+    border: 1px solid var(--border-color);
+}
+
+.social-link:hover {
+    background: var(--accent-primary);
+    color: white;
+    transform: translateY(-2px);
+}
+
+.social-link svg {
+    width: 18px;
+    height: 18px;
+}
+
+.footer-heading {
+    font-size: 1rem;
+    font-weight: 600;
+    color: var(--text-primary);
+    margin: 0 0 8px 0;
+}
+
+.footer-links {
+    list-style: none;
+    padding: 0;
+    margin: 0;
+    display: flex;
+    flex-direction: column;
+    gap: 10px;
+}
+
+.footer-links a {
+    color: var(--text-secondary);
+    text-decoration: none;
+    font-size: 0.9rem;
+    transition: all var(--transition-fast);
+    display: inline-block;
+}
+
+.footer-links a:hover {
+    color: var(--accent-primary);
+    transform: translateX(4px);
+}
+
+.footer-bottom {
+    max-width: 1200px;
+    margin: 0 auto;
+    padding-top: 30px;
+    border-top: 1px solid var(--border-color);
+    text-align: center;
+    display: flex;
+    flex-direction: column;
+    gap: 12px;
+}
+
+.footer-copyright {
+    font-size: 0.9rem;
+    color: var(--text-secondary);
+    margin: 0;
+    font-weight: 500;
+}
+
+.footer-disclaimer {
+    font-size: 0.8rem;
+    color: var(--text-muted);
+    margin: 0;
+    line-height: 1.5;
+    max-width: 800px;
+    margin: 0 auto;
+}
+
+/* Mobile Footer Adjustments */
+@media (max-width: 768px) {
+    .site-footer {
+        padding: 40px 16px 20px;
+        margin-top: 40px;
+    }
+
+    .footer-container {
+        grid-template-columns: 1fr;
+        gap: 32px;
+    }
+
+    .footer-title {
+        font-size: 1.3rem;
+    }
+
+    .footer-social {
+        justify-content: flex-start;
+    }
+
+    .footer-bottom {
+        padding-top: 20px;
+    }
+}
+/* ==========================================
+   PRODUCT CARD ENHANCEMENTS
+   Ratings, Stock, Sold Count
+   ========================================== */
+
+/* Stock Badge */
+.stock-badge {
+    position: absolute;
+    bottom: 12px;
+    right: 12px;
+    padding: 4px 10px;
+    border-radius: 12px;
+    font-size: 11px;
+    font-weight: 600;
+    display: flex;
+    align-items: center;
+    gap: 4px;
+    z-index: 10;
+    backdrop-filter: blur(8px);
+}
+
+.stock-badge.in-stock {
+    background: rgba(16, 185, 129, 0.9);
+    color: white;
+}
+
+.stock-badge.out-stock {
+    background: rgba(239, 68, 68, 0.9);
+    color: white;
+}
+
+/* Rating Stars */
+.product-card-rating {
+    display: flex;
+    align-items: center;
+    gap: 6px;
+    margin-bottom: 8px;
+    font-size: 14px;
+}
+
+.product-card-rating .stars {
+    color: #fbbf24;
+    letter-spacing: 1px;
+}
+
+.product-card-rating .review-count {
+    font-size: 12px;
+    color: var(--text-muted);
+}
+
+/* Sold Count */
+.product-card-sold {
+    display: flex;
+    align-items: center;
+    gap: 4px;
+    font-size: 12px;
+    color: var(--text-muted);
+    margin-top: 8px;
+    padding-top: 8px;
+    border-top: 1px solid var(--border-light);
+}
+
+.product-card-sold svg {
+    color: var(--accent-primary);
 }

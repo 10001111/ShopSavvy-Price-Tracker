@@ -1,0 +1,31 @@
+{
+  "actorSpecification": 1,
+  "name": "ShopSavvy-Price-Tracker",
+  "title": "ShopSavvy Price Tracker",
+  "description": "Scrapes product data from Amazon Mexico and Mercado Libre Mexico",
+  "version": "1.0",
+  "build": {
+    "dockerfile": "./Dockerfile"
+  },
+  "input": "./input_schema.json",
+  "storages": {
+    "dataset": {
+      "actorSpecification": 1,
+      "title": "Products",
+      "views": {
+        "overview": {
+          "title": "Overview",
+          "transformation": {
+            "fields": [
+              "title",
+              "price",
+              "currency",
+              "source",
+              "url"
+            ]
+          }
+        }
+      }
+    }
+  }
+}

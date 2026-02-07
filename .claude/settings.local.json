@@ -6,7 +6,8 @@
       "mcp__acp__Edit",
       "WebFetch(domain:www.google.com)",
       "WebFetch(domain:myaccount.google.com)",
-      "WebFetch(domain:console.apify.com)"
+      "WebFetch(domain:console.apify.com)",
+      "WebFetch(domain:www.mercadolibre.com.mx)"
     ]
   }
 }

@@ -521,23 +521,40 @@ async function addTrackedProduct({
  * @returns {Promise<Object|null>}
  */
 async function cacheScrapedProduct(product) {
+  console.log(`\n💾 [CACHE] ========== STORING PRODUCT ==========`);
+  console.log(`💾 [CACHE] Title: "${product.title?.substring(0, 50)}..."`);
+  console.log(`💾 [CACHE] Source: ${product.source}`);
+  console.log(`💾 [CACHE] Product ID: ${product.id}`);
+
   const productData = {
     product_id: product.id,
     product_title: product.title,
     product_url: product.url || null,
     source: product.source,
-    current_price: parseFloat(product.price) || 0,
+    price: parseFloat(product.price) || 0,  // FIX: Changed from current_price to price
     thumbnail:
       product.thumbnail || (product.images && product.images[0]) || null,
     images: product.images || [],
     description: product.description || null,
     seller: product.seller || null,
     rating: product.rating || null,
+    available_quantity: product.available_quantity || null,  // ADD: Stock quantity
+    sold_quantity: product.sold_quantity || null,  // ADD: Sold count
     condition: product.condition || "new",
-    currency: product.currency || "MXN",
+    currency: product.currency || "USD",  // FIX: Changed default from MXN to USD
     scraped_at: new Date().toISOString(),
-    last_checked: new Date().toISOString(),
+    last_updated: new Date().toISOString(),  // FIX: Changed from last_checked to last_updated
   };
+
+  console.log('📝 [CACHE] Data being inserted:', {
+    product_id: productData.product_id,
+    price: productData.price,
+    currency: productData.currency,
+    rating: productData.rating,
+    available_quantity: productData.available_quantity,
+    sold_quantity: productData.sold_quantity,
+    images_count: Array.isArray(productData.images) ? productData.images.length : 0
+  });
 
   // Try to insert, on conflict update
   const { data, error } = await getSupabase()
@@ -550,10 +567,33 @@ async function cacheScrapedProduct(product) {
     .single();
 
   if (error) {
-    console.error("[Supabase] cacheScrapedProduct error:", error);
+    console.error(`\n❌ [CACHE] ========== DATABASE ERROR ==========`);
+    console.error(`❌ [CACHE] Failed to store product: ${productData.product_id}`);
+    console.error(`❌ [CACHE] Error message: ${error.message}`);
+    console.error(`❌ [CACHE] Error code: ${error.code}`);
+    console.error(`❌ [CACHE] Error details:`, JSON.stringify(error, null, 2));
+
+    // Check for common errors
+    if (error.code === 'PGRST204') {
+      console.error(`\n💡 [CACHE] SOLUTION: Column not found in database schema`);
+      console.error(`💡 [CACHE] This means the database table is missing required columns.`);
+      console.error(`💡 [CACHE] ACTION REQUIRED: Run migration 008 to add missing columns:`);
+      console.error(`💡 [CACHE]   1. Go to Supabase Dashboard > SQL Editor`);
+      console.error(`💡 [CACHE]   2. Run: migrations/008_add_product_quantity_fields.sql`);
+      console.error(`💡 [CACHE]   3. Restart the server`);
+    } else if (error.code === '23505') {
+      console.error(`\n💡 [CACHE] Duplicate key violation - product already exists`);
+    }
+
+    console.error(`❌ [CACHE] ==========================================\n`);
     return null;
   }
 
+  console.log(`✅ [CACHE] Successfully stored product!`);
+  console.log(`✅ [CACHE] Product ID: ${data.product_id}`);
+  console.log(`✅ [CACHE] Price: ${data.currency} ${data.price}`);
+  console.log(`✅ [CACHE] Stock: ${data.available_quantity || 'unknown'}`);
+  console.log(`💾 [CACHE] ==========================================\n`);
   return data;
 }
 
@@ -918,7 +958,166 @@ async function getPriceStatistics(trackedProductId, period = "30d") {
 // ============================================
 
 /**
- * Get highlighted deals - products with best prices or good deals
+ * Get highlighted deals from PRODUCT CACHE (scraped search results)
+ * Shows recently scraped products with good ratings and availability
+ * @param {number} limit - Maximum products to return
+ */
+async function getHighlightedDealsFromCache(limit = 12) {
+  try {
+    console.log(`[Cache Deals] Fetching highlighted deals from product_cache (limit: ${limit})`);
+
+    // Get products from product_cache with good ratings, sorted by recency
+    const { data: products, error } = await getSupabase()
+      .from("product_cache")
+      .select("*")
+      .not("price", "is", null)
+      .gt("price", 0) // Exclude $0 prices
+      .gt("available_quantity", 0) // Must have inventory
+      .order("scraped_at", { ascending: false })
+      .limit(limit * 3); // Get more to filter
+
+    if (error) {
+      console.error("[Cache Deals] getHighlightedDealsFromCache error:", error);
+      return [];
+    }
+
+    if (!products || products.length === 0) {
+      console.log("[Cache Deals] No products found in product_cache");
+      return [];
+    }
+
+    console.log(`[Cache Deals] Found ${products.length} products in cache`);
+
+    // Score products based on multiple factors
+    const scoredProducts = products.map(product => {
+      let score = 0;
+
+      // Factor 1: Rating (0-50 points)
+      const rating = parseFloat(product.rating) || 0;
+      if (rating >= 4.5) score += 50;
+      else if (rating >= 4.0) score += 40;
+      else if (rating >= 3.5) score += 30;
+      else if (rating >= 3.0) score += 20;
+
+      // Factor 2: Availability (0-30 points)
+      const availableQty = product.available_quantity || 0;
+      if (availableQty > 100) score += 30;
+      else if (availableQty > 50) score += 25;
+      else if (availableQty > 10) score += 20;
+      else if (availableQty > 0) score += 10;
+
+      // Factor 3: Sales volume (0-20 points)
+      const soldQty = product.sold_quantity || 0;
+      if (soldQty > 1000) score += 20;
+      else if (soldQty > 500) score += 15;
+      else if (soldQty > 100) score += 10;
+      else if (soldQty > 50) score += 5;
+
+      return { ...product, _dealScore: score };
+    });
+
+    // Sort by score and return top deals
+    const topDeals = scoredProducts
+      .sort((a, b) => b._dealScore - a._dealScore)
+      .slice(0, limit);
+
+    console.log(`[Cache Deals] Returning ${topDeals.length} highlighted deals`);
+    return topDeals;
+  } catch (err) {
+    console.error("[Cache Deals] getHighlightedDealsFromCache exception:", err);
+    return [];
+  }
+}
+
+/**
+ * Get popular products from PRODUCT CACHE (most sold, highest rated)
+ * @param {Object} options - Query options
+ */
+async function getPopularProductsFromCache({ limit = 8 } = {}) {
+  try {
+    console.log(`[Cache Popular] Fetching popular products from product_cache (limit: ${limit})`);
+
+    // Get products sorted by sold quantity and rating
+    const { data: products, error } = await getSupabase()
+      .from("product_cache")
+      .select("*")
+      .not("price", "is", null)
+      .gt("price", 0) // Exclude $0 prices
+      .gt("available_quantity", 0) // Must have inventory
+      .order("sold_quantity", { ascending: false })
+      .limit(limit * 2);
+
+    if (error) {
+      console.error("[Cache Popular] getPopularProductsFromCache error:", error);
+      return [];
+    }
+
+    if (!products || products.length === 0) {
+      console.log("[Cache Popular] No products found in product_cache");
+      return [];
+    }
+
+    console.log(`[Cache Popular] Found ${products.length} products`);
+
+    // Sort by combination of sold quantity and rating
+    const sortedProducts = products
+      .map(p => ({
+        ...p,
+        _popularityScore: (p.sold_quantity || 0) * 0.7 + (parseFloat(p.rating) || 0) * 100
+      }))
+      .sort((a, b) => b._popularityScore - a._popularityScore)
+      .slice(0, limit);
+
+    console.log(`[Cache Popular] Returning ${sortedProducts.length} popular products`);
+    return sortedProducts;
+  } catch (err) {
+    console.error("[Cache Popular] getPopularProductsFromCache exception:", err);
+    return [];
+  }
+}
+
+/**
+ * Get recently added products from PRODUCT CACHE
+ * @param {Object} options - Query options
+ */
+async function getRecentProductsFromCache({ limit = 8, period = "recent" } = {}) {
+  try {
+    console.log(`[Cache Recent] Fetching recent products from product_cache (limit: ${limit})`);
+
+    // Calculate time range
+    let hoursBack = 48; // default: 2 days
+    if (period === "daily") hoursBack = 24;
+    else if (period === "weekly") hoursBack = 168;
+
+    const cutoffDate = new Date();
+    cutoffDate.setHours(cutoffDate.getHours() - hoursBack);
+
+    // Get recently scraped products
+    const { data: products, error } = await getSupabase()
+      .from("product_cache")
+      .select("*")
+      .not("price", "is", null)
+      .gt("price", 0) // Exclude $0 prices
+      .gt("available_quantity", 0) // Must have inventory
+      .gte("scraped_at", cutoffDate.toISOString())
+      .order("scraped_at", { ascending: false })
+      .limit(limit);
+
+    if (error) {
+      console.error("[Cache Recent] getRecentProductsFromCache error:", error);
+      return [];
+    }
+
+    console.log(`[Cache Recent] Found ${products?.length || 0} recent products`);
+    return products || [];
+  } catch (err) {
+    console.error("[Cache Recent] getRecentProductsFromCache exception:", err);
+    return [];
+  }
+}
+
+/**
+ * OLD FUNCTION - Get highlighted deals from TRACKED PRODUCTS (user dashboard items)
  * Aggregates data across all users' tracked products
  * @param {number} limit - Maximum products to return
  */
@@ -1846,13 +2045,17 @@ module.exports = {
   addPriceHistory,
   getPriceHistory,
   getPriceStatistics,
-  // Discovery & Deals
+  // Discovery & Deals (from tracked_products - for user dashboard)
   getHighlightedDeals,
   getPopularProducts,
   getTopPriceDrops,
   getDiscountsByCategory,
   getProductsByCategory,
   getProductCategories,
+  // Discovery & Deals (from product_cache - for homepage)
+  getHighlightedDealsFromCache,
+  getPopularProductsFromCache,
+  getRecentProductsFromCache,
   // Search history
   recordSearch,
   getUserSearchHistory,

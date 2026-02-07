@@ -1,0 +1,39 @@
+# This file contains the updated product page route code
+# To be inserted into server.js starting at line ~6356
+
+## Key Changes:
+1. Multi-source dropdown (Amazon/ML switching)
+2. Image gallery with thumbnails
+3. Dynamic price/stock/sold updates
+4. Dual source badges
+5. Real stock status (no more false "Out of Stock")
+6. Real prices (no more $0.00)
+
+## Implementation Summary:
+Due to the file size limit, I'll implement this in stages:
+
+### Stage 1: Update the initial data processing
+- Extract sources from result.sources
+- Determine if hasMultipleSources
+- Set up initial state for Amazon vs ML
+
+### Stage 2: Create the HTML with:
+- Source dropdown (shows only if hasMultipleSources)
+- Image gallery with scrollable thumbnails
+- Dynamic data fields (price, stock, sold count)
+- Retailer badge that changes with dropdown
+
+### Stage 3: Add JavaScript for:
+- switchSource() function
+- changeMainImage() function
+- updateAllProductData() function
+
+### Stage 4: Add CSS for:
+- Source dropdown styling
+- Thumbnail gallery
+- Active thumbnail indicator
+- Smooth transitions
+
+Would you like me to proceed with implementing all 4 stages now by editing the server.js file directly?
+
+The full implementation will span approximately lines 6356-7000 in server.js.

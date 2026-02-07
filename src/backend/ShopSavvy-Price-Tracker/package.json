@@ -1,0 +1,13 @@
+{
+  "name": "shopsavvy-price-tracker-actor",
+  "version": "0.0.1",
+  "description": "Apify Actor that scrapes Amazon and Mercado Libre for product data",
+  "main": "main.js",
+  "scripts": {
+    "start": "node main.js"
+  },
+  "dependencies": {
+    "crawlee": "^3.0.0",
+    "apify": "^3.0.0"
+  }
+}

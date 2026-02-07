@@ -212,60 +212,19 @@ const { CheerioCrawler } = require("crawlee");
         else if (label === "ML_SEARCH") {
           const productLinks = [];
 
-          // Debug: Log page title and check if we got blocked
-          const pageTitle = $("title").text();
-          console.log(`[ShopSavvy Actor] ML page title: "${pageTitle}"`);
-
-          // Check if we're being blocked or captcha'd
-          if (pageTitle.toLowerCase().includes("captcha") ||
-              pageTitle.toLowerCase().includes("robot") ||
-              $("body").text().toLowerCase().includes("verificación de seguridad")) {
-            console.log(`[ShopSavvy Actor] ⚠️ ML BLOCKED: Captcha or security check detected`);
-            console.log(`[ShopSavvy Actor] Suggestion: Mercado Libre may be blocking automated requests`);
-            return;
-          }
-
-          // Try multiple selector strategies
-          const selectors = [
-            "a[href*='/item/']",                    // Original selector
-            "a.ui-search-link",                     // Search result links
-            ".ui-search-result__content a",         // Product card links
-            ".ui-search-item__group a[href*='ML']", // Item group links
-            "a[href*='/p/ML']"                      // Product page links
-          ];
-
-          for (const selector of selectors) {
-            $(selector).each((i, el) => {
-              if (mlCount + productLinks.length >= maxResults) return;
-              let href = $(el).attr("href");
-              if (href && (href.includes("/item/") || href.includes("/p/ML"))) {
-                if (href.startsWith("/")) href = "https://www.mercadolibre.com.mx" + href;
-                // Strip query params for dedup
-                const clean = href.split("?")[0].split("#")[0];
-                if (!productLinks.includes(clean) && clean.match(/ML[A-Z]?\d+/)) {
-                  productLinks.push(clean);
-                }
-              }
-            });
-
-            if (productLinks.length > 0) {
-              console.log(`[ShopSavvy Actor] ML selector "${selector}" found ${productLinks.length} links`);
-              break;
+          // Primary selectors
+          $("a[href*='/item/']").each((i, el) => {
+            if (mlCount + productLinks.length >= maxResults) return;
+            let href = $(el).attr("href");
+            if (href && href.includes("/item/")) {
+              if (href.startsWith("/")) href = "https://www.mercadolibre.com.mx" + href;
+              // Strip query params for dedup
+              const clean = href.split("?")[0];
+              if (!productLinks.includes(clean)) productLinks.push(clean);
             }
-          }
+          });
 
-          console.log(`[ShopSavvy Actor] ML search found ${productLinks.length} product links total`);
-
-          // Debug: If no links found, log available links for inspection
-          if (productLinks.length === 0) {
-            const allLinks = [];
-            $("a[href]").each((i, el) => {
-              const href = $(el).attr("href");
-              if (href) allLinks.push(href);
-            });
-            console.log(`[ShopSavvy Actor] Total links on page: ${allLinks.length}`);
-            console.log(`[ShopSavvy Actor] Sample links:`, allLinks.slice(0, 10));
-          }
+          console.log(`[ShopSavvy Actor] ML search found ${productLinks.length} product links`);
 
           for (const url of productLinks) {
             await requestQueue.addRequest({ url, label: "ML_PRODUCT" });
