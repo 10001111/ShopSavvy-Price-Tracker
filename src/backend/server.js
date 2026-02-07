@@ -17,6 +17,7 @@ const supabaseDb = require("./supabase-db");
 const { isRedisConfigured } = require("./config/redis");
 const { getQueueStatus, getRecentJobs } = require("./queue");
 const { scrapeProducts } = require("./apify");
+const { extractProductSpecs, generateEnhancedTitle } = require("./product-spec-extractor");
 
 // Use Supabase for cloud storage, SQLite as fallback
 const USE_SUPABASE = Boolean(
@@ -1184,6 +1185,7 @@ function renderPage(
     <link rel="stylesheet" href="/modern-2026.css">
     <link rel="stylesheet" href="/footer.css">
     <link rel="stylesheet" href="/product-enhancements.css">
+    <link rel="stylesheet" href="/product-page-enhanced.css">
     <!-- Chart.js for price history charts -->
     <script src="https://cdn.jsdelivr.net/npm/chart.js@4.4.1/dist/chart.umd.min.js"></script>
     <script src="https://cdn.jsdelivr.net/npm/chartjs-adapter-date-fns@3.0.0/dist/chartjs-adapter-date-fns.bundle.min.js"></script>
