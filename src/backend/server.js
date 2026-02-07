@@ -2952,6 +2952,10 @@ async function start() {
       // Build product URL
       const productUrl = buildSearchParams(`/product/${encodeURIComponent(item.id)}`, { q: query, minPrice, maxPrice, sort, source, page });
 
+      // Extract real product specs
+      const specs = extractProductSpecs(item);
+      const enhancedTitle = generateEnhancedTitle(item, specs);
+
       return `
       <article class="product-card-modern" data-product-id="${item.id}" role="article">
         <a href="${productUrl}" class="product-card-link" aria-label="${item.title || t(lang, 'product')}">
@@ -2989,12 +2993,21 @@ async function start() {
           <!-- Content Section -->
           <div class="product-content">
 
-            <!-- Product Title -->
+            <!-- Product Title (Enhanced with Specs) -->
             <h3 class="product-title line-clamp-2">
-              ${item.title || t(lang, "product")}
+              ${enhancedTitle}
             </h3>
 
-            <!-- Chips Row (Technical Specs) -->
+            <!-- Product Specs Chips -->
+            <div class="chip-row">
+              ${specs.ram ? `<div class="chip chip-spec">💾 ${specs.ram}</div>` : ''}
+              ${specs.storage ? `<div class="chip chip-spec">💿 ${specs.storage}</div>` : ''}
+              ${specs.screenSize ? `<div class="chip chip-spec">📱 ${specs.screenSize}</div>` : ''}
+              ${specs.os ? `<div class="chip chip-spec">${specs.os}</div>` : ''}
+              ${specs.connectivity && specs.connectivity.includes('5G') ? `<div class="chip chip-spec">📡 5G</div>` : ''}
+            </div>
+
+            <!-- Rating & Social Proof Chips -->
             <div class="chip-row">
               ${rating > 0 ? `
               <div class="chip chip-rating" aria-label="${lang === 'es' ? 'Calificación' : 'Rating'}: ${rating.toFixed(1)}">

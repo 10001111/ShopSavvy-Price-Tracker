@@ -7060,3 +7060,44 @@ img[loading="lazy"].loaded {
     opacity: 1;
     transform: translateY(0);
 }
+
+/* ==========================================
+   PRODUCT SPEC CHIPS (Real Specs Display)
+   Added: 2026-02-07
+   ========================================== */
+.chip-spec {
+    display: inline-flex;
+    align-items: center;
+    gap: 4px;
+    padding: 4px 10px;
+    background: linear-gradient(135deg, #F1F5F9 0%, #E2E8F0 100%);
+    border: 1px solid #CBD5E1;
+    border-radius: 8px;
+    font-size: 11px;
+    font-weight: 600;
+    color: #475569;
+    transition: all 0.3s cubic-bezier(0.4, 0, 0.2, 1);
+}
+
+.chip-spec:hover {
+    background: linear-gradient(135deg, #0066FF 0%, #0052CC 100%);
+    color: white;
+    border-color: #0066FF;
+    transform: translateY(-2px);
+    box-shadow: 0 4px 8px rgba(0, 102, 255, 0.2);
+}
+
+/* Dark mode support */
+@media (prefers-color-scheme: dark) {
+    .chip-spec {
+        background: linear-gradient(135deg, #334155 0%, #1E293B 100%);
+        border-color: #475569;
+        color: #CBD5E1;
+    }
+    
+    .chip-spec:hover {
+        background: linear-gradient(135deg, #0066FF 0%, #0052CC 100%);
+        color: white;
+        border-color: #0066FF;
+    }
+}
