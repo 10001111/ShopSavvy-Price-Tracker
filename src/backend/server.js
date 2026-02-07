@@ -2248,34 +2248,8 @@ async function fetchAllProducts({
     }
   };
 
-  // NEW: Category-only filtering (no search, just filter database)
-  if (USE_SUPABASE && category && !query) {
-    console.log(`[Category Filter] 📂 Filtering products by category: "${category}"`);
-
-    const categoryProducts = await supabaseDb
-      .getProductsByCategory(category, {
-        limit: pageSize * 10,  // Get more for pagination
-        minPrice,
-        maxPrice,
-        source
-      })
-      .catch(() => []);
-
-    console.log(`[Category Filter] Found ${categoryProducts.length} products in "${category}"`);
-
-    if (categoryProducts.length > 0) {
-      promises.push(
-        Promise.resolve({
-          products: mapRows(categoryProducts),
-          total: categoryProducts.length,
-          totalPages: Math.ceil(categoryProducts.length / pageSize),
-          source: "category-filter",
-        }),
-      );
-    }
-  }
-  // Search query path
-  else if (USE_SUPABASE && query) {
+  // Search query path (now handles both search queries AND category queries)
+  if (USE_SUPABASE && query) {
     const searchStartTime = Date.now();
     console.log(`[PERF] 🔍 Starting search for "${query}" (source: ${source})`);
 
@@ -2747,13 +2721,29 @@ async function start() {
     const pageSize = 20;
 
     // ============================================
-    // CATEGORY FILTERING (Database-based, not search)
+    // CATEGORY-TO-SEARCH MAPPING
+    // Converts category clicks into search queries
+    // This triggers Apify scraping to populate the database
     // ============================================
-    // If user clicked a category link, filter database by category field
-    // NO LONGER triggers new searches - much faster!
+    const CATEGORY_TO_SEARCH = {
+      "electronics": "electronics",
+      "phones": "smartphone",
+      "computers": "laptop",
+      "tvs": "television",
+      "appliances": "electrodomesticos",
+      "toys": "toys",
+      "clothing": "ropa",
+      "sports-outdoors": "deportes",
+      "home-kitchen": "hogar cocina",
+      "beauty": "belleza"
+    };
+
+    // If user clicked a category link, convert to search query
+    // This ensures the database gets populated via Apify scraping
     if (category && !query) {
-      console.log(`[Category] User clicked "${category}" → filtering database by category field`);
-      // Don't set query - we'll filter by category in fetchAllProducts
+      query = CATEGORY_TO_SEARCH[category] || category;
+      console.log(`[Category] User clicked "${category}" → triggering search: "${query}"`);
+      // Now proceeds with normal search flow (checks DB, scrapes if needed)
     }
 
     let results = {
