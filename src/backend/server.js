@@ -1181,6 +1181,7 @@ function renderPage(
     <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
     <link href="https://fonts.googleapis.com/css2?family=Inter:wght@300;400;500;600;700;800&display=swap" rel="stylesheet">
     <link rel="stylesheet" href="/styles.css">
+    <link rel="stylesheet" href="/modern-2026.css">
     <link rel="stylesheet" href="/footer.css">
     <link rel="stylesheet" href="/product-enhancements.css">
     <!-- Chart.js for price history charts -->
@@ -2937,6 +2938,136 @@ async function start() {
     `;
     };
 
+    // ==========================================
+    // MODERN 2026 PRODUCT CARD RENDERER
+    // Bento Grid + Micro-interactions + WCAG AA
+    // ==========================================
+    const renderProductCardModern = (item) => {
+      // Extract data
+      const rating = item.rating || item.reviews?.rating_average || 0;
+      const reviewCount = item.reviews?.total || 0;
+      const soldCount = item.sold_quantity || 0;
+      const availableQty = item.available_quantity || 0;
+      const isInStock = availableQty > 0;
+      const isLowStock = isInStock && availableQty < 10;
+
+      // Calculate discount
+      const hasDiscount = item.original_price && item.original_price > item.price;
+      const discountPercent = hasDiscount ? Math.round(((item.original_price - item.price) / item.original_price) * 100) : 0;
+
+      // Determine if this is a "best price" (discount > 30% or marked as good deal)
+      const isBestPrice = discountPercent > 30 || item.isBestPrice;
+
+      // Source display
+      const sourceLabel = item.source === 'amazon' ? 'Amazon' : 'Mercado Libre';
+
+      // Build product URL
+      const productUrl = buildSearchParams(`/product/${encodeURIComponent(item.id)}`, { q: query, minPrice, maxPrice, sort, source, page });
+
+      return `
+      <article class="product-card-modern" data-product-id="${item.id}" role="article">
+        <a href="${productUrl}" class="product-card-link" aria-label="${item.title || t(lang, 'product')}">
+
+          <!-- Image Section with Lazy Loading -->
+          <div class="product-image-container">
+            <div class="product-image-skeleton" aria-hidden="true"></div>
+            <img
+              src="${item.thumbnail || '/images/product-placeholder.svg'}"
+              alt="${item.title || t(lang, 'product')}"
+              class="product-image"
+              loading="lazy"
+              onload="this.classList.add('loaded'); this.previousElementSibling.style.display='none'"
+              onerror="this.src='/images/product-placeholder.svg'"
+            />
+
+            <!-- Badges Container -->
+            <div class="badge-container">
+              ${isBestPrice ? `<span class="badge badge-best-price ${discountPercent > 40 ? 'badge-urgent' : ''}" role="status">
+                ${lang === 'es' ? '🔥 Mejor Precio' : '🔥 Best Price'}
+              </span>` : ''}
+
+              ${hasDiscount && !isBestPrice ? `<span class="badge badge-discount" role="status">
+                -${discountPercent}% OFF
+              </span>` : ''}
+
+              ${isLowStock ? `<span class="badge badge-low-stock badge-urgent" role="status">
+                ${lang === 'es' ? `Solo ${availableQty} disponibles` : `Only ${availableQty} left`}
+              </span>` : ''}
+
+              <span class="badge badge-source">${sourceLabel}</span>
+            </div>
+          </div>
+
+          <!-- Content Section -->
+          <div class="product-content">
+
+            <!-- Product Title -->
+            <h3 class="product-title line-clamp-2">
+              ${item.title || t(lang, "product")}
+            </h3>
+
+            <!-- Chips Row (Technical Specs) -->
+            <div class="chip-row">
+              ${rating > 0 ? `
+              <div class="chip chip-rating" aria-label="${lang === 'es' ? 'Calificación' : 'Rating'}: ${rating.toFixed(1)}">
+                <svg class="chip-icon" viewBox="0 0 24 24" fill="currentColor">
+                  <path d="M12 2l3.09 6.26L22 9.27l-5 4.87 1.18 6.88L12 17.77l-6.18 3.25L7 14.14 2 9.27l6.91-1.01L12 2z"/>
+                </svg>
+                <span>${rating.toFixed(1)}</span>
+                ${reviewCount > 0 ? `<span class="text-tertiary">(${reviewCount})</span>` : ''}
+              </div>
+              ` : ''}
+
+              ${soldCount > 0 ? `
+              <div class="chip chip-sold" aria-label="${lang === 'es' ? 'Vendidos' : 'Sold'}: ${soldCount}+">
+                <svg class="chip-icon" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+                  <path d="M20 21v-2a4 4 0 0 0-4-4H8a4 4 0 0 0-4 4v2"></path>
+                  <circle cx="12" cy="7" r="4"></circle>
+                </svg>
+                <span>${soldCount}+</span>
+              </div>
+              ` : ''}
+            </div>
+
+            <!-- Pricing Container -->
+            <div class="pricing-container">
+              <div class="price-row">
+                <span class="price-current" data-price-mxn="${item.price}">
+                  ${formatPrice(item.price, "MXN")}
+                </span>
+
+                ${hasDiscount ? `
+                <span class="price-original" data-price-mxn="${item.original_price}">
+                  ${formatPrice(item.original_price, "MXN")}
+                </span>
+                <span class="price-discount-label">
+                  ${lang === 'es' ? 'Ahorra' : 'Save'} ${discountPercent}%
+                </span>
+                ` : ''}
+              </div>
+            </div>
+
+            <!-- Primary CTA Button -->
+            <button
+              class="cta-primary"
+              role="button"
+              aria-label="${lang === 'es' ? 'Ver detalles del producto' : 'View product details'}"
+              onclick="this.classList.add('loading')"
+            >
+              <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+                <circle cx="9" cy="21" r="1"></circle>
+                <circle cx="20" cy="21" r="1"></circle>
+                <path d="M1 1h4l2.68 13.39a2 2 0 0 0 2 1.61h9.72a2 2 0 0 0 2-1.61L23 6H6"></path>
+              </svg>
+              ${lang === 'es' ? 'Ver Producto' : 'View Product'}
+            </button>
+
+          </div>
+        </a>
+      </article>
+      `;
+    };
+
     const resultsHtml =
       (query || isFeatured) && results.products.length
         ? `
@@ -2961,8 +3092,8 @@ async function start() {
         ${
           results.products.length
             ? `
-          <div class="product-grid">
-            ${results.products.map(renderProductCard).join("")}
+          <div class="bento-grid">
+            ${results.products.map(renderProductCardModern).join("")}
           </div>
           ${
             query
@@ -3302,12 +3433,12 @@ async function start() {
                 : "Popular products with the best discounts right now."
             }</p>
           </div>
-          <div class="product-grid" data-reveal-stagger>
+          <div class="bento-grid" data-reveal-stagger>
             ${results.products
               .slice(0, 8)
               .map(
                 (product, index) =>
-                  `<div data-reveal="fade-up">${renderProductCard(product)}</div>`,
+                  `<div data-reveal="fade-up">${renderProductCardModern(product)}</div>`,
               )
               .join("")}
           </div>
