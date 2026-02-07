@@ -2186,6 +2186,7 @@ function getMockProductById(id) {
  */
 async function fetchAllProducts({
   query,
+  category,  // NEW: Filter by category field in database
   minPrice,
   maxPrice,
   sort,
@@ -2246,7 +2247,34 @@ async function fetchAllProducts({
     }
   };
 
-  if (USE_SUPABASE && query) {
+  // NEW: Category-only filtering (no search, just filter database)
+  if (USE_SUPABASE && category && !query) {
+    console.log(`[Category Filter] 📂 Filtering products by category: "${category}"`);
+
+    const categoryProducts = await supabaseDb
+      .getProductsByCategory(category, {
+        limit: pageSize * 10,  // Get more for pagination
+        minPrice,
+        maxPrice,
+        source
+      })
+      .catch(() => []);
+
+    console.log(`[Category Filter] Found ${categoryProducts.length} products in "${category}"`);
+
+    if (categoryProducts.length > 0) {
+      promises.push(
+        Promise.resolve({
+          products: mapRows(categoryProducts),
+          total: categoryProducts.length,
+          totalPages: Math.ceil(categoryProducts.length / pageSize),
+          source: "category-filter",
+        }),
+      );
+    }
+  }
+  // Search query path
+  else if (USE_SUPABASE && query) {
     const searchStartTime = Date.now();
     console.log(`[PERF] 🔍 Starting search for "${query}" (source: ${source})`);
 
@@ -2718,40 +2746,13 @@ async function start() {
     const pageSize = 20;
 
     // ============================================
-    // CATEGORY TO SEARCH QUERY MAPPING
+    // CATEGORY FILTERING (Database-based, not search)
     // ============================================
-    // If user clicked a category link (no search query), convert category to search term
+    // If user clicked a category link, filter database by category field
+    // NO LONGER triggers new searches - much faster!
     if (category && !query) {
-      // Enhanced category search terms - use broader terms for better variety
-      const categorySearchTerms = {
-        electronics: lang === "es"
-          ? "electrónica audífonos tablet smart tv cámara"
-          : "electronics headphones tablet smart tv camera",
-        phones: lang === "es"
-          ? "celular smartphone iphone samsung"
-          : "phone smartphone iphone samsung",
-        computers: lang === "es"
-          ? "computadora laptop pc macbook"
-          : "computer laptop pc macbook",
-        clothing: lang === "es"
-          ? "ropa camisa pantalones zapatos"
-          : "clothing shirt pants shoes",
-        "home-kitchen": lang === "es"
-          ? "hogar muebles cama silla mesa almohada"
-          : "home furniture bed chair table pillow",
-        "sports-outdoors": lang === "es"
-          ? "deportes fitness gimnasio balón pesas yoga"
-          : "sports fitness gym ball weights yoga",
-        toys: lang === "es"
-          ? "juguetes lego muñeca juego de mesa videojuego"
-          : "toys lego doll board game video game",
-        beauty: lang === "es"
-          ? "belleza maquillaje skincare perfume champú"
-          : "beauty makeup skincare perfume shampoo"
-      };
-
-      query = categorySearchTerms[category] || category;
-      console.log(`[Category] User clicked "${category}" → searching for "${query}"`);
+      console.log(`[Category] User clicked "${category}" → filtering database by category field`);
+      // Don't set query - we'll filter by category in fetchAllProducts
     }
 
     let results = {
@@ -2766,6 +2767,7 @@ async function start() {
     if (query || category) {
       results = await fetchAllProducts({
         query,
+        category,  // Pass category for database filtering
         minPrice,
         maxPrice,
         sort,
@@ -3829,6 +3831,9 @@ async function start() {
       other: `<svg viewBox="0 0 32 32" fill="none"><defs><linearGradient id="other1" x1="0" y1="0" x2="1" y2="1"><stop offset="0%" stop-color="#d1d5db"/><stop offset="100%" stop-color="#9ca3af"/></linearGradient></defs><!-- box --><path d="M4 12 L16 7 L28 12 L28 24 L16 29 L4 24 Z" fill="url(#other1)"/><path d="M4 12 L16 17 L28 12" fill="#6b7280" fill-opacity=".3"/><path d="M16 17 L16 29" stroke="#6b7280" stroke-width=".8"/><path d="M4 12 L16 17" stroke="#6b7280" stroke-width=".8"/><path d="M28 12 L16 17" stroke="#6b7280" stroke-width=".8"/><!-- tape --><rect x="13" y="9" width="6" height="3" rx=".5" fill="#fff" fill-opacity=".3"/></svg>`,
     };
 
+    // REMOVED: Discounts by Category section (not needed anymore)
+    const categorySection = "";
+    /*
     const categorySection =
       categoryDiscounts.length > 0
         ? `
@@ -3868,6 +3873,7 @@ async function start() {
       </section>
     `
         : "";
+    */
 
     // Empty state if no deals data
     const emptyDealsSection =

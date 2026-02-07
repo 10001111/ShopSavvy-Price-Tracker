@@ -1,5 +1,44 @@
 const { Actor } = require("apify");
-const { CheerioCrawler, PlaywrightCrawler } = require("crawlee");
+const { CheerioCrawler } = require("crawlee");
+
+// ============================================
+// CATEGORY DETECTION FUNCTION
+// ============================================
+function detectCategory(title) {
+  if (!title) return 'uncategorized';
+
+  const titleLower = title.toLowerCase();
+
+  // Phones (highest priority)
+  if (titleLower.match(/iphone|samsung galaxy|google pixel|motorola|oneplus|xiaomi|smartphone|celular/))
+    return 'phones';
+
+  // Computers
+  if (titleLower.match(/macbook|laptop|gaming laptop|desktop|pc|chromebook|computadora|portátil/))
+    return 'computers';
+
+  // Electronics
+  if (titleLower.match(/smart tv|television|televisión|headphones|airpods|speaker|nintendo switch|playstation|xbox|ipad|tablet|kindle|camera|drone|smartwatch|audífonos/))
+    return 'electronics';
+
+  // Toys
+  if (titleLower.match(/lego|playmobil|hot wheels|barbie|funko pop|nerf|juguete|muñeca|board game|puzzle|action figure|toy/))
+    return 'toys';
+
+  // Clothing
+  if (titleLower.match(/nike|adidas|puma|under armour|shoes|sneakers|zapatos|tenis|hoodie|jacket|jeans|shirt|camisa/))
+    return 'clothing';
+
+  // Home & Kitchen
+  if (titleLower.match(/kitchenaid|instant pot|ninja|dyson|vacuum|aspiradora|mixer|batidora|toaster|coffee maker|bed|mattress|pillow|sofa|chair|table/))
+    return 'home-kitchen';
+
+  // Beauty
+  if (titleLower.match(/maybelline|l'oreal|neutrogena|cerave|dove|makeup|maquillaje|lipstick|mascara|shampoo|champú|perfume|skincare/))
+    return 'beauty';
+
+  return 'uncategorized';
+}
 
 // Wrap everything in an async IIFE with top-level error handling.
 // The .then() pattern swallows errors on Apify's LIMITED_PERMISSIONS runtime.
@@ -173,6 +212,8 @@ const { CheerioCrawler, PlaywrightCrawler } = require("crawlee");
 
           // Only store if we have valid price and title
           if (title && asin && price && price > 0) {
+            const category = detectCategory(title);
+
             await dataset.pushData({
               source: "amazon",
               id: `AMZN-${asin}`,
@@ -180,6 +221,7 @@ const { CheerioCrawler, PlaywrightCrawler } = require("crawlee");
               title,
               price,
               currency: "MXN",
+              category,  // AUTO-CATEGORIZE!
               images,
               thumbnail: images[0] || null,
               description: bullets.join("\n"),
@@ -196,6 +238,7 @@ const { CheerioCrawler, PlaywrightCrawler } = require("crawlee");
             amazonCount++;
             console.log(`[ShopSavvy Actor] Stored Amazon MX product #${amazonCount}:`);
             console.log(`  Title: ${title.slice(0, 60)}`);
+            console.log(`  Category: ${category}`);
             console.log(`  Price: $${price} MXN`);
             console.log(`  Rating: ${rating}/5 (${reviewCount} reviews)`);
             console.log(`  Stock: ${availableQuantity} available (${stockStatus})`);
@@ -389,12 +432,15 @@ const { CheerioCrawler, PlaywrightCrawler } = require("crawlee");
 
           // Only store if we have valid price and title
           if (title && price && price > 0) {
+            const category = detectCategory(title);
+
             await dataset.pushData({
               source: "mercadolibre",
               id: mlId,
               title,
               price,
               currency,
+              category,  // AUTO-CATEGORIZE!
               images,
               thumbnail: images[0] || null,
               description,
@@ -411,6 +457,7 @@ const { CheerioCrawler, PlaywrightCrawler } = require("crawlee");
             mlCount++;
             console.log(`[ShopSavvy Actor] Stored ML product #${mlCount}:`);
             console.log(`  Title: ${title.slice(0, 60)}`);
+            console.log(`  Category: ${category}`);
             console.log(`  Price: $${price} ${currency}`);
             console.log(`  Rating: ${rating}/5 (${reviewCount} reviews)`);
             console.log(`  Stock: ${availableQuantity} available (${stockStatus})`);

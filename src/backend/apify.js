@@ -85,7 +85,7 @@ async function scrapeProducts({ source = "all", query = "", productUrls = [], ma
   const run = await apify.actor(ACTOR_ID).call(
     { source, query, productUrls, maxResults },
     {
-      build: "1.0.4", // Latest build with improved debugging
+      build: "1.0.5", // Latest: Auto-categorizes products!
       waitSecs: 300, // wait up to 5 minutes
       memory: 512,
     }
@@ -150,7 +150,7 @@ async function recheckPrices(productUrls) {
 
   const run = await apify.actor(ACTOR_ID).call(
     { source: "all", query: "", productUrls, maxResults: productUrls.length },
-    { build: "1.0.4", waitSecs: 300, memory: 512 }
+    { build: "1.0.5", waitSecs: 300, memory: 512 }
   );
 
   if (run.status !== "SUCCEEDED") {

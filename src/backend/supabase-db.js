@@ -1117,6 +1117,55 @@ async function getRecentProductsFromCache({ limit = 8, period = "recent" } = {})
 }
 
 /**
+ * Get products by category from product_cache
+ * Used for category page filtering (fast database query, no search)
+ * @param {string} category - Category to filter by
+ * @param {object} options - Filter options
+ * @returns {Promise<Array>} Products in the category
+ */
+async function getProductsByCategory(category, options = {}) {
+  try {
+    const {
+      limit = 100,
+      minPrice = 0,
+      maxPrice = 999999,
+      source = "all"
+    } = options;
+
+    console.log(`[Category Filter] Getting products for category: ${category}`);
+
+    let query = getSupabase()
+      .from("product_cache")
+      .select("*")
+      .eq("category", category)
+      .gt("price", 0)
+      .gte("price", minPrice)
+      .lte("price", maxPrice)
+      .gt("available_quantity", 0);
+
+    // Filter by source if specified
+    if (source !== "all") {
+      query = query.eq("source", source);
+    }
+
+    const { data: products, error } = await query
+      .order("scraped_at", { ascending: false })
+      .limit(limit);
+
+    if (error) {
+      console.error("[Category Filter] Error:", error);
+      return [];
+    }
+
+    console.log(`[Category Filter] Found ${products?.length || 0} products in "${category}"`);
+    return products || [];
+  } catch (err) {
+    console.error("[Category Filter] Exception:", err);
+    return [];
+  }
+}
+
+/**
  * OLD FUNCTION - Get highlighted deals from TRACKED PRODUCTS (user dashboard items)
  * Aggregates data across all users' tracked products
  * @param {number} limit - Maximum products to return
