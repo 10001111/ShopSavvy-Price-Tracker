@@ -2956,8 +2956,14 @@ async function start() {
       const specs = extractProductSpecs(item);
       const enhancedTitle = generateEnhancedTitle(item, specs);
 
+      // Get category for filtering
+      const category = item.category || detectCategory(item.title) || '';
+
+      // Get drop date for time filtering (use scraped_at or current date)
+      const dropDate = item.dropDate || item.scraped_at || new Date().toISOString();
+
       return `
-      <article class="product-card-modern" data-product-id="${item.id}" role="article">
+      <article class="product-card-modern" data-product-id="${item.id}" data-category="${category}" data-drop-date="${dropDate}" role="article">
         <a href="${productUrl}" class="product-card-link" aria-label="${item.title || t(lang, 'product')}">
 
           <!-- Image Section with Lazy Loading -->
@@ -3033,13 +3039,13 @@ async function start() {
             <!-- Pricing Container -->
             <div class="pricing-container">
               <div class="price-row">
-                <span class="price-current" data-price-mxn="${item.price}">
-                  ${formatPrice(item.price, "MXN")}
+                <span class="price-current" data-price="${item.price}" data-currency="${item.currency || item.currency_id || 'MXN'}">
+                  ${formatPrice(item.price, item.currency || item.currency_id || "MXN")}
                 </span>
 
                 ${hasDiscount ? `
-                <span class="price-original" data-price-mxn="${item.original_price}">
-                  ${formatPrice(item.original_price, "MXN")}
+                <span class="price-original" data-price="${item.original_price}" data-currency="${item.currency || item.currency_id || 'MXN'}">
+                  ${formatPrice(item.original_price, item.currency || item.currency_id || "MXN")}
                 </span>
                 <span class="price-discount-label">
                   ${lang === 'es' ? 'Ahorra' : 'Save'} ${discountPercent}%
@@ -3654,132 +3660,48 @@ async function start() {
     // All deals data comes from Supabase queries - no demo data fallbacks
 
     // Helper to render deal card for carousel (CamelCamelCamel style)
+    // Modern Deal Card (uses same design as search results)
     const renderDealCard = (deal) => {
-      const badges = [];
-      if (deal.isBestPrice) {
-        badges.push(`<span class="badge-best-price">Best Price</span>`);
-      }
-      if (deal.isGoodDeal && !deal.isBestPrice) {
-        badges.push(`<span class="badge-good-deal">Good Deal</span>`);
-      }
+      // Normalize deal data to match product card structure
+      const item = {
+        id: deal.product_id,
+        title: deal.product_title,
+        thumbnail: getProductImageUrl(deal),
+        price: deal.current_price || deal.price,
+        original_price: deal.avgPrice,
+        rating: 4 + (deal.product_id ? (deal.product_id.split("").reduce((a, c) => a + c.charCodeAt(0), 0) % 10) / 10 : 0.5),
+        reviews: { total: 100 + (deal.product_id ? (deal.product_id.split("").reduce((a, c) => a + c.charCodeAt(0), 0) % 900) : 400) },
+        sold_quantity: deal.sold_quantity || (20 + (deal.product_id ? (deal.product_id.split("").reduce((a, c) => a + c.charCodeAt(0), 0) % 980) : 480)),
+        available_quantity: deal.available_quantity || 10,
+        source: deal.source || 'mercadolibre',
+        isBestPrice: deal.isBestPrice,
+        category: deal.category || detectCategory(deal.product_title)
+      };
 
-      const imageUrl = getProductImageUrl(deal);
-
-      return `
-        <div class="deal-card-ccc" data-category="${deal.category || detectCategory(deal.product_title) || ""}" data-drop-date="${deal.dropDate || ""}">
-          ${badges.length > 0 ? `<div class="deal-card-badges">${badges.join("")}</div>` : ""}
-          <div class="deal-card-image">
-            <img src="${imageUrl}"
-                 alt="${deal.product_title || ""}"
-                 loading="lazy"
-                 onerror="this.src='/images/product-placeholder.svg'" />
-          </div>
-          <div class="deal-card-content">
-            <h4 class="deal-card-title">${deal.product_title || "Product"}</h4>
-            <div class="deal-card-pricing">
-              <span class="deal-card-price">${formatPrice(deal.current_price, "MXN")}</span>
-            </div>
-            ${
-              deal.savingsPercent > 0
-                ? `<div class="deal-card-savings">${lang === "es" ? "Ahorro" : "Save"} ${Math.round(deal.savingsPercent)}% (${formatPrice(deal.savingsAmount || 0, "MXN")})</div>`
-                : ""
-            }
-            ${deal.avgPrice ? `<span class="deal-card-avg">${lang === "es" ? "Prom:" : "Avg:"} ${formatPrice(deal.avgPrice, "MXN")}</span>` : ""}
-            <a href="/product/${encodeURIComponent(deal.product_id)}?source=${deal.source || "mercadolibre"}" class="deal-card-btn">
-              ${
-                deal.source === "amazon"
-                  ? lang === "es"
-                    ? "Ver en Amazon"
-                    : "View on Amazon"
-                  : lang === "es"
-                    ? "Ver en Mercado Libre"
-                    : "View on Mercado Libre"
-              }
-            </a>
-          </div>
-        </div>
-      `;
+      // Use the modern card renderer
+      return renderProductCardModern(item);
     };
 
-    // Helper to render home product card — redesigned
+    // Modern Home Product Card (uses same design as search results)
     const renderHomeProductCard = (product, showDrop = false) => {
-      const badges = [];
-      if (product.isBestPrice) {
-        badges.push(
-          `<span class="badge-best-price">${lang === "es" ? "Mejor Precio" : "Best Price"}</span>`,
-        );
-      } else if (product.isGoodDeal) {
-        badges.push(
-          `<span class="badge-good-deal">${lang === "es" ? "Buena Oferta" : "Good Deal"}</span>`,
-        );
-      }
+      // Normalize product data to match modern card structure
+      const item = {
+        id: product.product_id,
+        title: product.product_title,
+        thumbnail: getProductImageUrl(product),
+        price: product.current_price || product.price,
+        original_price: product.previousPrice || product.avgPrice,
+        rating: 4 + (product.product_id ? (product.product_id.split("").reduce((a, c) => a + c.charCodeAt(0), 0) % 10) / 10 : 0.5),
+        reviews: { total: 100 + (product.product_id ? (product.product_id.split("").reduce((a, c) => a + c.charCodeAt(0), 0) % 900) : 400) },
+        sold_quantity: product.sold_quantity || (20 + (product.product_id ? (product.product_id.split("").reduce((a, c) => a + c.charCodeAt(0), 0) % 980) : 480)),
+        available_quantity: product.available_quantity || 10,
+        source: product.source || 'mercadolibre',
+        isBestPrice: product.isBestPrice,
+        category: product.category || detectCategory(product.product_title)
+      };
 
-      const imageUrl = getProductImageUrl(product);
-
-      // original price for strikethrough: prefer previousPrice (drops), fall back to avgPrice
-      const originalPrice = product.previousPrice || product.avgPrice;
-
-      // savings label
-      const savingsText =
-        showDrop && product.dropPercent
-          ? `${lang === "es" ? "Ahorro" : "Save"} ${Math.round(product.dropPercent)}% (${formatPrice(product.dropAmount || 0, "MXN")})`
-          : product.savingsPercent
-            ? `${lang === "es" ? "Ahorro" : "Save"} ${Math.round(product.savingsPercent)}% (${formatPrice(product.savingsAmount || 0, "MXN")})`
-            : "";
-
-      // deterministic "social proof" derived from product_id hash — no real DB call needed
-      const idNum = (product.product_id || "")
-        .split("")
-        .reduce((a, c) => a + c.charCodeAt(0), 0);
-      const starCount = 3 + (idNum % 3); // 3, 4, or 5
-      const starHalfs = idNum % 2 === 0 ? 0 : 1; // half-star sometimes
-      const starsHTML =
-        "★".repeat(starCount - starHalfs) +
-        (starHalfs ? "½" : "") +
-        "☆".repeat(5 - starCount);
-      const boughtNum = 20 + (idNum % 980); // 20–999
-
-      // retailer label + tiny inline SVG icon
-      const isAmazon = product.source === "amazon";
-      const retailerTxt = isAmazon
-        ? lang === "es"
-          ? "Ver en Amazon"
-          : "View on Amazon"
-        : lang === "es"
-          ? "Ver en Mercado Libre"
-          : "View on Mercado Libre";
-      // Amazon arrow icon / ML tag icon — 14×14, single-path
-      const retailerSvg = isAmazon
-        ? `<svg class="retailer-icon" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round"><path d="M5 12h14M12 5l7 7-7 7"/></svg>`
-        : `<svg class="retailer-icon" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round"><path d="M20.84 4.61a5.5 5.5 0 0 0-7.78 0L12 5.67l-1.06-1.06a5.5 5.5 0 0 0-7.78 7.78l1.06 1.06L12 21.23l7.78-7.78 1.06-1.06a5.5 5.5 0 0 0 0-7.78z"/></svg>`;
-
-      return `
-        <div class="ccc-product-card" data-category="${product.category || detectCategory(product.product_title) || ""}" data-drop-date="${product.dropDate || ""}">
-          ${badges.length > 0 ? `<div class="product-card-badges">${badges.join("")}</div>` : ""}
-          <div class="product-card-image">
-            <img src="${imageUrl}"
-                 alt="${product.product_title || ""}"
-                 loading="lazy"
-                 onerror="this.src='/images/product-placeholder.svg'" />
-          </div>
-          <div class="product-card-content">
-            <h4 class="product-card-title">${product.product_title || "Product"}</h4>
-            <div class="product-card-pricing">
-              <span class="product-card-price">${formatPrice(product.current_price, "MXN")}</span>
-              ${originalPrice ? `<span class="product-card-price-original">${formatPrice(originalPrice, "MXN")}</span>` : ""}
-            </div>
-            ${savingsText ? `<div class="product-card-savings">${savingsText}</div>` : ""}
-            <div class="product-card-meta">
-              <span class="product-card-stars">${starsHTML}</span>
-              <span class="product-card-bought">${boughtNum}+ ${lang === "es" ? "comprados" : "bought"}</span>
-            </div>
-            <a href="/product/${encodeURIComponent(product.product_id)}?source=${product.source || "mercadolibre"}" class="product-card-btn">
-              ${retailerSvg}
-              ${retailerTxt}
-            </a>
-          </div>
-        </div>
-      `;
+      // Use the modern card renderer
+      return renderProductCardModern(item);
     };
 
     // Highlighted Deals Section (CamelCamelCamel style with carousel) - Always show
@@ -4283,14 +4205,31 @@ async function start() {
             });
           });
 
+          // ========================================
+          // CURRENCY TOGGLE (MXN ⇄ USD)
+          // ========================================
+          const MXN_TO_USD = 0.049;  // 1 MXN = ~$0.049 USD (approximate rate)
+          const USD_TO_MXN = 1 / MXN_TO_USD;  // 1 USD = ~20.5 MXN
+
+          // Auto-detect currency based on localStorage → site language
+          // English (en) → USD | Spanish (es) → MXN
+          const siteLang = document.documentElement.lang || 'en';
+          const defaultCurrency = siteLang === 'es' ? 'MXN' : 'USD';
+          let currentCurrency = localStorage.getItem('preferredCurrency') || defaultCurrency;
+
           // Price range sync for search
           const minInput = document.getElementById("minPrice");
           const maxInput = document.getElementById("maxPrice");
           const minValue = document.getElementById("minPriceValue");
           const maxValue = document.getElementById("maxPriceValue");
 
-          function formatMXN(value) {
-            return new Intl.NumberFormat('es-MX', { style: 'currency', currency: 'MXN' }).format(value);
+          function formatCurrency(value) {
+            return new Intl.NumberFormat('en-US', {
+              style: 'currency',
+              currency: currentCurrency,
+              minimumFractionDigits: 2,
+              maximumFractionDigits: 2
+            }).format(value);
           }
 
           function syncRanges(changed) {
@@ -4308,24 +4247,13 @@ async function start() {
                 minInput.value = String(min);
               }
             }
-            minValue.textContent = formatMXN(min);
-            maxValue.textContent = formatMXN(max);
+            minValue.textContent = formatCurrency(min);
+            maxValue.textContent = formatCurrency(max);
           }
 
           minInput?.addEventListener("input", () => syncRanges(minInput));
           maxInput?.addEventListener("input", () => syncRanges(maxInput));
           syncRanges();
-
-          // ========================================
-          // CURRENCY TOGGLE (MXN ⇄ USD)
-          // ========================================
-          const MXN_TO_USD = 0.049;  // 1 MXN = ~$0.049 USD (approximate rate)
-          const USD_TO_MXN = 1 / MXN_TO_USD;  // 1 USD = ~20.5 MXN
-
-          // Auto-detect currency based on site language
-          // English (en) → USD | Spanish (es) → MXN
-          const siteLang = document.documentElement.lang || 'en';
-          let currentCurrency = siteLang === 'es' ? 'MXN' : 'USD';
 
           // Price ranges for each currency (in their native units)
           const priceRanges = {
@@ -4345,6 +4273,9 @@ async function start() {
             currentCurrency = currentCurrency === 'USD' ? 'MXN' : 'USD';
             currencyLabel.textContent = currentCurrency;
             currencyInput.value = currentCurrency;
+
+            // Save preference to localStorage
+            localStorage.setItem('preferredCurrency', currentCurrency);
 
             console.log('%c💱 Currency Toggled:', 'color: #10b981; font-weight: bold;', currentCurrency);
 
@@ -4388,12 +4319,23 @@ async function start() {
 
           function updateAllPriceDisplays() {
             // Update all product prices on the page
-            document.querySelectorAll('[data-price-mxn]').forEach(el => {
-              const priceMXN = parseFloat(el.getAttribute('data-price-mxn'));
-              if (isNaN(priceMXN) || priceMXN === 0) return;
+            document.querySelectorAll('[data-price][data-currency]').forEach(el => {
+              const basePrice = parseFloat(el.getAttribute('data-price'));
+              const sourceCurrency = el.getAttribute('data-currency') || 'MXN';
 
-              // Convert MXN to display currency
-              const displayPrice = currentCurrency === 'MXN' ? priceMXN : priceMXN * MXN_TO_USD;
+              if (isNaN(basePrice) || basePrice === 0) return;
+
+              let displayPrice = basePrice;
+
+              // Convert based on source and target currency
+              if (sourceCurrency === 'MXN' && currentCurrency === 'USD') {
+                // Convert MXN to USD
+                displayPrice = basePrice * MXN_TO_USD;
+              } else if (sourceCurrency === 'USD' && currentCurrency === 'MXN') {
+                // Convert USD to MXN
+                displayPrice = basePrice * USD_TO_MXN;
+              }
+              // If source and target are the same, displayPrice = basePrice (no conversion)
 
               const formatted = new Intl.NumberFormat('en-US', {
                 style: 'currency',
@@ -4404,7 +4346,7 @@ async function start() {
 
               el.textContent = formatted;
 
-              console.log('[Currency] Converted', priceMXN, 'MXN to', formatted, '(' + currentCurrency + ')');
+              console.log('[Currency] Converted', basePrice, sourceCurrency, 'to', formatted, '(' + currentCurrency + ')');
             });
           }
 
@@ -4416,7 +4358,31 @@ async function start() {
             console.log('%c💱 Initializing Currency:', 'color: #10b981; font-weight: bold;', currentCurrency);
             console.log('%c🌐 Site Language:', 'color: #3b82f6; font-weight: bold;', siteLang);
 
-            // Update all price displays to match the default currency
+            // Update currency label and input to match loaded preference
+            const currencyLabel = document.getElementById('currencyLabel');
+            const currencyInput = document.getElementById('currencyInput');
+            if (currencyLabel) currencyLabel.textContent = currentCurrency;
+            if (currencyInput) currencyInput.value = currentCurrency;
+
+            // Update price slider ranges to match currency
+            const minSlider = document.getElementById('minPrice');
+            const maxSlider = document.getElementById('maxPrice');
+            if (minSlider && maxSlider) {
+              const ranges = priceRanges[currentCurrency];
+              minSlider.min = ranges.min;
+              minSlider.max = ranges.max;
+              minSlider.step = ranges.step;
+              minSlider.value = ranges.min;
+
+              maxSlider.min = ranges.min;
+              maxSlider.max = ranges.max;
+              maxSlider.step = ranges.step;
+              maxSlider.value = ranges.max;
+
+              syncRanges();
+            }
+
+            // Update all price displays to match the current currency
             updateAllPriceDisplays();
 
             console.log('%c✅ Currency initialized successfully', 'color: #10b981; font-weight: bold;');
@@ -7712,26 +7678,17 @@ State: ${state || "none"}</pre>
       ? "action-button secondary tracked"
       : "action-button secondary";
 
-    // Extract specs from title for modern chip display
-    const extractSpecs = (title) => {
-      const specs = [];
-      // Extract RAM
-      const ramMatch = title.match(/(\d+GB)\s*(RAM|Memory)/i);
-      if (ramMatch) specs.push(ramMatch[1] + ' RAM');
-      // Extract Storage
-      const storageMatch = title.match(/(\d+(?:\.\d+)?(?:GB|TB))\s*(SSD|Storage|HDD)?/i);
-      if (storageMatch && !ramMatch?.includes(storageMatch[1])) specs.push(storageMatch[1] + ' Storage');
-      // Extract Screen Size
-      const screenMatch = title.match(/(\d+(?:\.\d+)?["']|inch)/i);
-      if (screenMatch) specs.push(screenMatch[0]);
-      // Extract Condition
-      if (title.match(/renewed|refurbished/i)) specs.push('Renewed');
-      else if (title.match(/\bnew\b/i)) specs.push('New');
-      return specs;
-    };
+    // Extract real product specs using the extractor module
+    const specs = extractProductSpecs(product);
+    const enhancedTitle = generateEnhancedTitle(product, specs);
 
-    const productSpecs = extractSpecs(product.title || '');
-    const cleanTitle = (product.title || '').split('-')[0].split(',')[0].trim();
+    // Create spec chips array for display
+    const productSpecs = [];
+    if (specs.ram) productSpecs.push(`💾 ${specs.ram}`);
+    if (specs.storage) productSpecs.push(`💿 ${specs.storage}`);
+    if (specs.screenSize) productSpecs.push(`📱 ${specs.screenSize}`);
+    if (specs.os) productSpecs.push(specs.os);
+    if (specs.connectivity && specs.connectivity.includes('5G')) productSpecs.push('📡 5G');
 
     res.send(
       renderPage(
@@ -7750,7 +7707,7 @@ State: ${state || "none"}</pre>
         <!-- Hero Image with Glassmorphism + Image Gallery -->
         <div class="product-hero-card">
           <div class="product-image-glass-container">
-            <img class="product-image-hero" src="${productImages[0] || product.thumbnail || ""}" alt="${cleanTitle}" id="productHeroImage" />
+            <img class="product-image-hero" src="${productImages[0] || product.thumbnail || ""}" alt="${enhancedTitle}" id="productHeroImage" />
             ${isGoodDeal ? `<div class="deal-badge-float">${lang === "es" ? "🔥 Buen Precio" : "🔥 Hot Deal"}</div>` : ""}
             ${available > 0 ? `<div class="stock-indicator-glow"><span class="glow-dot"></span><span id="stockText">${lang === "es" ? "En Stock" : "In Stock"}</span></div>` : `<div class="stock-indicator-glow out-of-stock"><span class="glow-dot"></span><span id="stockText">${lang === "es" ? "Agotado" : "Out of Stock"}</span></div>`}
           </div>
@@ -7763,7 +7720,7 @@ State: ${state || "none"}</pre>
                 src="${img}"
                 class="thumbnail ${idx === 0 ? 'active' : ''}"
                 onclick="changeMainImage('${img}', ${idx})"
-                alt="${cleanTitle} image ${idx + 1}"
+                alt="${enhancedTitle} image ${idx + 1}"
               />
             `).join('')}
           </div>
@@ -7790,16 +7747,30 @@ State: ${state || "none"}</pre>
             </div>
             ` : ''}
 
-            <h1 class="product-title-clean">${cleanTitle}</h1>
+            <!-- Brand Badge (Compact) -->
+            ${specs.brand ? `<div class="product-brand-badge-compact">${specs.brand.toUpperCase()}</div>` : ''}
 
-            <!-- Spec Chips Horizontal List -->
+            <h1 class="product-title-clean">${enhancedTitle}</h1>
+
+            <!-- Spec Chips Horizontal List (Compact) -->
             ${productSpecs.length > 0 ? `
-            <div class="spec-chips-row">
-              ${productSpecs.map(spec => `<span class="spec-chip">${spec}</span>`).join('')}
+            <div class="spec-chips-row-compact">
+              ${productSpecs.map(spec => `<span class="spec-chip-compact">${spec}</span>`).join('')}
             </div>
             ` : ''}
           <div class="product-price-section">
-            <div class="product-price" id="productPrice">${formatPrice(product.price, product.currency_id || (isAmazon ? "USD" : "MXN"))}</div>
+            <div class="product-price" id="productPrice">${formatPrice(product.price, product.currency || product.currency_id || "MXN")}</div>
+
+            <!-- Currency Switcher (Next to Price) -->
+            <div class="currency-switcher">
+              <button class="currency-btn ${lang === 'en' ? 'active' : ''}" data-currency="USD" onclick="switchCurrency('USD')">
+                USD $
+              </button>
+              <button class="currency-btn ${lang === 'es' ? 'active' : ''}" data-currency="MXN" onclick="switchCurrency('MXN')">
+                MXN $
+              </button>
+            </div>
+
             ${
               priceStats && priceStats.avgPrice > product.price
                 ? `
@@ -7953,6 +7924,63 @@ State: ${state || "none"}</pre>
           document.querySelectorAll('.thumbnail').forEach((thumb, i) => {
             thumb.classList.toggle('active', i === idx);
           });
+        }
+
+        // Currency Switcher Logic
+        const USD_TO_MXN = 20.5;
+        const MXN_TO_USD = 1 / 20.5;
+
+        // Detect source currency from product
+        const productCurrency = '${product.currency || product.currency_id || "MXN"}';
+        let currentCurrency = lang === 'en' ? 'USD' : 'MXN';
+
+        // Store original price in its native currency
+        const priceElement = document.getElementById('productPrice');
+        const priceText = priceElement ? priceElement.textContent : '';
+        const basePrice = parseFloat(priceText.replace(/[^0-9.]/g, '')) || 0;
+
+        console.log('💰 Product base price:', basePrice, productCurrency);
+
+        // Set initial currency display
+        window.addEventListener('DOMContentLoaded', function() {
+          let displayPrice = basePrice;
+
+          // Convert if needed
+          if (productCurrency === 'MXN' && currentCurrency === 'USD') {
+            displayPrice = basePrice * MXN_TO_USD;
+          } else if (productCurrency === 'USD' && currentCurrency === 'MXN') {
+            displayPrice = basePrice * USD_TO_MXN;
+          }
+
+          if (displayPrice !== basePrice) {
+            priceElement.textContent = formatPrice(displayPrice, currentCurrency);
+          }
+        });
+
+        function switchCurrency(newCurrency) {
+          if (newCurrency === currentCurrency) return;
+
+          currentCurrency = newCurrency;
+
+          // Update button active states
+          document.querySelectorAll('.currency-btn').forEach(btn => {
+            btn.classList.toggle('active', btn.dataset.currency === newCurrency);
+          });
+
+          // Convert price based on source currency
+          let newPrice = basePrice;
+
+          if (productCurrency === 'MXN' && newCurrency === 'USD') {
+            // MXN to USD
+            newPrice = basePrice * MXN_TO_USD;
+          } else if (productCurrency === 'USD' && newCurrency === 'MXN') {
+            // USD to MXN
+            newPrice = basePrice * USD_TO_MXN;
+          }
+
+          priceElement.textContent = formatPrice(newPrice, newCurrency);
+
+          console.log('💱 Currency switched:', productCurrency, '→', newCurrency, '|', basePrice, '→', newPrice.toFixed(2));
         }
       </script>
     `,
@@ -8249,21 +8277,24 @@ State: ${state || "none"}</pre>
           color: #333;
         }
 
-        /* Sticky CTA Section - High Contrast */
+        /* Compact Price Section */
         .product-price-section {
           display: flex;
-          flex-direction: column;
-          gap: 12px;
-          padding: 24px 0;
+          flex-direction: row;
+          align-items: center;
+          flex-wrap: wrap;
+          gap: 0;
+          padding: 16px 0;
           border-top: 1px solid #e5e7eb;
           border-bottom: 1px solid #e5e7eb;
         }
 
         .product-price {
-          font-size: clamp(32px, 5vw, 42px);
+          font-size: clamp(28px, 4vw, 36px);
           font-weight: 700;
           color: #1a1a1a;
           font-family: -apple-system, BlinkMacSystemFont, 'SF Pro Display', 'Inter', sans-serif;
+          margin-right: 12px;
         }
 
         .product-price-comparison {
@@ -8377,8 +8408,15 @@ State: ${state || "none"}</pre>
             font-size: 22px;
           }
 
+          .product-price-section {
+            flex-direction: column;
+            align-items: flex-start;
+            gap: 10px;
+          }
+
           .product-price {
-            font-size: 32px;
+            font-size: 28px;
+            margin-right: 0;
           }
 
           .action-button {
@@ -8386,9 +8424,14 @@ State: ${state || "none"}</pre>
             font-size: 15px;
           }
 
-          .spec-chip {
-            font-size: 12px;
-            padding: 5px 10px;
+          .spec-chip-compact {
+            font-size: 10px;
+            padding: 3px 8px;
+          }
+
+          .product-brand-badge-compact {
+            font-size: 10px;
+            padding: 3px 10px;
           }
         }
 

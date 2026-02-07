@@ -2013,11 +2013,16 @@ button:active,
     display: flex;
     flex-direction: row;
     flex-wrap: wrap;
-    gap: 8px;
+    gap: 6px;
     align-items: center;
     justify-content: center;
-    margin: 32px 0;
-    padding: 16px 0;
+    margin: 40px 0;
+    padding: 20px;
+    background: #ffffff;
+    border-radius: 12px;
+    box-shadow: 0 2px 8px rgba(0, 0, 0, 0.06);
+    /* Touch-friendly padding */
+    touch-action: manipulation;
 }
 
 /* Pagination numbers container */
@@ -2029,120 +2034,171 @@ button:active,
     justify-content: center;
 }
 
-/* Individual page number button */
+/* Individual page number button - Amazon.mx style */
 .pagination-number {
-    min-width: 40px;
-    height: 40px;
+    min-width: 42px;
+    height: 42px;
     padding: 0 12px;
-    background: var(--bg-secondary);
-    border: 1px solid var(--border-color);
-    border-radius: var(--radius-md);
+    background: #ffffff;
+    border: 1px solid #D5D9D9;
+    border-radius: 8px;
     text-decoration: none;
-    color: var(--text-primary);
+    color: #0F1111;
     font-weight: 500;
     font-size: 14px;
     display: inline-flex;
     align-items: center;
     justify-content: center;
-    transition: all 0.2s ease;
+    transition: all 0.15s ease;
     cursor: pointer;
+    /* Touch-friendly */
+    -webkit-tap-highlight-color: transparent;
+    user-select: none;
 }
 
 .pagination-number:hover {
-    background: var(--primary-color);
-    color: #ffffff;
-    border-color: var(--primary-color);
-    transform: translateY(-2px);
-    box-shadow: 0 4px 8px rgba(60, 145, 237, 0.2);
+    background: #F7FAFA;
+    border-color: #007185;
+    color: #007185;
+    box-shadow: 0 2px 5px rgba(0, 0, 0, 0.1);
 }
 
-/* Current page (active state) */
+.pagination-number:active {
+    transform: scale(0.95);
+}
+
+/* Current page (active state) - Amazon orange */
 .pagination-number.pagination-current {
-    background: var(--primary-color);
+    background: #232F3E;
     color: #ffffff;
-    border-color: var(--primary-color);
+    border-color: #232F3E;
     font-weight: 600;
     cursor: default;
-    box-shadow: 0 2px 8px rgba(60, 145, 237, 0.3);
+    box-shadow: 0 2px 8px rgba(35, 47, 62, 0.2);
 }
 
 /* Ellipsis (…) */
 .pagination-ellipsis {
-    min-width: 40px;
-    height: 40px;
+    min-width: 42px;
+    height: 42px;
     display: inline-flex;
     align-items: center;
     justify-content: center;
-    color: var(--text-muted);
-    font-size: 16px;
+    color: #565959;
+    font-size: 18px;
     pointer-events: none;
+    font-weight: 500;
 }
 
-/* Previous/Next buttons */
+/* Previous/Next buttons - Amazon.mx style */
 .pagination-prev,
 .pagination-next {
-    padding: 10px 16px;
-    background: var(--bg-secondary);
-    border: 1px solid var(--border-color);
-    border-radius: var(--radius-md);
+    min-height: 42px;
+    padding: 10px 18px;
+    background: #ffffff;
+    border: 1px solid #D5D9D9;
+    border-radius: 8px;
     text-decoration: none;
-    color: var(--text-primary);
+    color: #0F1111;
     font-weight: 500;
     font-size: 14px;
     display: inline-flex;
     align-items: center;
-    gap: 6px;
-    transition: all 0.2s ease;
+    gap: 8px;
+    transition: all 0.15s ease;
     white-space: nowrap;
+    cursor: pointer;
+    /* Touch-friendly */
+    -webkit-tap-highlight-color: transparent;
+    user-select: none;
 }
 
 .pagination-prev:hover,
 .pagination-next:hover {
-    background: var(--primary-color);
-    color: #ffffff;
-    border-color: var(--primary-color);
-    transform: translateY(-2px);
-    box-shadow: 0 4px 8px rgba(60, 145, 237, 0.2);
+    background: #F7FAFA;
+    border-color: #007185;
+    color: #007185;
+    box-shadow: 0 2px 5px rgba(0, 0, 0, 0.1);
+}
+
+.pagination-prev:active,
+.pagination-next:active {
+    transform: scale(0.97);
 }
 
 .pagination-prev svg,
 .pagination-next svg {
     flex-shrink: 0;
+    width: 18px;
+    height: 18px;
 }
 
 /* Disabled state for prev/next */
 .pagination-disabled {
-    padding: 10px 16px;
-    background: transparent;
-    border: 1px solid transparent;
-    color: transparent;
-    cursor: default;
+    min-height: 42px;
+    padding: 10px 18px;
+    background: #F7F8F8;
+    border: 1px solid #E3E6E6;
+    border-radius: 8px;
+    color: #ADB1B8;
+    cursor: not-allowed;
     pointer-events: none;
-    visibility: hidden;
+    opacity: 0.5;
 }
 
-/* Mobile adjustments */
-@media (max-width: 640px) {
+/* Mobile & Touch adjustments */
+@media (max-width: 768px) {
     .pagination {
-        gap: 6px;
+        gap: 4px;
+        padding: 16px 12px;
+        margin: 32px 0;
     }
 
     .pagination-number {
-        min-width: 36px;
-        height: 36px;
-        font-size: 13px;
+        min-width: 40px;
+        height: 40px;
+        font-size: 14px;
+        /* Larger touch target for mobile */
+        min-height: 44px;
     }
 
     .pagination-prev,
     .pagination-next {
-        padding: 8px 12px;
+        padding: 10px 14px;
+        font-size: 13px;
+        min-height: 44px;
+        gap: 6px;
+    }
+}
+
+@media (max-width: 480px) {
+    .pagination {
+        padding: 12px 8px;
+    }
+
+    .pagination-number {
+        min-width: 38px;
+        height: 38px;
         font-size: 13px;
     }
 
-    /* Hide prev/next text on very small screens, keep icons */
+    .pagination-ellipsis {
+        min-width: 30px;
+    }
+
+    /* Stack prev/next text below icon on very small screens */
     .pagination-prev,
     .pagination-next {
-        gap: 4px;
+        flex-direction: column;
+        padding: 8px 10px;
+        gap: 2px;
+        font-size: 11px;
+    }
+
+    .pagination-prev svg,
+    .pagination-next svg {
+        width: 16px;
+        height: 16px;
     }
 }
 
@@ -5025,6 +5081,43 @@ body {
     display: none;
 }
 
+/* Fix for modern product cards in carousel - even sizing */
+.ccc-carousel .product-card-modern {
+    flex: 0 0 280px;
+    min-width: 280px;
+    max-width: 280px;
+    scroll-snap-align: start;
+    height: auto;
+}
+
+.ccc-carousel .product-image-container {
+    height: 200px;
+}
+
+@media (max-width: 768px) {
+    .ccc-carousel .product-card-modern {
+        flex: 0 0 240px;
+        min-width: 240px;
+        max-width: 240px;
+    }
+
+    .ccc-carousel .product-image-container {
+        height: 180px;
+    }
+}
+
+@media (max-width: 480px) {
+    .ccc-carousel .product-card-modern {
+        flex: 0 0 220px;
+        min-width: 220px;
+        max-width: 220px;
+    }
+
+    .ccc-carousel .product-image-container {
+        height: 160px;
+    }
+}
+
 /* ==========================================
    POPULAR PRODUCTS — Sticky bar + 4-col grid
    ========================================== */
@@ -6715,6 +6808,51 @@ img[loading="lazy"].loaded {
     }
 }
 
+/* ==========================================
+   COMPACT PRODUCT DETAIL STYLES
+   Added: 2026-02-07
+   ========================================== */
+.product-brand-badge-compact {
+    display: inline-block;
+    padding: 4px 12px;
+    background: linear-gradient(135deg, #F59E0B 0%, #D97706 100%);
+    color: white;
+    border-radius: 6px;
+    font-size: 11px;
+    font-weight: 700;
+    text-transform: uppercase;
+    letter-spacing: 0.5px;
+    margin-bottom: 8px;
+    width: fit-content;
+}
+
+.spec-chips-row-compact {
+    display: flex;
+    flex-wrap: wrap;
+    gap: 6px;
+    margin: 12px 0;
+}
+
+.spec-chip-compact {
+    display: inline-flex;
+    align-items: center;
+    gap: 4px;
+    padding: 4px 10px;
+    background: linear-gradient(135deg, #F1F5F9 0%, #E2E8F0 100%);
+    border: 1px solid #CBD5E1;
+    border-radius: 6px;
+    font-size: 11px;
+    font-weight: 600;
+    color: #475569;
+    transition: all 0.2s;
+    white-space: nowrap;
+}
+
+.spec-chip-compact:hover {
+    background: linear-gradient(135deg, #E2E8F0 0%, #CBD5E1 100%);
+    transform: translateY(-1px);
+}
+
 .product-model-info {
     font-size: 14px;
     color: #64748B;
@@ -7094,10 +7232,82 @@ img[loading="lazy"].loaded {
         border-color: #475569;
         color: #CBD5E1;
     }
-    
+
     .chip-spec:hover {
         background: linear-gradient(135deg, #0066FF 0%, #0052CC 100%);
         color: white;
         border-color: #0066FF;
+    }
+}
+
+/* ==========================================
+   CURRENCY SWITCHER (Product Detail Page)
+   Added: 2026-02-07
+   ========================================== */
+.currency-switcher {
+    display: inline-flex;
+    gap: 0;
+    background: rgba(255, 255, 255, 0.95);
+    backdrop-filter: blur(10px);
+    border-radius: 10px;
+    padding: 4px;
+    box-shadow: 0 2px 8px rgba(0, 0, 0, 0.08);
+    border: 1px solid rgba(0, 0, 0, 0.05);
+    margin-left: 16px;
+    vertical-align: middle;
+}
+
+.currency-btn {
+    padding: 6px 14px;
+    border: none;
+    background: transparent;
+    color: #64748B;
+    font-size: 13px;
+    font-weight: 600;
+    cursor: pointer;
+    border-radius: 7px;
+    transition: all 0.3s cubic-bezier(0.4, 0, 0.2, 1);
+    white-space: nowrap;
+}
+
+.currency-btn:hover {
+    color: #0066FF;
+    background: rgba(0, 102, 255, 0.1);
+}
+
+.currency-btn.active {
+    background: linear-gradient(135deg, #0066FF 0%, #0052CC 100%);
+    color: white;
+    box-shadow: 0 2px 6px rgba(0, 102, 255, 0.3);
+}
+
+@media (max-width: 768px) {
+    .currency-switcher {
+        display: flex;
+        margin-left: 0;
+        margin-top: 12px;
+        width: fit-content;
+    }
+
+    .currency-btn {
+        padding: 6px 12px;
+        font-size: 12px;
+    }
+}
+
+/* Dark mode support */
+@media (prefers-color-scheme: dark) {
+    .currency-switcher {
+        background: rgba(30, 41, 59, 0.95);
+        border-color: rgba(255, 255, 255, 0.1);
+    }
+
+    .currency-btn {
+        color: #94A3B8;
+    }
+
+    .currency-btn:hover {
+        color: #60A5FA;
+        background: rgba(96, 165, 250, 0.1);
     }
 }

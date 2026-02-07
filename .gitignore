@@ -1,7 +1,29 @@
+# Dependencies
 node_modules/
+
+# Environment variables
 .env
+.env.local
+.env.*.local
+
+# Database files
 data/
+src/backend/data/
+*.db
+*.db-journal
+
+# SSL Certificates
 certs/
+
+# Logs
+logs/
+*.log
+npm-debug.log*
+
+# OS files
+.DS_Store
+Thumbs.db
+desktop.ini
 
 # Windows reserved names
 nul
@@ -13,5 +35,31 @@ AUX
 prn
 PRN
 
+# IDE
+.vscode/
+.idea/
+*.swp
+*.swo
+*~
+
+# Build outputs
+dist/
+build/
+.cache/
+
+# Temporary files
+tmp/
+temp/
+*.tmp
+
+# Supabase local
+.temp/
+supabase/.temp/
+
 # Test files
-test-price-history.js
+test-*.js
+
+# Backup files
+*.backup
+*-old.*
+*.old
