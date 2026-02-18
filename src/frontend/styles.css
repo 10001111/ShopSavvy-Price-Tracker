@@ -5924,14 +5924,6 @@ body {
     --color-white: #FFFFFF;
 
     /* Semantic Colors */
-    --bg-primary: var(--color-white);
-    --bg-secondary: var(--color-gray-100);
-    --bg-tertiary: var(--color-gray-200);
-    --text-primary: var(--color-gray-900);
-    --text-secondary: var(--color-gray-700);
-    --text-tertiary: var(--color-gray-500);
-    --border-light: var(--color-gray-300);
-    --border-medium: var(--color-gray-400);
 
     /* Spacing Scale (8px base) */
     --space-1: 0.25rem; /* 4px */
@@ -5998,21 +5990,6 @@ body {
     --touch-target-min: 44px;
 }
 
-/* Dark Mode Support */
-@media (prefers-color-scheme: dark) {
-    :root {
-        --bg-primary: var(--color-gray-900);
-        --bg-secondary: var(--color-gray-800);
-        --bg-tertiary: var(--color-gray-700);
-        --text-primary: var(--color-gray-100);
-        --text-secondary: var(--color-gray-300);
-        --text-tertiary: var(--color-gray-400);
-        --border-light: var(--color-gray-700);
-        --border-medium: var(--color-gray-600);
-        --glass-bg: rgba(30, 41, 59, 0.7);
-        --glass-border: rgba(255, 255, 255, 0.1);
-    }
-}
 
 /* ==========================================
    BENTO GRID SYSTEM (2026 Layout)
