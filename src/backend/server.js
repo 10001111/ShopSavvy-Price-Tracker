@@ -5594,8 +5594,8 @@ async function start() {
     res.redirect("/"); // Redirect to home after logout
   });
 
-  // Diagnostic endpoint to check Supabase configuration
-  app.get("/debug/supabase-config", (req, res) => {
+  // Diagnostic endpoint - admin only
+  app.get("/debug/supabase-config", requireAdmin, (req, res) => {
     const hasSupabaseUrl = Boolean(process.env.SUPABASE_URL);
     const hasSupabaseKey = Boolean(process.env.SUPABASE_ANON_KEY);
 
@@ -6317,32 +6317,13 @@ State: ${state || "none"}</pre>
     const success = req.query.success === "1";
     const error = req.query.error;
 
-    // Debug logging
-    console.log(
-      "[Profile Settings GET] Loading page for user ID:",
-      req.user.id,
-    );
-    console.log(
-      "[Profile Settings GET] User data from DB:",
-      JSON.stringify(user, null, 2),
-    );
-
     res.send(
       renderPage(
         lang === "es" ? "Configuración de Perfil" : "Profile Settings",
         `
       <h1>${lang === "es" ? "Configuración de Perfil" : "Profile Settings"}</h1>
 
-      <!-- Debug Info (remove in production) -->
-      <div style="background: #ffe0e0; padding: 12px; border-radius: 8px; margin-bottom: 16px; font-size: 12px; font-family: monospace;">
-        <strong>DEBUG INFO:</strong><br>
-        User ID: ${user.id}<br>
-        Username in DB: "${user.username || "(null)"}"<br>
-        Profile Pic URL: "${user.profile_picture_url || "(null)"}"<br>
-        Email: ${user.email}
-      </div>
-
-      ${success ? `<div class="success">${lang === "es" ? "Perfil actualizado correctamente" : "Profile updated successfully"}</div>` : ""}
+            ${success ? `<div class="success">${lang === "es" ? "Perfil actualizado correctamente" : "Profile updated successfully"}</div>` : ""}
       ${error ? `<div class="error">${decodeURIComponent(error)}</div>` : ""}
 
       <div class="settings-section">

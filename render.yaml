@@ -1,6 +1,6 @@
 services:
   - type: web
-    name: shopsavvy-price-tracker
+    name: ofertaradar
     env: node
     buildCommand: npm install
     startCommand: npm start
@@ -10,7 +10,7 @@ services:
       - key: PORT
         fromService:
           type: web
-          name: shopsavvy-price-tracker
+          name: ofertaradar
           property: port
       - key: JWT_SECRET
         sync: false
