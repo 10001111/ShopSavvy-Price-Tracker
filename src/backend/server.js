@@ -1980,6 +1980,147 @@ function detectCategory(productTitle) {
 }
 
 /**
+ * Generate hashtags for a product based on its title and category.
+ * Returns an array of lowercase hashtag strings (without the # symbol).
+ * e.g. ["lego", "toys", "building"] for a Lego product.
+ */
+function generateHashtags(product) {
+  const title = (product.title || product.product_title || "").toLowerCase();
+  const category =
+    product.category ||
+    detectCategory(product.title || product.product_title || "") ||
+    "uncategorized";
+  const tags = new Set();
+
+  // Always add the category itself
+  tags.add(category.replace(/-/g, ""));
+
+  // Brand / product-specific tags
+  const brandRules = [
+    {
+      match: /\biphone\b|\bapple\b/,
+      tags: ["iphone", "apple", "phone", "electronics"],
+    },
+    {
+      match: /\bsamsung galaxy\b/,
+      tags: ["samsung", "galaxy", "phone", "electronics"],
+    },
+    {
+      match: /\bgoogle pixel\b/,
+      tags: ["pixel", "google", "phone", "electronics"],
+    },
+    { match: /\bmotorola\b/, tags: ["motorola", "phone", "electronics"] },
+    { match: /\bxiaomi\b|\bredmi\b/, tags: ["xiaomi", "phone", "electronics"] },
+    { match: /\boneplus\b/, tags: ["oneplus", "phone", "electronics"] },
+    {
+      match: /\bsmartphone\b|\bcelular\b/,
+      tags: ["phone", "smartphone", "electronics"],
+    },
+    { match: /\bmacbook\b/, tags: ["macbook", "apple", "laptop", "computers"] },
+    {
+      match: /\blaptop\b|\bnotebook\b/,
+      tags: ["laptop", "computers", "electronics"],
+    },
+    {
+      match: /\bplaystation\b|\bps5\b|\bps4\b/,
+      tags: ["playstation", "sony", "gaming", "electronics"],
+    },
+    { match: /\bxbox\b/, tags: ["xbox", "microsoft", "gaming", "electronics"] },
+    {
+      match: /\bnintendo switch\b/,
+      tags: ["nintendo", "switch", "gaming", "electronics"],
+    },
+    { match: /\bnintendo\b/, tags: ["nintendo", "gaming"] },
+    {
+      match: /\bairpods\b/,
+      tags: ["airpods", "apple", "audio", "electronics"],
+    },
+    {
+      match: /\bheadphones\b|\baudífonos\b|\baudifonos\b/,
+      tags: ["headphones", "audio", "electronics"],
+    },
+    { match: /\bsony\b/, tags: ["sony", "electronics"] },
+    { match: /\bipad\b/, tags: ["ipad", "apple", "tablet", "electronics"] },
+    { match: /\btablet\b/, tags: ["tablet", "electronics"] },
+    {
+      match: /\bsmart tv\b|\btelevisión\b|\btelevision\b|\btv\b/,
+      tags: ["tv", "smarttv", "electronics"],
+    },
+    {
+      match: /\bapple watch\b/,
+      tags: ["applewatch", "apple", "smartwatch", "electronics"],
+    },
+    {
+      match: /\bsmartwatch\b/,
+      tags: ["smartwatch", "wearable", "electronics"],
+    },
+    { match: /\bdrone\b/, tags: ["drone", "electronics"] },
+    {
+      match: /\bcamera\b|\bcámara\b/,
+      tags: ["camera", "photography", "electronics"],
+    },
+    { match: /\blego\b/, tags: ["lego", "toys", "building"] },
+    { match: /\bbarbie\b/, tags: ["barbie", "toys", "dolls"] },
+    { match: /\bhot wheels\b/, tags: ["hotwheels", "toys", "cars"] },
+    {
+      match: /\bfunko\b|\bfunko pop\b/,
+      tags: ["funko", "toys", "collectibles"],
+    },
+    { match: /\bnerf\b/, tags: ["nerf", "toys", "outdoor"] },
+    { match: /\bplaymobil\b/, tags: ["playmobil", "toys"] },
+    {
+      match: /\bboard game\b|\bjuego de mesa\b/,
+      tags: ["boardgame", "toys", "family"],
+    },
+    { match: /\bdyson\b/, tags: ["dyson", "appliance", "homekitchen"] },
+    {
+      match: /\binstant pot\b|\binstantpot\b/,
+      tags: ["instantpot", "cooking", "homekitchen"],
+    },
+    { match: /\bkitchenaid\b/, tags: ["kitchenaid", "cooking", "homekitchen"] },
+    { match: /\bnike\b/, tags: ["nike", "sports", "clothing"] },
+    { match: /\badidas\b/, tags: ["adidas", "sports", "clothing"] },
+    {
+      match: /\bsneakers\b|\btenis\b|\bzapatos\b/,
+      tags: ["sneakers", "shoes", "clothing"],
+    },
+    {
+      match: /\bperfume\b|\bcolonia\b/,
+      tags: ["perfume", "beauty", "fragrance"],
+    },
+    {
+      match: /\bshampoo\b|\bchampú\b/,
+      tags: ["shampoo", "haircare", "beauty"],
+    },
+    {
+      match: /\bmakeup\b|\bmaquillaje\b/,
+      tags: ["makeup", "beauty", "cosmetics"],
+    },
+  ];
+
+  for (const rule of brandRules) {
+    if (rule.match.test(title)) {
+      for (const tag of rule.tags) tags.add(tag);
+    }
+  }
+
+  // Category-level fallback tags
+  const categoryTags = {
+    phones: ["phone", "smartphone", "electronics"],
+    computers: ["laptop", "computer", "electronics"],
+    electronics: ["electronics", "tech", "gadget"],
+    toys: ["toys", "kids", "play"],
+    clothing: ["clothing", "fashion", "apparel"],
+    beauty: ["beauty", "skincare", "personal"],
+    "home-kitchen": ["home", "kitchen", "appliance"],
+    "sports-outdoors": ["sports", "outdoor", "fitness"],
+  };
+  for (const t of categoryTags[category] || []) tags.add(t);
+
+  return Array.from(tags).slice(0, 6); // max 6 tags per product
+}
+
+/**
  * Calculate real category statistics from actual products
  * @param {Array} products - Array of product objects
  * @param {string} lang - Language code (en/es)
@@ -3134,6 +3275,13 @@ async function start() {
               </div>
             </div>
 
+            <!-- Hashtags -->
+            ${(() => {
+              const hashtags = generateHashtags(item);
+              if (!hashtags.length) return "";
+              return `<div class="product-hashtags">${hashtags.map((tag) => `<a href="/?q=${encodeURIComponent(tag)}" class="product-hashtag" onclick="event.stopPropagation()">#${tag}</a>`).join("")}</div>`;
+            })()}
+
             <!-- Primary CTA Button -->
             <button
               class="cta-primary"
@@ -3365,10 +3513,6 @@ async function start() {
       <!-- Hero Section -->
       <section class="hero-section" data-reveal="fade-up">
         <div class="hero-content">
-          <div class="hero-badge" data-reveal="fade-up" data-reveal-delay="100">
-            <span class="hero-badge-icon">🇲🇽</span>
-            ${lang === "es" ? "La herramienta #1 de ahorro en México" : "#1 Price Tracking Tool in Mexico"}
-          </div>
           <h1 class="hero-title" data-reveal="fade-up" data-reveal-delay="200">${lang === "es" ? "Nunca Pagues de Más" : "Never Overpay Again"}</h1>
           <p class="hero-subtitle" data-reveal="fade-up" data-reveal-delay="300">${
             lang === "es"
