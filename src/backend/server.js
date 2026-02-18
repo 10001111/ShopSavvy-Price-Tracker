@@ -1156,7 +1156,47 @@ function renderPage(
   userData = null,
   extraBody = "",
   currentCategory = "",
+  currentQuery = "",
 ) {
+  // Derive active category tab from the search query (hashtag-driven nav)
+  const q = (currentQuery || "").toLowerCase().trim();
+  const HASHTAG_TO_TAB = {
+    electronics: "electronics",
+    tech: "electronics",
+    gadget: "electronics",
+    phone: "phone",
+    smartphone: "phone",
+    iphone: "phone",
+    celular: "phone",
+    laptop: "laptop",
+    computer: "laptop",
+    macbook: "laptop",
+    computadora: "laptop",
+    gaming: "gaming",
+    playstation: "gaming",
+    xbox: "gaming",
+    nintendo: "gaming",
+    toys: "toys",
+    juguetes: "toys",
+    lego: "toys",
+    kids: "toys",
+    clothing: "clothing",
+    ropa: "clothing",
+    fashion: "clothing",
+    sneakers: "clothing",
+    home: "home",
+    kitchen: "home",
+    hogar: "home",
+    appliance: "home",
+    sports: "sports",
+    deportes: "sports",
+    fitness: "sports",
+    beauty: "beauty",
+    belleza: "beauty",
+    makeup: "beauty",
+    skincare: "beauty",
+  };
+  const activeTab = HASHTAG_TO_TAB[q] || currentCategory || "";
   const otherLang = lang === "en" ? "es" : "en";
   const currentFlag = lang === "en" ? "🇺🇸" : "🇲🇽";
   const currentLangName = lang === "en" ? "EN" : "ES";
@@ -1312,14 +1352,15 @@ function renderPage(
     </header>
     <nav class="category-nav">
       <div class="category-tabs">
-        <a href="/?category=electronics" class="category-tab ${currentCategory === "electronics" ? "active" : ""}">${lang === "es" ? "Electrónica" : "Electronics"}</a>
-        <a href="/?category=phones" class="category-tab ${currentCategory === "phones" ? "active" : ""}">${lang === "es" ? "Celulares" : "Phones"}</a>
-        <a href="/?category=computers" class="category-tab ${currentCategory === "computers" ? "active" : ""}">${lang === "es" ? "Computadoras" : "Computers"}</a>
-        <a href="/?category=clothing" class="category-tab ${currentCategory === "clothing" ? "active" : ""}">${lang === "es" ? "Ropa" : "Clothing"}</a>
-        <a href="/?category=home-kitchen" class="category-tab ${currentCategory === "home-kitchen" ? "active" : ""}">${lang === "es" ? "Hogar" : "Home"}</a>
-        <a href="/?category=sports-outdoors" class="category-tab ${currentCategory === "sports-outdoors" ? "active" : ""}">${lang === "es" ? "Deportes" : "Sports"}</a>
-        <a href="/?category=toys" class="category-tab ${currentCategory === "toys" ? "active" : ""}">${lang === "es" ? "Juguetes" : "Toys"}</a>
-        <a href="/?category=beauty" class="category-tab ${currentCategory === "beauty" ? "active" : ""}">${lang === "es" ? "Belleza" : "Beauty"}</a>
+        <a href="/?q=electronics" class="category-tab ${activeTab === "electronics" ? "active" : ""}">⚡ ${lang === "es" ? "Electrónica" : "Electronics"}</a>
+        <a href="/?q=phone" class="category-tab ${activeTab === "phone" ? "active" : ""}">📱 ${lang === "es" ? "Celulares" : "Phones"}</a>
+        <a href="/?q=laptop" class="category-tab ${activeTab === "laptop" ? "active" : ""}">💻 ${lang === "es" ? "Computadoras" : "Computers"}</a>
+        <a href="/?q=gaming" class="category-tab ${activeTab === "gaming" ? "active" : ""}">🎮 ${lang === "es" ? "Gaming" : "Gaming"}</a>
+        <a href="/?q=toys" class="category-tab ${activeTab === "toys" ? "active" : ""}">🧸 ${lang === "es" ? "Juguetes" : "Toys"}</a>
+        <a href="/?q=clothing" class="category-tab ${activeTab === "clothing" ? "active" : ""}">👕 ${lang === "es" ? "Ropa" : "Clothing"}</a>
+        <a href="/?q=home" class="category-tab ${activeTab === "home" ? "active" : ""}">🏠 ${lang === "es" ? "Hogar" : "Home"}</a>
+        <a href="/?q=sports" class="category-tab ${activeTab === "sports" ? "active" : ""}">⚽ ${lang === "es" ? "Deportes" : "Sports"}</a>
+        <a href="/?q=beauty" class="category-tab ${activeTab === "beauty" ? "active" : ""}">💄 ${lang === "es" ? "Belleza" : "Beauty"}</a>
       </div>
     </nav>
     <main class="main-content">
@@ -5224,6 +5265,7 @@ async function start() {
         </script>
       `,
         category,
+        query,
       ),
     );
   });
