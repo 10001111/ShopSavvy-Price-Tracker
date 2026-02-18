@@ -4202,8 +4202,8 @@ async function start() {
         : "";
 
     // Determine if we should show deal sections
-    // Only show deals on homepage (no search query, no category filter)
-    const isHomepage = !query && !category;
+    // Only show deals on homepage (no search query)
+    const isHomepage = !query;
 
     // Search page for logged-in users with CamelCamelCamel-style sections
     const searchPage = `
