@@ -2033,132 +2033,85 @@ function generateHashtags(product) {
     "uncategorized";
   const tags = new Set();
 
-  // Always add the category itself
-  tags.add(category.replace(/-/g, ""));
-
-  // Brand / product-specific tags
-  const brandRules = [
+  // Rules map title keywords → nav-aligned hashtags only
+  // Valid tags: electronics, phone, laptop, gaming, toys, clothing, home, sports, beauty
+  const rules = [
+    // Phones
     {
-      match: /\biphone\b|\bapple\b/,
-      tags: ["iphone", "apple", "phone", "electronics"],
+      match:
+        /\biphone\b|\bsamsung galaxy\b|\bgoogle pixel\b|\bmotorola\b|\bxiaomi\b|\bredmi\b|\boneplus\b|\bsmartphone\b|\bcelular\b/,
+      tags: ["phone", "electronics"],
     },
+    // Laptops / computers
     {
-      match: /\bsamsung galaxy\b/,
-      tags: ["samsung", "galaxy", "phone", "electronics"],
+      match: /\bmacbook\b|\blaptop\b|\bnotebook\b|\bchromebook\b/,
+      tags: ["laptop", "electronics"],
     },
+    // Gaming consoles & accessories
     {
-      match: /\bgoogle pixel\b/,
-      tags: ["pixel", "google", "phone", "electronics"],
+      match:
+        /\bplaystation\b|\bps5\b|\bps4\b|\bxbox\b|\bnintendo\b|\bgaming\b|\bvideojuego\b|\bvideo game\b|\bgame controller\b|\bmando\b/,
+      tags: ["gaming", "electronics"],
     },
-    { match: /\bmotorola\b/, tags: ["motorola", "phone", "electronics"] },
-    { match: /\bxiaomi\b|\bredmi\b/, tags: ["xiaomi", "phone", "electronics"] },
-    { match: /\boneplus\b/, tags: ["oneplus", "phone", "electronics"] },
+    // General electronics (tablets, TVs, headphones, cameras, wearables, drones)
     {
-      match: /\bsmartphone\b|\bcelular\b/,
-      tags: ["phone", "smartphone", "electronics"],
+      match:
+        /\bipad\b|\btablet\b|\bsmart tv\b|\btelevisi[oó]n\b|\btelevision\b|\b\btv\b|\bairpods\b|\bheadphones\b|\baudifonos\b|\baudífonos\b|\bcamera\b|\bcámara\b|\bsmartwatch\b|\bapple watch\b|\bdrone\b|\bearbuds\b|\bspeaker\b/,
+      tags: ["electronics"],
     },
-    { match: /\bmacbook\b/, tags: ["macbook", "apple", "laptop", "computers"] },
+    // Toys
     {
-      match: /\blaptop\b|\bnotebook\b/,
-      tags: ["laptop", "computers", "electronics"],
+      match:
+        /\blego\b|\bbarbie\b|\bhot wheels\b|\bfunko\b|\bnerf\b|\bplaymobil\b|\bjuguete\b|\btoy\b|\bboard game\b|\bjuego de mesa\b/,
+      tags: ["toys"],
     },
+    // Clothing & shoes
     {
-      match: /\bplaystation\b|\bps5\b|\bps4\b/,
-      tags: ["playstation", "sony", "gaming", "electronics"],
+      match:
+        /\bnike\b|\badidas\b|\bsneakers\b|\btenis\b|\bzapatos\b|\bshirt\b|\bcamisa\b|\bjeans\b|\bpants\b|\bpantalon\b|\bvestido\b|\bdress\b|\bjacket\b|\bchaqueta\b/,
+      tags: ["clothing"],
     },
-    { match: /\bxbox\b/, tags: ["xbox", "microsoft", "gaming", "electronics"] },
+    // Home & kitchen
     {
-      match: /\bnintendo switch\b/,
-      tags: ["nintendo", "switch", "gaming", "electronics"],
+      match:
+        /\bdyson\b|\binstant pot\b|\bkitchenaid\b|\bblender\b|\blicuadora\b|\bvacuum\b|\baspiradora\b|\bcoffee maker\b|\bcafetera\b|\bmicrowave\b|\bmicroondas\b|\brefrigerator\b|\brefrigerador\b/,
+      tags: ["home"],
     },
-    { match: /\bnintendo\b/, tags: ["nintendo", "gaming"] },
+    // Sports & outdoors
     {
-      match: /\bairpods\b/,
-      tags: ["airpods", "apple", "audio", "electronics"],
+      match:
+        /\btreadmill\b|\bcaminadora\b|\bweights\b|\bpesas\b|\bdumbbell\b|\byoga\b|\bbicicleta\b|\bbike\b|\bfitness\b|\bgymnasium\b|\bgimnasio\b/,
+      tags: ["sports"],
     },
+    // Beauty
     {
-      match: /\bheadphones\b|\baudífonos\b|\baudifonos\b/,
-      tags: ["headphones", "audio", "electronics"],
-    },
-    { match: /\bsony\b/, tags: ["sony", "electronics"] },
-    { match: /\bipad\b/, tags: ["ipad", "apple", "tablet", "electronics"] },
-    { match: /\btablet\b/, tags: ["tablet", "electronics"] },
-    {
-      match: /\bsmart tv\b|\btelevisión\b|\btelevision\b|\btv\b/,
-      tags: ["tv", "smarttv", "electronics"],
-    },
-    {
-      match: /\bapple watch\b/,
-      tags: ["applewatch", "apple", "smartwatch", "electronics"],
-    },
-    {
-      match: /\bsmartwatch\b/,
-      tags: ["smartwatch", "wearable", "electronics"],
-    },
-    { match: /\bdrone\b/, tags: ["drone", "electronics"] },
-    {
-      match: /\bcamera\b|\bcámara\b/,
-      tags: ["camera", "photography", "electronics"],
-    },
-    { match: /\blego\b/, tags: ["lego", "toys", "building"] },
-    { match: /\bbarbie\b/, tags: ["barbie", "toys", "dolls"] },
-    { match: /\bhot wheels\b/, tags: ["hotwheels", "toys", "cars"] },
-    {
-      match: /\bfunko\b|\bfunko pop\b/,
-      tags: ["funko", "toys", "collectibles"],
-    },
-    { match: /\bnerf\b/, tags: ["nerf", "toys", "outdoor"] },
-    { match: /\bplaymobil\b/, tags: ["playmobil", "toys"] },
-    {
-      match: /\bboard game\b|\bjuego de mesa\b/,
-      tags: ["boardgame", "toys", "family"],
-    },
-    { match: /\bdyson\b/, tags: ["dyson", "appliance", "homekitchen"] },
-    {
-      match: /\binstant pot\b|\binstantpot\b/,
-      tags: ["instantpot", "cooking", "homekitchen"],
-    },
-    { match: /\bkitchenaid\b/, tags: ["kitchenaid", "cooking", "homekitchen"] },
-    { match: /\bnike\b/, tags: ["nike", "sports", "clothing"] },
-    { match: /\badidas\b/, tags: ["adidas", "sports", "clothing"] },
-    {
-      match: /\bsneakers\b|\btenis\b|\bzapatos\b/,
-      tags: ["sneakers", "shoes", "clothing"],
-    },
-    {
-      match: /\bperfume\b|\bcolonia\b/,
-      tags: ["perfume", "beauty", "fragrance"],
-    },
-    {
-      match: /\bshampoo\b|\bchampú\b/,
-      tags: ["shampoo", "haircare", "beauty"],
-    },
-    {
-      match: /\bmakeup\b|\bmaquillaje\b/,
-      tags: ["makeup", "beauty", "cosmetics"],
+      match:
+        /\bperfume\b|\bcolonia\b|\bshampoo\b|\bchamp[uú]\b|\bmakeup\b|\bmaquillaje\b|\bskincare\b|\bcream\b|\bcrema\b|\blipstick\b|\beyeliner\b/,
+      tags: ["beauty"],
     },
   ];
 
-  for (const rule of brandRules) {
+  for (const rule of rules) {
     if (rule.match.test(title)) {
       for (const tag of rule.tags) tags.add(tag);
     }
   }
 
-  // Category-level fallback tags
-  const categoryTags = {
-    phones: ["phone", "smartphone", "electronics"],
-    computers: ["laptop", "computer", "electronics"],
-    electronics: ["electronics", "tech", "gadget"],
-    toys: ["toys", "kids", "play"],
-    clothing: ["clothing", "fashion", "apparel"],
-    beauty: ["beauty", "skincare", "personal"],
-    "home-kitchen": ["home", "kitchen", "appliance"],
-    "sports-outdoors": ["sports", "outdoor", "fitness"],
+  // Category fallback — map detected category to nav hashtags
+  const categoryFallback = {
+    phones: ["phone", "electronics"],
+    computers: ["laptop", "electronics"],
+    electronics: ["electronics"],
+    gaming: ["gaming", "electronics"],
+    toys: ["toys"],
+    clothing: ["clothing"],
+    beauty: ["beauty"],
+    "home-kitchen": ["home"],
+    "sports-outdoors": ["sports"],
   };
-  for (const t of categoryTags[category] || []) tags.add(t);
+  for (const t of categoryFallback[category] || []) tags.add(t);
 
-  return Array.from(tags).slice(0, 6); // max 6 tags per product
+  return Array.from(tags);
 }
 
 /**
