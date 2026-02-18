@@ -1,7 +1,7 @@
 /**
  * Apify Service Module
  * Calls the ShopSavvy-Price-Tracker Actor on Apify to scrape
- * Amazon and Mercado Libre product data.
+ * Amazon product data.
  *
  * Uses Redis to cache recent scrape results (30 min TTL).
  */
@@ -38,25 +38,19 @@ function buildCacheKey({ source, query, productUrls }) {
 /**
  * Run the ShopSavvy Actor and wait for results.
  * @param {Object} input
- * @param {string} input.source        - 'amazon' | 'mercadolibre' | 'all'
+ * @param {string} input.source        - 'amazon'
  * @param {string} input.query         - search keyword
  * @param {string[]} [input.productUrls] - direct URLs (for price re-checks)
  * @param {number} [input.maxResults]  - max products per source (default 20)
  * @returns {Promise<Array>}           - array of scraped product objects
  */
-async function scrapeProducts({ source = "all", query = "", productUrls = [], maxResults = 20 }) {
+async function scrapeProducts({
+  source = "amazon",
+  query = "",
+  productUrls = [],
+  maxResults = 20,
+}) {
   const apify = getClient();
-
-  // 🔧 TEMPORARY: Force Amazon-only until Mercado Libre browser scraper is ready
-  if (source === "all") {
-    console.log(`[APIFY] Converting "all" to "amazon" (Mercado Libre temporarily disabled)`);
-    source = "amazon";
-  }
-  if (source === "mercadolibre") {
-    console.log(`[APIFY] ⚠️  Mercado Libre scraper temporarily disabled (requires browser-based scraping)`);
-    console.log(`[APIFY] Suggestion: Use "amazon" or "all" for now`);
-    return [];
-  }
 
   const cacheKey = buildCacheKey({ source, query, productUrls });
 
@@ -64,14 +58,18 @@ async function scrapeProducts({ source = "all", query = "", productUrls = [], ma
   console.log(`\n🕷️  [APIFY] ========== SCRAPING REQUEST ==========`);
   console.log(`🕷️  [APIFY] Source: ${source}`);
   console.log(`🕷️  [APIFY] Query: "${query}"`);
-  console.log(`🕷️  [APIFY] Product URLs: ${productUrls.length > 0 ? productUrls.length : 'none'}`);
+  console.log(
+    `🕷️  [APIFY] Product URLs: ${productUrls.length > 0 ? productUrls.length : "none"}`,
+  );
   console.log(`🕷️  [APIFY] Max Results: ${maxResults}`);
   console.log(`🕷️  [APIFY] Cache Key: ${cacheKey}`);
 
   // Check Redis cache first
   const cached = await getCache(cacheKey);
   if (cached) {
-    console.log(`✅ [APIFY] Cache hit! Returning ${cached.length} cached products`);
+    console.log(
+      `✅ [APIFY] Cache hit! Returning ${cached.length} cached products`,
+    );
     console.log(`🕷️  [APIFY] ========================================\n`);
     return cached;
   }
@@ -88,7 +86,7 @@ async function scrapeProducts({ source = "all", query = "", productUrls = [], ma
       build: "1.0.5", // Latest: Auto-categorizes products!
       waitSecs: 300, // wait up to 5 minutes
       memory: 512,
-    }
+    },
   );
 
   const duration = ((Date.now() - startTime) / 1000).toFixed(2);
@@ -113,19 +111,21 @@ async function scrapeProducts({ source = "all", query = "", productUrls = [], ma
     const sample = items[0];
     console.log(`📦 [APIFY] Sample product:`, {
       id: sample.id,
-      title: sample.title?.substring(0, 50) + '...',
+      title: sample.title?.substring(0, 50) + "...",
       price: sample.price,
       source: sample.source,
       available_quantity: sample.available_quantity,
       sold_quantity: sample.sold_quantity,
-      rating: sample.rating
+      rating: sample.rating,
     });
   }
 
   // Cache the results
   if (items.length > 0) {
     await setCache(cacheKey, items, CACHE_TTL);
-    console.log(`💾 [APIFY] Cached ${items.length} products (TTL: ${CACHE_TTL}s)`);
+    console.log(
+      `💾 [APIFY] Cached ${items.length} products (TTL: ${CACHE_TTL}s)`,
+    );
   } else {
     console.warn(`⚠️  [APIFY] No products found - not caching`);
   }
@@ -146,12 +146,18 @@ async function recheckPrices(productUrls) {
   // Don't cache price re-checks -- we always want fresh data
   const apify = getClient();
 
-  console.log("[Apify] Re-checking prices for", productUrls.length, "products...");
-
-  const run = await apify.actor(ACTOR_ID).call(
-    { source: "all", query: "", productUrls, maxResults: productUrls.length },
-    { build: "1.0.5", waitSecs: 300, memory: 512 }
+  console.log(
+    "[Apify] Re-checking prices for",
+    productUrls.length,
+    "products...",
   );
+
+  const run = await apify
+    .actor(ACTOR_ID)
+    .call(
+      { source: "all", query: "", productUrls, maxResults: productUrls.length },
+      { build: "1.0.5", waitSecs: 300, memory: 512 },
+    );
 
   if (run.status !== "SUCCEEDED") {
     console.error("[Apify] Price re-check run failed:", run.status);

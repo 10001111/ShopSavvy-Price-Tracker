@@ -1,17 +1,17 @@
 {
   "title": "ShopSavvy Price Tracker Input",
-  "description": "Scrape product data from Amazon and Mercado Libre Mexico including prices, images, and details.",
+  "description": "Scrape product data from Amazon Mexico including prices, images, and details.",
   "type": "object",
   "schemaVersion": 1,
   "properties": {
     "source": {
       "title": "Source",
-      "description": "Which e-commerce store to scrape: amazon, mercadolibre, or all.",
+      "description": "Which e-commerce store to scrape: amazon.",
       "type": "string",
       "editor": "select",
-      "default": "all",
-      "enum": ["amazon", "mercadolibre", "all"],
-      "enumTitles": ["Amazon", "Mercado Libre", "All Stores"]
+      "default": "amazon",
+      "enum": ["amazon"],
+      "enumTitles": ["Amazon"]
     },
     "query": {
       "title": "Search Query",

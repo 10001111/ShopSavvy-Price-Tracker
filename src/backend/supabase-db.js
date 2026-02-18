@@ -531,29 +531,31 @@ async function cacheScrapedProduct(product) {
     product_title: product.title,
     product_url: product.url || null,
     source: product.source,
-    price: parseFloat(product.price) || 0,  // FIX: Changed from current_price to price
+    price: parseFloat(product.price) || 0, // FIX: Changed from current_price to price
     thumbnail:
       product.thumbnail || (product.images && product.images[0]) || null,
     images: product.images || [],
     description: product.description || null,
     seller: product.seller || null,
     rating: product.rating || null,
-    available_quantity: product.available_quantity || null,  // ADD: Stock quantity
-    sold_quantity: product.sold_quantity || null,  // ADD: Sold count
+    available_quantity: product.available_quantity || null, // ADD: Stock quantity
+    sold_quantity: product.sold_quantity || null, // ADD: Sold count
     condition: product.condition || "new",
-    currency: product.currency || "USD",  // FIX: Changed default from MXN to USD
+    currency: product.currency || "USD", // FIX: Changed default from MXN to USD
     scraped_at: new Date().toISOString(),
-    last_updated: new Date().toISOString(),  // FIX: Changed from last_checked to last_updated
+    last_updated: new Date().toISOString(), // FIX: Changed from last_checked to last_updated
   };
 
-  console.log('📝 [CACHE] Data being inserted:', {
+  console.log("📝 [CACHE] Data being inserted:", {
     product_id: productData.product_id,
     price: productData.price,
     currency: productData.currency,
     rating: productData.rating,
     available_quantity: productData.available_quantity,
     sold_quantity: productData.sold_quantity,
-    images_count: Array.isArray(productData.images) ? productData.images.length : 0
+    images_count: Array.isArray(productData.images)
+      ? productData.images.length
+      : 0,
   });
 
   // Try to insert, on conflict update
@@ -568,21 +570,33 @@ async function cacheScrapedProduct(product) {
 
   if (error) {
     console.error(`\n❌ [CACHE] ========== DATABASE ERROR ==========`);
-    console.error(`❌ [CACHE] Failed to store product: ${productData.product_id}`);
+    console.error(
+      `❌ [CACHE] Failed to store product: ${productData.product_id}`,
+    );
     console.error(`❌ [CACHE] Error message: ${error.message}`);
     console.error(`❌ [CACHE] Error code: ${error.code}`);
     console.error(`❌ [CACHE] Error details:`, JSON.stringify(error, null, 2));
 
     // Check for common errors
-    if (error.code === 'PGRST204') {
-      console.error(`\n💡 [CACHE] SOLUTION: Column not found in database schema`);
-      console.error(`💡 [CACHE] This means the database table is missing required columns.`);
-      console.error(`💡 [CACHE] ACTION REQUIRED: Run migration 008 to add missing columns:`);
+    if (error.code === "PGRST204") {
+      console.error(
+        `\n💡 [CACHE] SOLUTION: Column not found in database schema`,
+      );
+      console.error(
+        `💡 [CACHE] This means the database table is missing required columns.`,
+      );
+      console.error(
+        `💡 [CACHE] ACTION REQUIRED: Run migration 008 to add missing columns:`,
+      );
       console.error(`💡 [CACHE]   1. Go to Supabase Dashboard > SQL Editor`);
-      console.error(`💡 [CACHE]   2. Run: migrations/008_add_product_quantity_fields.sql`);
+      console.error(
+        `💡 [CACHE]   2. Run: migrations/008_add_product_quantity_fields.sql`,
+      );
       console.error(`💡 [CACHE]   3. Restart the server`);
-    } else if (error.code === '23505') {
-      console.error(`\n💡 [CACHE] Duplicate key violation - product already exists`);
+    } else if (error.code === "23505") {
+      console.error(
+        `\n💡 [CACHE] Duplicate key violation - product already exists`,
+      );
     }
 
     console.error(`❌ [CACHE] ==========================================\n`);
@@ -592,7 +606,7 @@ async function cacheScrapedProduct(product) {
   console.log(`✅ [CACHE] Successfully stored product!`);
   console.log(`✅ [CACHE] Product ID: ${data.product_id}`);
   console.log(`✅ [CACHE] Price: ${data.currency} ${data.price}`);
-  console.log(`✅ [CACHE] Stock: ${data.available_quantity || 'unknown'}`);
+  console.log(`✅ [CACHE] Stock: ${data.available_quantity || "unknown"}`);
   console.log(`💾 [CACHE] ==========================================\n`);
   return data;
 }
@@ -964,7 +978,9 @@ async function getPriceStatistics(trackedProductId, period = "30d") {
  */
 async function getHighlightedDealsFromCache(limit = 12) {
   try {
-    console.log(`[Cache Deals] Fetching highlighted deals from product_cache (limit: ${limit})`);
+    console.log(
+      `[Cache Deals] Fetching highlighted deals from product_cache (limit: ${limit})`,
+    );
 
     // Get products from product_cache with good ratings, sorted by recency
     const { data: products, error } = await getSupabase()
@@ -989,7 +1005,7 @@ async function getHighlightedDealsFromCache(limit = 12) {
     console.log(`[Cache Deals] Found ${products.length} products in cache`);
 
     // Score products based on multiple factors
-    const scoredProducts = products.map(product => {
+    const scoredProducts = products.map((product) => {
       let score = 0;
 
       // Factor 1: Rating (0-50 points)
@@ -1035,7 +1051,9 @@ async function getHighlightedDealsFromCache(limit = 12) {
  */
 async function getPopularProductsFromCache({ limit = 8 } = {}) {
   try {
-    console.log(`[Cache Popular] Fetching popular products from product_cache (limit: ${limit})`);
+    console.log(
+      `[Cache Popular] Fetching popular products from product_cache (limit: ${limit})`,
+    );
 
     // Get products sorted by sold quantity and rating
     const { data: products, error } = await getSupabase()
@@ -1048,7 +1066,10 @@ async function getPopularProductsFromCache({ limit = 8 } = {}) {
       .limit(limit * 2);
 
     if (error) {
-      console.error("[Cache Popular] getPopularProductsFromCache error:", error);
+      console.error(
+        "[Cache Popular] getPopularProductsFromCache error:",
+        error,
+      );
       return [];
     }
 
@@ -1061,17 +1082,23 @@ async function getPopularProductsFromCache({ limit = 8 } = {}) {
 
     // Sort by combination of sold quantity and rating
     const sortedProducts = products
-      .map(p => ({
+      .map((p) => ({
         ...p,
-        _popularityScore: (p.sold_quantity || 0) * 0.7 + (parseFloat(p.rating) || 0) * 100
+        _popularityScore:
+          (p.sold_quantity || 0) * 0.7 + (parseFloat(p.rating) || 0) * 100,
       }))
       .sort((a, b) => b._popularityScore - a._popularityScore)
       .slice(0, limit);
 
-    console.log(`[Cache Popular] Returning ${sortedProducts.length} popular products`);
+    console.log(
+      `[Cache Popular] Returning ${sortedProducts.length} popular products`,
+    );
     return sortedProducts;
   } catch (err) {
-    console.error("[Cache Popular] getPopularProductsFromCache exception:", err);
+    console.error(
+      "[Cache Popular] getPopularProductsFromCache exception:",
+      err,
+    );
     return [];
   }
 }
@@ -1080,9 +1107,14 @@ async function getPopularProductsFromCache({ limit = 8 } = {}) {
  * Get recently added products from PRODUCT CACHE
  * @param {Object} options - Query options
  */
-async function getRecentProductsFromCache({ limit = 8, period = "recent" } = {}) {
+async function getRecentProductsFromCache({
+  limit = 8,
+  period = "recent",
+} = {}) {
   try {
-    console.log(`[Cache Recent] Fetching recent products from product_cache (limit: ${limit})`);
+    console.log(
+      `[Cache Recent] Fetching recent products from product_cache (limit: ${limit})`,
+    );
 
     // Calculate time range
     let hoursBack = 48; // default: 2 days
@@ -1108,7 +1140,9 @@ async function getRecentProductsFromCache({ limit = 8, period = "recent" } = {})
       return [];
     }
 
-    console.log(`[Cache Recent] Found ${products?.length || 0} recent products`);
+    console.log(
+      `[Cache Recent] Found ${products?.length || 0} recent products`,
+    );
     return products || [];
   } catch (err) {
     console.error("[Cache Recent] getRecentProductsFromCache exception:", err);
@@ -1129,7 +1163,7 @@ async function getProductsByCategory(category, options = {}) {
       limit = 100,
       minPrice = 0,
       maxPrice = 999999,
-      source = "all"
+      source = "all",
     } = options;
 
     console.log(`[Category Filter] Getting products for category: ${category}`);
@@ -1157,7 +1191,9 @@ async function getProductsByCategory(category, options = {}) {
       return [];
     }
 
-    console.log(`[Category Filter] Found ${products?.length || 0} products in "${category}"`);
+    console.log(
+      `[Category Filter] Found ${products?.length || 0} products in "${category}"`,
+    );
     return products || [];
   } catch (err) {
     console.error("[Category Filter] Exception:", err);
@@ -1972,7 +2008,7 @@ function createDbInterface() {
  * Called every time the home-page search form is submitted with a non-empty query.
  * @param {number} userId
  * @param {string} query
- * @param {string} [source] - 'amazon' | 'mercadolibre' | 'all'
+ * @param {string} [source] - 'amazon'
  * @param {number} [resultCount]
  */
 async function recordSearch(userId, query, source = "all", resultCount = 0) {

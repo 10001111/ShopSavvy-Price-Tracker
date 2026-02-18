@@ -17,7 +17,10 @@ const supabaseDb = require("./supabase-db");
 const { isRedisConfigured } = require("./config/redis");
 const { getQueueStatus, getRecentJobs } = require("./queue");
 const { scrapeProducts } = require("./apify");
-const { extractProductSpecs, generateEnhancedTitle } = require("./product-spec-extractor");
+const {
+  extractProductSpecs,
+  generateEnhancedTitle,
+} = require("./product-spec-extractor");
 
 // Use Supabase for cloud storage, SQLite as fallback
 const USE_SUPABASE = Boolean(
@@ -1033,7 +1036,6 @@ const translations = {
     used: "Used",
     available: "available",
     outOfStock: "Out of stock",
-    viewOnML: "View on Mercado Libre",
     trackPrice: "Track Price",
     trackPriceAlert: "Coming soon: Add to price tracking",
 
@@ -1065,11 +1067,8 @@ const translations = {
 
     // Source selector
     source: "Source",
-    sourceAll: "All Stores",
-    sourceMercadoLibre: "Mercado Libre",
     sourceAmazon: "Amazon",
     fromAmazon: "Amazon",
-    fromMercadoLibre: "Mercado Libre",
   },
   es: {
     // Header
@@ -1107,7 +1106,6 @@ const translations = {
     used: "Usado",
     available: "disponibles",
     outOfStock: "Sin stock",
-    viewOnML: "Ver en Mercado Libre",
     trackPrice: "Rastrear Precio",
     trackPriceAlert: "Próximamente: Agregar a seguimiento de precios",
 
@@ -1139,11 +1137,8 @@ const translations = {
 
     // Source selector
     source: "Fuente",
-    sourceAll: "Todas las Tiendas",
-    sourceMercadoLibre: "Mercado Libre",
     sourceAmazon: "Amazon",
     fromAmazon: "Amazon",
-    fromMercadoLibre: "Mercado Libre",
   },
 };
 
@@ -1317,14 +1312,14 @@ function renderPage(
     </header>
     <nav class="category-nav">
       <div class="category-tabs">
-        <a href="/?category=electronics" class="category-tab ${currentCategory === 'electronics' ? 'active' : ''}">${lang === "es" ? "Electrónica" : "Electronics"}</a>
-        <a href="/?category=phones" class="category-tab ${currentCategory === 'phones' ? 'active' : ''}">${lang === "es" ? "Celulares" : "Phones"}</a>
-        <a href="/?category=computers" class="category-tab ${currentCategory === 'computers' ? 'active' : ''}">${lang === "es" ? "Computadoras" : "Computers"}</a>
-        <a href="/?category=clothing" class="category-tab ${currentCategory === 'clothing' ? 'active' : ''}">${lang === "es" ? "Ropa" : "Clothing"}</a>
-        <a href="/?category=home-kitchen" class="category-tab ${currentCategory === 'home-kitchen' ? 'active' : ''}">${lang === "es" ? "Hogar" : "Home"}</a>
-        <a href="/?category=sports-outdoors" class="category-tab ${currentCategory === 'sports-outdoors' ? 'active' : ''}">${lang === "es" ? "Deportes" : "Sports"}</a>
-        <a href="/?category=toys" class="category-tab ${currentCategory === 'toys' ? 'active' : ''}">${lang === "es" ? "Juguetes" : "Toys"}</a>
-        <a href="/?category=beauty" class="category-tab ${currentCategory === 'beauty' ? 'active' : ''}">${lang === "es" ? "Belleza" : "Beauty"}</a>
+        <a href="/?category=electronics" class="category-tab ${currentCategory === "electronics" ? "active" : ""}">${lang === "es" ? "Electrónica" : "Electronics"}</a>
+        <a href="/?category=phones" class="category-tab ${currentCategory === "phones" ? "active" : ""}">${lang === "es" ? "Celulares" : "Phones"}</a>
+        <a href="/?category=computers" class="category-tab ${currentCategory === "computers" ? "active" : ""}">${lang === "es" ? "Computadoras" : "Computers"}</a>
+        <a href="/?category=clothing" class="category-tab ${currentCategory === "clothing" ? "active" : ""}">${lang === "es" ? "Ropa" : "Clothing"}</a>
+        <a href="/?category=home-kitchen" class="category-tab ${currentCategory === "home-kitchen" ? "active" : ""}">${lang === "es" ? "Hogar" : "Home"}</a>
+        <a href="/?category=sports-outdoors" class="category-tab ${currentCategory === "sports-outdoors" ? "active" : ""}">${lang === "es" ? "Deportes" : "Sports"}</a>
+        <a href="/?category=toys" class="category-tab ${currentCategory === "toys" ? "active" : ""}">${lang === "es" ? "Juguetes" : "Toys"}</a>
+        <a href="/?category=beauty" class="category-tab ${currentCategory === "beauty" ? "active" : ""}">${lang === "es" ? "Belleza" : "Beauty"}</a>
       </div>
     </nav>
     <main class="main-content">
@@ -1538,7 +1533,7 @@ function renderPage(
       <div class="footer-container">
         <div class="footer-section">
           <h3 class="footer-title">OfertaRadar</h3>
-          <p class="footer-description">${lang === "es" ? "Tu plataforma de seguimiento de precios inteligente. Encuentra las mejores ofertas en Amazon y Mercado Libre." : "Your intelligent price tracking platform. Find the best deals on Amazon and Mercado Libre."}</p>
+          <p class="footer-description">${lang === "es" ? "Tu plataforma de seguimiento de precios inteligente. Encuentra las mejores ofertas en Amazon." : "Your intelligent price tracking platform. Find the best deals on Amazon."}</p>
           <div class="footer-social">
             <a href="#" class="social-link" aria-label="Facebook"><svg viewBox="0 0 24 24" fill="currentColor"><path d="M24 12.073c0-6.627-5.373-12-12-12s-12 5.373-12 12c0 5.99 4.388 10.954 10.125 11.854v-8.385H7.078v-3.47h3.047V9.43c0-3.007 1.792-4.669 4.533-4.669 1.312 0 2.686.235 2.686.235v2.953H15.83c-1.491 0-1.956.925-1.956 1.874v2.25h3.328l-.532 3.47h-2.796v8.385C19.612 23.027 24 18.062 24 12.073z"/></svg></a>
             <a href="#" class="social-link" aria-label="Twitter"><svg viewBox="0 0 24 24" fill="currentColor"><path d="M23.953 4.57a10 10 0 01-2.825.775 4.958 4.958 0 002.163-2.723c-.951.555-2.005.959-3.127 1.184a4.92 4.92 0 00-8.384 4.482C7.69 8.095 4.067 6.13 1.64 3.162a4.822 4.822 0 00-.666 2.475c0 1.71.87 3.213 2.188 4.096a4.904 4.904 0 01-2.228-.616v.06a4.923 4.923 0 003.946 4.827 4.996 4.996 0 01-2.212.085 4.936 4.936 0 004.604 3.417 9.867 9.867 0 01-6.102 2.105c-.39 0-.779-.023-1.17-.067a13.995 13.995 0 007.557 2.209c9.053 0 13.998-7.496 13.998-13.985 0-.21 0-.42-.015-.63A9.935 9.935 0 0024 4.59z"/></svg></a>
@@ -1582,7 +1577,7 @@ function renderPage(
           © ${new Date().getFullYear()} OfertaRadar. ${lang === "es" ? "Todos los derechos reservados." : "All rights reserved."}
         </p>
         <p class="footer-disclaimer">
-          ${lang === "es" ? "OfertaRadar es una plataforma independiente de seguimiento de precios. No estamos afiliados con Amazon o Mercado Libre. Los precios y la disponibilidad pueden variar." : "OfertaRadar is an independent price tracking platform. We are not affiliated with Amazon or Mercado Libre. Prices and availability may vary."}
+          ${lang === "es" ? "OfertaRadar es una plataforma independiente de seguimiento de precios. No estamos afiliados con Amazon. Los precios y la disponibilidad pueden variar." : "OfertaRadar is an independent price tracking platform. We are not affiliated with Amazon. Prices and availability may vary."}
         </p>
       </div>
     </footer>
@@ -1798,56 +1793,123 @@ function detectCategory(productTitle) {
   // Exclusion keywords: If product contains these, it CANNOT be in that category
   const exclusionRules = {
     phones: [
-      "case", "cover", "holder", "mount", "charger", "cable", "screen protector",
-      "funda", "cargador", "protector", "soporte"
+      "case",
+      "cover",
+      "holder",
+      "mount",
+      "charger",
+      "cable",
+      "screen protector",
+      "funda",
+      "cargador",
+      "protector",
+      "soporte",
     ],
     computers: [
-      "toy", "lego", "juguete", "game piece", "pieza", "case", "bag", "mochila",
-      "sticker", "pegatina", "poster", "mousepad", "alfombrilla"
+      "toy",
+      "lego",
+      "juguete",
+      "game piece",
+      "pieza",
+      "case",
+      "bag",
+      "mochila",
+      "sticker",
+      "pegatina",
+      "poster",
+      "mousepad",
+      "alfombrilla",
     ],
     electronics: [
-      "toy", "lego", "juguete", "book", "libro", "poster", "sticker", "clothing",
-      "shirt", "camisa", "toy version", "replica juguete"
+      "toy",
+      "lego",
+      "juguete",
+      "book",
+      "libro",
+      "poster",
+      "sticker",
+      "clothing",
+      "shirt",
+      "camisa",
+      "toy version",
+      "replica juguete",
     ],
-    beauty: [
-      "toy", "lego", "juguete", "food", "comida", "kitchen appliance"
-    ],
-    toys: [],  // Toys can contain any keywords
+    beauty: ["toy", "lego", "juguete", "food", "comida", "kitchen appliance"],
+    toys: [], // Toys can contain any keywords
     "sports-outdoors": [
-      "toy", "lego", "juguete", "video game", "videojuego", "book", "libro"
+      "toy",
+      "lego",
+      "juguete",
+      "video game",
+      "videojuego",
+      "book",
+      "libro",
     ],
-    clothing: [
-      "doll clothes", "ropa muñeca", "toy", "juguete", "lego"
-    ],
+    clothing: ["doll clothes", "ropa muñeca", "toy", "juguete", "lego"],
     "home-kitchen": [
-      "toy", "lego", "juguete", "miniature", "miniatura", "doll house", "casa muñecas"
-    ]
+      "toy",
+      "lego",
+      "juguete",
+      "miniature",
+      "miniatura",
+      "doll house",
+      "casa muñecas",
+    ],
   };
 
   // Strong indicators: If ANY of these appear, force category
   const strongIndicators = {
     toys: [
-      "lego", "playmobil", "hot wheels", "barbie", "funko pop", "nerf",
-      "juguete", "muñeca", "muñeco", "juego de mesa", "board game", "puzzle"
+      "lego",
+      "playmobil",
+      "hot wheels",
+      "barbie",
+      "funko pop",
+      "nerf",
+      "juguete",
+      "muñeca",
+      "muñeco",
+      "juego de mesa",
+      "board game",
+      "puzzle",
     ],
     phones: [
-      "iphone 1", "samsung galaxy s", "google pixel", "motorola edge", "xiaomi redmi note"
+      "iphone 1",
+      "samsung galaxy s",
+      "google pixel",
+      "motorola edge",
+      "xiaomi redmi note",
     ],
     computers: [
-      "macbook", "laptop ", "desktop pc", "gaming laptop", "notebook computer",
-      "computadora portátil", "pc gamer"
+      "macbook",
+      "laptop ",
+      "desktop pc",
+      "gaming laptop",
+      "notebook computer",
+      "computadora portátil",
+      "pc gamer",
     ],
     beauty: [
-      "lipstick", "mascara", "eyeshadow", "foundation", "shampoo", "conditioner",
-      "labial", "rímel", "champú", "perfume"
-    ]
+      "lipstick",
+      "mascara",
+      "eyeshadow",
+      "foundation",
+      "shampoo",
+      "conditioner",
+      "labial",
+      "rímel",
+      "champú",
+      "perfume",
+    ],
   };
 
   // Check strong indicators first (highest priority)
   for (const [catId, indicators] of Object.entries(strongIndicators)) {
     for (const indicator of indicators) {
       if (lowerTitle.includes(indicator.toLowerCase())) {
-        console.log(`[Category] Strong indicator "${indicator}" → ${catId} for "${productTitle.substring(0, 50)}"`);
+        console.log(
+          `[Category] Strong indicator "${indicator}" → ${catId} for "${productTitle.substring(0, 50)}"`,
+        );
         return catId;
       }
     }
@@ -1863,7 +1925,7 @@ function detectCategory(productTitle) {
     "toys",
     "sports-outdoors",
     "clothing",
-    "home-kitchen"
+    "home-kitchen",
   ];
 
   for (const catId of categoryPriority) {
@@ -1879,7 +1941,9 @@ function detectCategory(productTitle) {
 
     for (const exclusion of exclusions) {
       if (lowerTitle.includes(exclusion.toLowerCase())) {
-        console.log(`[Category] Excluded from ${catId}: contains "${exclusion}" in "${productTitle.substring(0, 50)}"`);
+        console.log(
+          `[Category] Excluded from ${catId}: contains "${exclusion}" in "${productTitle.substring(0, 50)}"`,
+        );
         isExcluded = true;
         break;
       }
@@ -1902,10 +1966,13 @@ function detectCategory(productTitle) {
 
   // Return category with highest score
   if (Object.keys(categoryScores).length > 0) {
-    const bestMatch = Object.entries(categoryScores)
-      .sort((a, b) => b[1].score - a[1].score)[0];
+    const bestMatch = Object.entries(categoryScores).sort(
+      (a, b) => b[1].score - a[1].score,
+    )[0];
 
-    console.log(`[Category] Best match: ${bestMatch[0]} (score: ${bestMatch[1].score}) for "${productTitle.substring(0, 50)}"`);
+    console.log(
+      `[Category] Best match: ${bestMatch[0]} (score: ${bestMatch[1].score}) for "${productTitle.substring(0, 50)}"`,
+    );
     return bestMatch[0];
   }
 
@@ -1992,10 +2059,9 @@ function parseNumber(value, fallback) {
 }
 
 function getMockProducts() {
-  // Mock products styled for Mercado Libre Mexico
   return [
     {
-      id: "MLM-001",
+      id: "AMZN-B0CHX2F5QT",
       title: "iPhone 15 Pro Max 256GB - Titanio Natural",
       description:
         "El iPhone más avanzado con chip A17 Pro, cámara de 48MP y Dynamic Island.",
@@ -2003,14 +2069,15 @@ function getMockProducts() {
       currency_id: "MXN",
       category: "electronics",
       thumbnail:
-        "https://http2.mlstatic.com/D_NQ_NP_2X_600741-MLA54876949912_042023-F.webp",
-      permalink: "https://www.mercadolibre.com.mx/",
+        "https://m.media-amazon.com/images/I/61bK6PMOC3L._AC_SL1500_.jpg",
+      permalink: "https://www.amazon.com.mx/dp/B0CHX2F5QT",
+      source: "amazon",
       condition: "new",
       available_quantity: 50,
-      seller: { nickname: "APPLE_STORE_MX" },
+      seller: { nickname: "Amazon.com.mx" },
     },
     {
-      id: "MLM-002",
+      id: "AMZN-B0C2XVRD4V",
       title: "Samsung Galaxy S24 Ultra 256GB Negro",
       description:
         "Smartphone con Galaxy AI, cámara de 200MP y S Pen incluido.",
@@ -2018,14 +2085,15 @@ function getMockProducts() {
       currency_id: "MXN",
       category: "electronics",
       thumbnail:
-        "https://http2.mlstatic.com/D_NQ_NP_2X_896939-MLM72661707718_112023-F.webp",
-      permalink: "https://www.mercadolibre.com.mx/",
+        "https://m.media-amazon.com/images/I/71NVpFKXBNL._AC_SL1500_.jpg",
+      permalink: "https://www.amazon.com.mx/dp/B0C2XVRD4V",
+      source: "amazon",
       condition: "new",
       available_quantity: 35,
-      seller: { nickname: "SAMSUNG_MX" },
+      seller: { nickname: "Amazon.com.mx" },
     },
     {
-      id: "MLM-003",
+      id: "AMZN-B0CM5JN8MB",
       title: 'MacBook Air M3 13" 256GB - Medianoche',
       description:
         "Laptop ultraligera con chip M3, 18 horas de batería y pantalla Liquid Retina.",
@@ -2033,14 +2101,15 @@ function getMockProducts() {
       currency_id: "MXN",
       category: "electronics",
       thumbnail:
-        "https://http2.mlstatic.com/D_NQ_NP_2X_854712-MLA74601558556_022024-F.webp",
-      permalink: "https://www.mercadolibre.com.mx/",
+        "https://m.media-amazon.com/images/I/71f5Eu5lJSL._AC_SL1500_.jpg",
+      permalink: "https://www.amazon.com.mx/dp/B0CM5JN8MB",
+      source: "amazon",
       condition: "new",
       available_quantity: 20,
-      seller: { nickname: "APPLE_STORE_MX" },
+      seller: { nickname: "Amazon.com.mx" },
     },
     {
-      id: "MLM-004",
+      id: "AMZN-B0CL61F39H",
       title: "PlayStation 5 Slim 1TB Digital Edition",
       description:
         "Consola de nueva generación con SSD ultrarrápido y DualSense.",
@@ -2048,14 +2117,15 @@ function getMockProducts() {
       currency_id: "MXN",
       category: "toys",
       thumbnail:
-        "https://http2.mlstatic.com/D_NQ_NP_2X_691344-MLM74174576447_012024-F.webp",
-      permalink: "https://www.mercadolibre.com.mx/",
+        "https://m.media-amazon.com/images/I/61QFNJ-yPjL._AC_SL1500_.jpg",
+      permalink: "https://www.amazon.com.mx/dp/B0CL61F39H",
+      source: "amazon",
       condition: "new",
       available_quantity: 15,
-      seller: { nickname: "SONY_MX" },
+      seller: { nickname: "Amazon.com.mx" },
     },
     {
-      id: "MLM-005",
+      id: "AMZN-B09XS7JWHH",
       title: "Audífonos Sony WH-1000XM5 Bluetooth Negro",
       description:
         "Los mejores audífonos con cancelación de ruido y 30 horas de batería.",
@@ -2063,14 +2133,15 @@ function getMockProducts() {
       currency_id: "MXN",
       category: "electronics",
       thumbnail:
-        "https://http2.mlstatic.com/D_NQ_NP_2X_673653-MLA51543508498_092022-F.webp",
-      permalink: "https://www.mercadolibre.com.mx/",
+        "https://m.media-amazon.com/images/I/61+btxzpfDL._AC_SL1500_.jpg",
+      permalink: "https://www.amazon.com.mx/dp/B09XS7JWHH",
+      source: "amazon",
       condition: "new",
       available_quantity: 45,
-      seller: { nickname: "SONY_MX" },
+      seller: { nickname: "Amazon.com.mx" },
     },
     {
-      id: "MLM-006",
+      id: "AMZN-B0D3J5VXRY",
       title: 'iPad Pro M4 11" 256GB WiFi Space Black',
       description:
         "La tablet más potente con chip M4, pantalla Ultra Retina XDR y Apple Pencil Pro.",
@@ -2078,14 +2149,15 @@ function getMockProducts() {
       currency_id: "MXN",
       category: "electronics",
       thumbnail:
-        "https://http2.mlstatic.com/D_NQ_NP_2X_929429-MLA75879827421_042024-F.webp",
-      permalink: "https://www.mercadolibre.com.mx/",
+        "https://m.media-amazon.com/images/I/71RnYM0LSML._AC_SL1500_.jpg",
+      permalink: "https://www.amazon.com.mx/dp/B0D3J5VXRY",
+      source: "amazon",
       condition: "new",
       available_quantity: 25,
-      seller: { nickname: "APPLE_STORE_MX" },
+      seller: { nickname: "Amazon.com.mx" },
     },
     {
-      id: "MLM-007",
+      id: "AMZN-B09GCZJVZ7",
       title: "Nintendo Switch OLED Edición Zelda",
       description:
         "Consola portátil con pantalla OLED de 7 pulgadas, edición especial.",
@@ -2093,14 +2165,15 @@ function getMockProducts() {
       currency_id: "MXN",
       category: "toys",
       thumbnail:
-        "https://http2.mlstatic.com/D_NQ_NP_2X_943597-MLM73034589839_112023-F.webp",
-      permalink: "https://www.mercadolibre.com.mx/",
+        "https://m.media-amazon.com/images/I/71JiyBFaDRL._AC_SL1500_.jpg",
+      permalink: "https://www.amazon.com.mx/dp/B09GCZJVZ7",
+      source: "amazon",
       condition: "new",
       available_quantity: 30,
-      seller: { nickname: "NINTENDO_MX" },
+      seller: { nickname: "Amazon.com.mx" },
     },
     {
-      id: "MLM-008",
+      id: "AMZN-B0BDHB9Y8H",
       title: "AirPods Pro 2 con USB-C",
       description:
         "Audífonos con cancelación activa de ruido, audio espacial y estuche MagSafe.",
@@ -2108,14 +2181,15 @@ function getMockProducts() {
       currency_id: "MXN",
       category: "electronics",
       thumbnail:
-        "https://http2.mlstatic.com/D_NQ_NP_2X_756250-MLA73970988653_012024-F.webp",
-      permalink: "https://www.mercadolibre.com.mx/",
+        "https://m.media-amazon.com/images/I/61SUj2aKoEL._AC_SL1500_.jpg",
+      permalink: "https://www.amazon.com.mx/dp/B0BDHB9Y8H",
+      source: "amazon",
       condition: "new",
       available_quantity: 60,
-      seller: { nickname: "APPLE_STORE_MX" },
+      seller: { nickname: "Amazon.com.mx" },
     },
     {
-      id: "MLM-009",
+      id: "AMZN-B0C6FDHNN6",
       title: 'Smart TV Samsung 55" Crystal UHD 4K',
       description:
         "Televisor inteligente con Tizen, Gaming Hub y diseño AirSlim.",
@@ -2123,28 +2197,30 @@ function getMockProducts() {
       currency_id: "MXN",
       category: "electronics",
       thumbnail:
-        "https://http2.mlstatic.com/D_NQ_NP_2X_600741-MLA54876949912_042023-F.webp",
-      permalink: "https://www.mercadolibre.com.mx/",
+        "https://m.media-amazon.com/images/I/71pnHk-RJOL._AC_SL1500_.jpg",
+      permalink: "https://www.amazon.com.mx/dp/B0C6FDHNN6",
+      source: "amazon",
       condition: "new",
       available_quantity: 18,
-      seller: { nickname: "SAMSUNG_MX" },
+      seller: { nickname: "Amazon.com.mx" },
     },
     {
-      id: "MLM-010",
+      id: "AMZN-B09VG326DQ",
       title: "Xbox Series X 1TB Negro",
       description: "La consola Xbox más rápida con 4K a 120fps y Quick Resume.",
       price: 12999,
       currency_id: "MXN",
       category: "toys",
       thumbnail:
-        "https://http2.mlstatic.com/D_NQ_NP_2X_709115-MLA45629061694_042021-F.webp",
-      permalink: "https://www.mercadolibre.com.mx/",
+        "https://m.media-amazon.com/images/I/61SugLDPHoL._AC_SL1500_.jpg",
+      permalink: "https://www.amazon.com.mx/dp/B09VG326DQ",
+      source: "amazon",
       condition: "new",
       available_quantity: 22,
-      seller: { nickname: "MICROSOFT_MX" },
+      seller: { nickname: "Amazon.com.mx" },
     },
     {
-      id: "MLM-011",
+      id: "AMZN-B09RFHTH7Z",
       title: "Aspiradora Dyson V15 Detect Absolute",
       description:
         "Aspiradora inalámbrica con láser para detectar polvo microscópico.",
@@ -2152,14 +2228,15 @@ function getMockProducts() {
       currency_id: "MXN",
       category: "home-kitchen",
       thumbnail:
-        "https://http2.mlstatic.com/D_NQ_NP_2X_672464-MLA50401987399_062022-F.webp",
-      permalink: "https://www.mercadolibre.com.mx/",
+        "https://m.media-amazon.com/images/I/71VmFTimSHL._AC_SL1500_.jpg",
+      permalink: "https://www.amazon.com.mx/dp/B09RFHTH7Z",
+      source: "amazon",
       condition: "new",
       available_quantity: 12,
-      seller: { nickname: "DYSON_MX" },
+      seller: { nickname: "Amazon.com.mx" },
     },
     {
-      id: "MLM-012",
+      id: "AMZN-B0CHX1W1QK",
       title: "Apple Watch Series 9 GPS 45mm Aluminio",
       description:
         "Reloj inteligente con chip S9, doble toque y pantalla siempre activa.",
@@ -2167,11 +2244,12 @@ function getMockProducts() {
       currency_id: "MXN",
       category: "electronics",
       thumbnail:
-        "https://http2.mlstatic.com/D_NQ_NP_2X_667508-MLA73458044571_122023-F.webp",
-      permalink: "https://www.mercadolibre.com.mx/",
+        "https://m.media-amazon.com/images/I/71CatFHkSNL._AC_SL1500_.jpg",
+      permalink: "https://www.amazon.com.mx/dp/B0CHX1W1QK",
+      source: "amazon",
       condition: "new",
       available_quantity: 40,
-      seller: { nickname: "APPLE_STORE_MX" },
+      seller: { nickname: "Amazon.com.mx" },
     },
   ];
 }
@@ -2185,7 +2263,7 @@ function getMockProductById(id) {
  */
 async function fetchAllProducts({
   query,
-  category,  // NEW: Filter by category field in database
+  category, // NEW: Filter by category field in database
   minPrice,
   maxPrice,
   sort,
@@ -2424,15 +2502,13 @@ async function fetchAllProducts({
 }
 
 /**
- * Get product by ID from MULTIPLE sources (Amazon + Mercado Libre)
- * Returns both Amazon and ML versions if available
+ * Get product by ID from Amazon
  */
 async function fetchProductById(id) {
-  console.log(`[PRODUCT] 🔍 Fetching product by ID: "${id}" from ALL sources`);
+  console.log(`[PRODUCT] 🔍 Fetching product by ID: "${id}"`);
 
   const sources = {
     amazon: null,
-    mercadolibre: null
   };
 
   // Helper function to transform database row to product object
@@ -2443,7 +2519,8 @@ async function fetchProductById(id) {
     let images = [];
     try {
       if (row.images) {
-        images = typeof row.images === 'string' ? JSON.parse(row.images) : row.images;
+        images =
+          typeof row.images === "string" ? JSON.parse(row.images) : row.images;
       }
     } catch (e) {
       images = row.thumbnail ? [row.thumbnail] : [];
@@ -2462,10 +2539,14 @@ async function fetchProductById(id) {
       available_quantity: parseInt(row.available_quantity) || 0,
       sold_quantity: parseInt(row.sold_quantity) || 0,
       permalink: row.product_url || row.permalink || null,
-      thumbnail: row.thumbnail || (images[0] || null),
+      thumbnail: row.thumbnail || images[0] || null,
       images: images,
       description: row.description || null,
-      seller: row.seller ? (typeof row.seller === 'string' ? { nickname: row.seller } : row.seller) : null,
+      seller: row.seller
+        ? typeof row.seller === "string"
+          ? { nickname: row.seller }
+          : row.seller
+        : null,
       source: row.source,
       rating: parseFloat(row.rating) || null,
       review_count: parseInt(row.review_count) || 0,
@@ -2478,7 +2559,8 @@ async function fetchProductById(id) {
       // Search product_cache for ALL versions of this product (by title similarity)
       console.log(`[PRODUCT] Searching product_cache for all sources...`);
 
-      const { data: allProducts, error } = await supabaseDb.getSupabase()
+      const { data: allProducts, error } = await supabaseDb
+        .getSupabase()
         .from("product_cache")
         .select("*")
         .eq("product_id", id);
@@ -2486,98 +2568,69 @@ async function fetchProductById(id) {
       if (error) {
         console.error("[PRODUCT] Error fetching from cache:", error);
       } else if (allProducts && allProducts.length > 0) {
-        // Group by source
-        allProducts.forEach(row => {
+        allProducts.forEach((row) => {
           const product = transformProduct(row);
-          if (product) {
-            if (product.source === 'amazon') {
-              sources.amazon = product;
-            } else if (product.source === 'mercadolibre') {
-              sources.mercadolibre = product;
-            }
+          if (product && product.source === "amazon") {
+            sources.amazon = product;
           }
         });
       }
 
       // If not found by exact ID, try searching tracked_products
-      if (!sources.amazon && !sources.mercadolibre) {
+      if (!sources.amazon) {
         console.log(`[PRODUCT] Checking tracked_products table...`);
         const row = await supabaseDb.getTrackedProductById(id);
         if (row) {
           const product = transformProduct(row);
           if (product) {
-            if (product.source === 'amazon') {
-              sources.amazon = product;
-            } else {
-              sources.mercadolibre = product;
-            }
+            sources.amazon = product;
           }
         }
       }
 
       // If still not found by exact ID, try fuzzy search by title
-      if (!sources.amazon && !sources.mercadolibre) {
+      if (!sources.amazon) {
         console.log(`[PRODUCT] Trying fuzzy search in product_cache...`);
-        const { data: fuzzyResults } = await supabaseDb.getSupabase()
+        const { data: fuzzyResults } = await supabaseDb
+          .getSupabase()
           .from("product_cache")
           .select("*")
-          .ilike("product_title", `%${id.replace(/[^a-zA-Z0-9]/g, '%')}%`)
+          .ilike("product_title", `%${id.replace(/[^a-zA-Z0-9]/g, "%")}%`)
           .limit(5);
 
         if (fuzzyResults && fuzzyResults.length > 0) {
-          fuzzyResults.forEach(row => {
+          fuzzyResults.forEach((row) => {
             const product = transformProduct(row);
-            if (product) {
-              if (!sources.amazon && product.source === 'amazon') {
-                sources.amazon = product;
-              }
-              if (!sources.mercadolibre && product.source === 'mercadolibre') {
-                sources.mercadolibre = product;
-              }
+            if (product && !sources.amazon) {
+              sources.amazon = product;
             }
           });
         }
       }
-
     } catch (e) {
-      console.error("[PRODUCT] Error in multi-source lookup:", e.message);
+      console.error("[PRODUCT] Error in product lookup:", e.message);
     }
   }
 
-  // Check if we found any products
+  // Check if we found the product
   const hasAmazon = sources.amazon !== null;
-  const hasMercadoLibre = sources.mercadolibre !== null;
 
-  console.log(`[PRODUCT] Results: Amazon=${hasAmazon}, MercadoLibre=${hasMercadoLibre}`);
+  console.log(`[PRODUCT] Results: Amazon=${hasAmazon}`);
 
-  if (!hasAmazon && !hasMercadoLibre) {
-    console.log(`[PRODUCT] ⚠️ Product "${id}" not found in any source`);
+  if (!hasAmazon) {
+    console.log(`[PRODUCT] ⚠️ Product "${id}" not found`);
     return {
       product: null,
       sources: {},
-      error: "This product has not been scraped yet. Try searching for it first.",
+      error:
+        "This product has not been scraped yet. Try searching for it first.",
     };
   }
 
-  // Return the primary product (prefer one with stock, or Amazon if both available)
-  let primaryProduct = null;
-  if (hasAmazon && hasMercadoLibre) {
-    // Both available - prefer one with stock
-    if (sources.amazon.available_quantity > 0) {
-      primaryProduct = sources.amazon;
-    } else if (sources.mercadolibre.available_quantity > 0) {
-      primaryProduct = sources.mercadolibre;
-    } else {
-      primaryProduct = sources.amazon; // Default to Amazon if both out of stock
-    }
-  } else {
-    primaryProduct = sources.amazon || sources.mercadolibre;
-  }
-
   return {
-    product: primaryProduct,
-    sources: sources, // Include both sources for dropdown
-    hasMultipleSources: hasAmazon && hasMercadoLibre,
+    product: sources.amazon,
+    sources: sources,
+    hasMultipleSources: false,
     notice: "",
     error: "",
     isRealData: true,
@@ -2724,23 +2777,25 @@ async function start() {
     // This triggers Apify scraping to populate the database
     // ============================================
     const CATEGORY_TO_SEARCH = {
-      "electronics": "electronics",
-      "phones": "smartphone",
-      "computers": "laptop",
-      "tvs": "television",
-      "appliances": "electrodomesticos",
-      "toys": "toys",
-      "clothing": "ropa",
+      electronics: "electronics",
+      phones: "smartphone",
+      computers: "laptop",
+      tvs: "television",
+      appliances: "electrodomesticos",
+      toys: "toys",
+      clothing: "ropa",
       "sports-outdoors": "deportes",
       "home-kitchen": "hogar cocina",
-      "beauty": "belleza"
+      beauty: "belleza",
     };
 
     // If user clicked a category link, convert to search query
     // This ensures the database gets populated via Apify scraping
     if (category && !query) {
       query = CATEGORY_TO_SEARCH[category] || category;
-      console.log(`[Category] User clicked "${category}" → triggering search: "${query}"`);
+      console.log(
+        `[Category] User clicked "${category}" → triggering search: "${query}"`,
+      );
       // Now proceeds with normal search flow (checks DB, scrapes if needed)
     }
 
@@ -2756,7 +2811,7 @@ async function start() {
     if (query || category) {
       results = await fetchAllProducts({
         query,
-        category,  // Pass category for database filtering
+        category, // Pass category for database filtering
         minPrice,
         maxPrice,
         sort,
@@ -2791,95 +2846,79 @@ async function start() {
           sort: "price_asc",
           page: 1,
           pageSize: 12,
-          source: "mercadolibre",
+          source: "amazon",
           forceSynchronous: false, // FIX: Don't wait for scraping, show cached products immediately
         });
 
-        console.log(`✅ [HOME] Loaded ${results.products.length} featured products from cache`);
+        console.log(
+          `✅ [HOME] Loaded ${results.products.length} featured products from cache`,
+        );
       } catch (e) {
         console.log("[Home] Error fetching featured products:", e.message);
       }
     }
 
     // Helper to get source badge HTML
-    const getSourceBadge = (item) => {
-      // Check if product is available on multiple sources
-      const hasAmazon = item.sources?.amazon !== null && item.sources?.amazon !== undefined;
-      const hasMercadoLibre = item.sources?.mercadolibre !== null && item.sources?.mercadolibre !== undefined;
-
-      // If sources data not available, fall back to item.source
-      if (!item.sources) {
-        const src = item.source || "mercadolibre";
-        if (src === "amazon") {
-          return `<span class="source-badge amazon">Amazon</span>`;
-        }
-        return `<span class="source-badge ml">Mercado Libre</span>`;
-      }
-
-      // Show dual badges if available on both platforms
-      if (hasAmazon && hasMercadoLibre) {
-        return `
-          <div class="source-badges-multi">
-            <span class="source-badge amazon">Amazon</span>
-            <span class="source-badge ml">ML</span>
-          </div>
-        `;
-      } else if (hasAmazon) {
-        return `<span class="source-badge amazon">Amazon</span>`;
-      } else if (hasMercadoLibre) {
-        return `<span class="source-badge ml">Mercado Libre</span>`;
-      }
-
-      // Default fallback
-      return `<span class="source-badge ml">Mercado Libre</span>`;
+    const getSourceBadge = () => {
+      return `<span class="source-badge amazon">Amazon</span>`;
     };
 
     // Product card HTML generator
     const renderProductCard = (item) => {
       // COMPREHENSIVE DEBUG LOGGING
-      console.group('🔍 [PRODUCT CARD DEBUG] Rendering product');
-      console.log('Raw item data:', JSON.stringify(item, null, 2));
-      console.log('Product ID:', item.id);
-      console.log('Title:', item.title?.substring(0, 50));
-      console.log('Price:', item.price, 'Currency:', item.currency_id);
-      console.log('Rating:', item.rating);
-      console.log('Available Quantity:', item.available_quantity);
-      console.log('Sold Quantity:', item.sold_quantity);
-      console.log('Condition:', item.condition);
-      console.log('Seller:', item.seller);
-      console.log('Source:', item.source);
-      console.log('Thumbnail:', item.thumbnail);
+      console.group("🔍 [PRODUCT CARD DEBUG] Rendering product");
+      console.log("Raw item data:", JSON.stringify(item, null, 2));
+      console.log("Product ID:", item.id);
+      console.log("Title:", item.title?.substring(0, 50));
+      console.log("Price:", item.price, "Currency:", item.currency_id);
+      console.log("Rating:", item.rating);
+      console.log("Available Quantity:", item.available_quantity);
+      console.log("Sold Quantity:", item.sold_quantity);
+      console.log("Condition:", item.condition);
+      console.log("Seller:", item.seller);
+      console.log("Source:", item.source);
+      console.log("Thumbnail:", item.thumbnail);
 
       // Extract rating data with debug logs
       const rating = item.rating || item.reviews?.rating_average || 0;
       const reviewCount = item.reviews?.total || 0;
-      const starDisplay = rating ? `★`.repeat(Math.floor(rating)) + (rating % 1 >= 0.5 ? '½' : '') + `☆`.repeat(5 - Math.ceil(rating)) : '';
+      const starDisplay = rating
+        ? `★`.repeat(Math.floor(rating)) +
+          (rating % 1 >= 0.5 ? "½" : "") +
+          `☆`.repeat(5 - Math.ceil(rating))
+        : "";
 
-      console.log('⭐ Rating calculation:');
-      console.log('  - Raw rating:', item.rating);
-      console.log('  - Reviews object:', item.reviews);
-      console.log('  - Final rating:', rating);
-      console.log('  - Review count:', reviewCount);
-      console.log('  - Star display:', starDisplay);
+      console.log("⭐ Rating calculation:");
+      console.log("  - Raw rating:", item.rating);
+      console.log("  - Reviews object:", item.reviews);
+      console.log("  - Final rating:", rating);
+      console.log("  - Review count:", reviewCount);
+      console.log("  - Star display:", starDisplay);
 
       // Stock status with debug logs
       const availableQty = item.available_quantity || 0;
       const isInStock = availableQty > 0;
       const stockStatus = isInStock
-        ? `<span class="stock-badge in-stock">✓ ${lang === 'es' ? 'En Stock' : 'In Stock'}</span>`
-        : `<span class="stock-badge out-stock">✗ ${lang === 'es' ? 'Agotado' : 'Out of Stock'}</span>`;
+        ? `<span class="stock-badge in-stock">✓ ${lang === "es" ? "En Stock" : "In Stock"}</span>`
+        : `<span class="stock-badge out-stock">✗ ${lang === "es" ? "Agotado" : "Out of Stock"}</span>`;
 
-      console.log('📦 Stock calculation:');
-      console.log('  - Available quantity:', availableQty);
-      console.log('  - Is in stock:', isInStock);
-      console.log('  - Stock badge HTML:', stockStatus);
+      console.log("📦 Stock calculation:");
+      console.log("  - Available quantity:", availableQty);
+      console.log("  - Is in stock:", isInStock);
+      console.log("  - Stock badge HTML:", stockStatus);
 
       // Sold count (use sold_quantity or generate from ID if not available)
-      const soldCount = item.sold_quantity || (item.id ? parseInt(item.id.split('-')[1]?.substring(0, 3) || '0', 36) % 500 + 20 : 0);
+      const soldCount =
+        item.sold_quantity ||
+        (item.id
+          ? (parseInt(item.id.split("-")[1]?.substring(0, 3) || "0", 36) %
+              500) +
+            20
+          : 0);
 
-      console.log('💰 Sales calculation:');
-      console.log('  - Sold quantity from data:', item.sold_quantity);
-      console.log('  - Final sold count:', soldCount);
+      console.log("💰 Sales calculation:");
+      console.log("  - Sold quantity from data:", item.sold_quantity);
+      console.log("  - Final sold count:", soldCount);
 
       console.groupEnd();
 
@@ -2895,29 +2934,37 @@ async function start() {
             <h3 class="product-card-title">${item.title || t(lang, "product")}</h3>
 
             <!-- Rating Stars -->
-            ${rating > 0 ? `
+            ${
+              rating > 0
+                ? `
             <div class="product-card-rating">
               <span class="stars">${starDisplay}</span>
-              ${reviewCount > 0 ? `<span class="review-count">(${reviewCount})</span>` : ''}
+              ${reviewCount > 0 ? `<span class="review-count">(${reviewCount})</span>` : ""}
             </div>
-            ` : ''}
+            `
+                : ""
+            }
 
             <div class="product-card-pricing">
               <span class="product-card-price-current" data-price-mxn="${item.price}">${formatPrice(item.price, "MXN")}</span>
-              ${item.original_price && item.original_price > item.price ? `<span class="product-card-price-original" data-price-mxn="${item.original_price}">${formatPrice(item.original_price, "MXN")}</span>` : ''}
+              ${item.original_price && item.original_price > item.price ? `<span class="product-card-price-original" data-price-mxn="${item.original_price}">${formatPrice(item.original_price, "MXN")}</span>` : ""}
             </div>
-            ${item.discount_percent && item.discount_percent > 0 ? `<div class="product-card-discount">-${Math.round(item.discount_percent)}% OFF</div>` : ''}
+            ${item.discount_percent && item.discount_percent > 0 ? `<div class="product-card-discount">-${Math.round(item.discount_percent)}% OFF</div>` : ""}
 
             <!-- Sold Count -->
-            ${soldCount > 0 ? `
+            ${
+              soldCount > 0
+                ? `
             <div class="product-card-sold">
               <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
                 <path d="M20 21v-2a4 4 0 0 0-4-4H8a4 4 0 0 0-4 4v2"></path>
                 <circle cx="12" cy="7" r="4"></circle>
               </svg>
-              ${soldCount}+ ${lang === 'es' ? 'vendidos' : 'sold'}
+              ${soldCount}+ ${lang === "es" ? "vendidos" : "sold"}
             </div>
-            ` : ''}
+            `
+                : ""
+            }
 
             ${item.seller?.nickname || (typeof item.seller === "string" && item.seller) ? `<div class="product-card-seller">${item.seller?.nickname || item.seller}</div>` : ""}
           </div>
@@ -2940,38 +2987,47 @@ async function start() {
       const isLowStock = isInStock && availableQty < 10;
 
       // Calculate discount
-      const hasDiscount = item.original_price && item.original_price > item.price;
-      const discountPercent = hasDiscount ? Math.round(((item.original_price - item.price) / item.original_price) * 100) : 0;
+      const hasDiscount =
+        item.original_price && item.original_price > item.price;
+      const discountPercent = hasDiscount
+        ? Math.round(
+            ((item.original_price - item.price) / item.original_price) * 100,
+          )
+        : 0;
 
       // Determine if this is a "best price" (discount > 30% or marked as good deal)
       const isBestPrice = discountPercent > 30 || item.isBestPrice;
 
       // Source display
-      const sourceLabel = item.source === 'amazon' ? 'Amazon' : 'Mercado Libre';
+      const sourceLabel = "Amazon";
 
       // Build product URL
-      const productUrl = buildSearchParams(`/product/${encodeURIComponent(item.id)}`, { q: query, minPrice, maxPrice, sort, source, page });
+      const productUrl = buildSearchParams(
+        `/product/${encodeURIComponent(item.id)}`,
+        { q: query, minPrice, maxPrice, sort, source, page },
+      );
 
       // Extract real product specs
       const specs = extractProductSpecs(item);
       const enhancedTitle = generateEnhancedTitle(item, specs);
 
       // Get category for filtering
-      const category = item.category || detectCategory(item.title) || '';
+      const category = item.category || detectCategory(item.title) || "";
 
       // Get drop date for time filtering (use scraped_at or current date)
-      const dropDate = item.dropDate || item.scraped_at || new Date().toISOString();
+      const dropDate =
+        item.dropDate || item.scraped_at || new Date().toISOString();
 
       return `
       <article class="product-card-modern" data-product-id="${item.id}" data-category="${category}" data-drop-date="${dropDate}" role="article">
-        <a href="${productUrl}" class="product-card-link" aria-label="${item.title || t(lang, 'product')}">
+        <a href="${productUrl}" class="product-card-link" aria-label="${item.title || t(lang, "product")}">
 
           <!-- Image Section with Lazy Loading -->
           <div class="product-image-container">
             <div class="product-image-skeleton" aria-hidden="true"></div>
             <img
-              src="${item.thumbnail || '/images/product-placeholder.svg'}"
-              alt="${item.title || t(lang, 'product')}"
+              src="${item.thumbnail || "/images/product-placeholder.svg"}"
+              alt="${item.title || t(lang, "product")}"
               class="product-image"
               loading="lazy"
               onload="this.classList.add('loaded'); this.previousElementSibling.style.display='none'"
@@ -2980,17 +3036,29 @@ async function start() {
 
             <!-- Badges Container -->
             <div class="badge-container">
-              ${isBestPrice ? `<span class="badge badge-best-price ${discountPercent > 40 ? 'badge-urgent' : ''}" role="status">
-                ${lang === 'es' ? '🔥 Mejor Precio' : '🔥 Best Price'}
-              </span>` : ''}
+              ${
+                isBestPrice
+                  ? `<span class="badge badge-best-price ${discountPercent > 40 ? "badge-urgent" : ""}" role="status">
+                ${lang === "es" ? "🔥 Mejor Precio" : "🔥 Best Price"}
+              </span>`
+                  : ""
+              }
 
-              ${hasDiscount && !isBestPrice ? `<span class="badge badge-discount" role="status">
+              ${
+                hasDiscount && !isBestPrice
+                  ? `<span class="badge badge-discount" role="status">
                 -${discountPercent}% OFF
-              </span>` : ''}
+              </span>`
+                  : ""
+              }
 
-              ${isLowStock ? `<span class="badge badge-low-stock badge-urgent" role="status">
-                ${lang === 'es' ? `Solo ${availableQty} disponibles` : `Only ${availableQty} left`}
-              </span>` : ''}
+              ${
+                isLowStock
+                  ? `<span class="badge badge-low-stock badge-urgent" role="status">
+                ${lang === "es" ? `Solo ${availableQty} disponibles` : `Only ${availableQty} left`}
+              </span>`
+                  : ""
+              }
 
               <span class="badge badge-source">${sourceLabel}</span>
             </div>
@@ -3006,51 +3074,63 @@ async function start() {
 
             <!-- Product Specs Chips -->
             <div class="chip-row">
-              ${specs.ram ? `<div class="chip chip-spec">💾 ${specs.ram}</div>` : ''}
-              ${specs.storage ? `<div class="chip chip-spec">💿 ${specs.storage}</div>` : ''}
-              ${specs.screenSize ? `<div class="chip chip-spec">📱 ${specs.screenSize}</div>` : ''}
-              ${specs.os ? `<div class="chip chip-spec">${specs.os}</div>` : ''}
-              ${specs.connectivity && specs.connectivity.includes('5G') ? `<div class="chip chip-spec">📡 5G</div>` : ''}
+              ${specs.ram ? `<div class="chip chip-spec">💾 ${specs.ram}</div>` : ""}
+              ${specs.storage ? `<div class="chip chip-spec">💿 ${specs.storage}</div>` : ""}
+              ${specs.screenSize ? `<div class="chip chip-spec">📱 ${specs.screenSize}</div>` : ""}
+              ${specs.os ? `<div class="chip chip-spec">${specs.os}</div>` : ""}
+              ${specs.connectivity && specs.connectivity.includes("5G") ? `<div class="chip chip-spec">📡 5G</div>` : ""}
             </div>
 
             <!-- Rating & Social Proof Chips -->
             <div class="chip-row">
-              ${rating > 0 ? `
-              <div class="chip chip-rating" aria-label="${lang === 'es' ? 'Calificación' : 'Rating'}: ${rating.toFixed(1)}">
+              ${
+                rating > 0
+                  ? `
+              <div class="chip chip-rating" aria-label="${lang === "es" ? "Calificación" : "Rating"}: ${rating.toFixed(1)}">
                 <svg class="chip-icon" viewBox="0 0 24 24" fill="currentColor">
                   <path d="M12 2l3.09 6.26L22 9.27l-5 4.87 1.18 6.88L12 17.77l-6.18 3.25L7 14.14 2 9.27l6.91-1.01L12 2z"/>
                 </svg>
                 <span>${rating.toFixed(1)}</span>
-                ${reviewCount > 0 ? `<span class="text-tertiary">(${reviewCount})</span>` : ''}
+                ${reviewCount > 0 ? `<span class="text-tertiary">(${reviewCount})</span>` : ""}
               </div>
-              ` : ''}
+              `
+                  : ""
+              }
 
-              ${soldCount > 0 ? `
-              <div class="chip chip-sold" aria-label="${lang === 'es' ? 'Vendidos' : 'Sold'}: ${soldCount}+">
+              ${
+                soldCount > 0
+                  ? `
+              <div class="chip chip-sold" aria-label="${lang === "es" ? "Vendidos" : "Sold"}: ${soldCount}+">
                 <svg class="chip-icon" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
                   <path d="M20 21v-2a4 4 0 0 0-4-4H8a4 4 0 0 0-4 4v2"></path>
                   <circle cx="12" cy="7" r="4"></circle>
                 </svg>
                 <span>${soldCount}+</span>
               </div>
-              ` : ''}
+              `
+                  : ""
+              }
             </div>
 
             <!-- Pricing Container -->
             <div class="pricing-container">
               <div class="price-row">
-                <span class="price-current" data-price="${item.price}" data-currency="${item.currency || item.currency_id || 'MXN'}">
+                <span class="price-current" data-price="${item.price}" data-currency="${item.currency || item.currency_id || "MXN"}">
                   ${formatPrice(item.price, item.currency || item.currency_id || "MXN")}
                 </span>
 
-                ${hasDiscount ? `
-                <span class="price-original" data-price="${item.original_price}" data-currency="${item.currency || item.currency_id || 'MXN'}">
+                ${
+                  hasDiscount
+                    ? `
+                <span class="price-original" data-price="${item.original_price}" data-currency="${item.currency || item.currency_id || "MXN"}">
                   ${formatPrice(item.original_price, item.currency || item.currency_id || "MXN")}
                 </span>
                 <span class="price-discount-label">
-                  ${lang === 'es' ? 'Ahorra' : 'Save'} ${discountPercent}%
+                  ${lang === "es" ? "Ahorra" : "Save"} ${discountPercent}%
                 </span>
-                ` : ''}
+                `
+                    : ""
+                }
               </div>
             </div>
 
@@ -3058,7 +3138,7 @@ async function start() {
             <button
               class="cta-primary"
               role="button"
-              aria-label="${lang === 'es' ? 'Ver detalles del producto' : 'View product details'}"
+              aria-label="${lang === "es" ? "Ver detalles del producto" : "View product details"}"
               onclick="this.classList.add('loading')"
             >
               <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
@@ -3066,7 +3146,7 @@ async function start() {
                 <circle cx="20" cy="21" r="1"></circle>
                 <path d="M1 1h4l2.68 13.39a2 2 0 0 0 2 1.61h9.72a2 2 0 0 0 2-1.61L23 6H6"></path>
               </svg>
-              ${lang === 'es' ? 'Ver Producto' : 'View Product'}
+              ${lang === "es" ? "Ver Producto" : "View Product"}
             </button>
 
           </div>
@@ -3106,12 +3186,16 @@ async function start() {
             query
               ? `
             <div class="pagination">
-              ${page > 1 ? `<a href="${buildSearchParams("/", { q: query, minPrice, maxPrice, sort, source, page: page - 1 })}" class="pagination-prev" aria-label="${lang === 'es' ? 'Página anterior' : 'Previous page'}">
+              ${
+                page > 1
+                  ? `<a href="${buildSearchParams("/", { q: query, minPrice, maxPrice, sort, source, page: page - 1 })}" class="pagination-prev" aria-label="${lang === "es" ? "Página anterior" : "Previous page"}">
                 <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
                   <polyline points="15 18 9 12 15 6"></polyline>
                 </svg>
                 ${t(lang, "previous")}
-              </a>` : '<span class="pagination-prev pagination-disabled"></span>'}
+              </a>`
+                  : '<span class="pagination-prev pagination-disabled"></span>'
+              }
 
               <div class="pagination-numbers">
                 ${(() => {
@@ -3119,12 +3203,14 @@ async function start() {
                   const maxVisible = 7; // Show max 7 page numbers
                   let pages = [];
 
-                  console.log(`📄 [PAGINATION DEBUG] Current page: ${page}, Total pages: ${totalPages}`);
+                  console.log(
+                    `📄 [PAGINATION DEBUG] Current page: ${page}, Total pages: ${totalPages}`,
+                  );
 
                   if (totalPages <= maxVisible) {
                     // Show all pages if total is small
                     pages = Array.from({ length: totalPages }, (_, i) => i + 1);
-                    console.log('📄 [PAGINATION] Showing all pages:', pages);
+                    console.log("📄 [PAGINATION] Showing all pages:", pages);
                   } else {
                     // Smart pagination: 1 ... 4 5 [6] 7 8 ... 20
                     const start = Math.max(1, page - 2);
@@ -3134,7 +3220,7 @@ async function start() {
                     if (start > 1) pages.push(1);
 
                     // Add ellipsis if gap after first page
-                    if (start > 2) pages.push('...');
+                    if (start > 2) pages.push("...");
 
                     // Add middle range
                     for (let i = start; i <= end; i++) {
@@ -3142,34 +3228,47 @@ async function start() {
                     }
 
                     // Add ellipsis if gap before last page
-                    if (end < totalPages - 1) pages.push('...');
+                    if (end < totalPages - 1) pages.push("...");
 
                     // Always show last page
                     if (end < totalPages) pages.push(totalPages);
 
-                    console.log('📄 [PAGINATION] Smart pagination:', pages, 'Range:', start, 'to', end);
+                    console.log(
+                      "📄 [PAGINATION] Smart pagination:",
+                      pages,
+                      "Range:",
+                      start,
+                      "to",
+                      end,
+                    );
                   }
 
-                  return pages.map(p => {
-                    if (p === '...') {
-                      return '<span class="pagination-ellipsis">…</span>';
-                    } else if (p === page) {
-                      console.log('📄 [PAGINATION] Current page button:', p);
-                      return `<span class="pagination-number pagination-current" aria-current="page">${p}</span>`;
-                    } else {
-                      console.log('📄 [PAGINATION] Regular page button:', p);
-                      return `<a href="${buildSearchParams("/", { q: query, minPrice, maxPrice, sort, source, page: p })}" class="pagination-number" aria-label="${lang === 'es' ? 'Ir a página' : 'Go to page'} ${p}">${p}</a>`;
-                    }
-                  }).join('');
+                  return pages
+                    .map((p) => {
+                      if (p === "...") {
+                        return '<span class="pagination-ellipsis">…</span>';
+                      } else if (p === page) {
+                        console.log("📄 [PAGINATION] Current page button:", p);
+                        return `<span class="pagination-number pagination-current" aria-current="page">${p}</span>`;
+                      } else {
+                        console.log("📄 [PAGINATION] Regular page button:", p);
+                        return `<a href="${buildSearchParams("/", { q: query, minPrice, maxPrice, sort, source, page: p })}" class="pagination-number" aria-label="${lang === "es" ? "Ir a página" : "Go to page"} ${p}">${p}</a>`;
+                      }
+                    })
+                    .join("");
                 })()}
               </div>
 
-              ${page < results.totalPages ? `<a href="${buildSearchParams("/", { q: query, minPrice, maxPrice, sort, source, page: page + 1 })}" class="pagination-next" aria-label="${lang === 'es' ? 'Siguiente página' : 'Next page'}">
+              ${
+                page < results.totalPages
+                  ? `<a href="${buildSearchParams("/", { q: query, minPrice, maxPrice, sort, source, page: page + 1 })}" class="pagination-next" aria-label="${lang === "es" ? "Siguiente página" : "Next page"}">
                 ${t(lang, "next")}
                 <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
                   <polyline points="9 18 15 12 9 6"></polyline>
                 </svg>
-              </a>` : '<span class="pagination-next pagination-disabled"></span>'}
+              </a>`
+                  : '<span class="pagination-next pagination-disabled"></span>'
+              }
             </div>
           `
               : ""
@@ -3225,7 +3324,7 @@ async function start() {
           </div>
           <div class="search-actions">
             <button type="submit" class="btn-search">${t(lang, "search")}</button>
-            <button type="button" id="scrapeBtn" class="btn-scrape" onclick="triggerScrape()" title="${lang === "es" ? "Descubrir nuevos productos en Amazon y Mercado Libre" : "Discover new products on Amazon & Mercado Libre"}">
+            <button type="button" id="scrapeBtn" class="btn-scrape" onclick="triggerScrape()" title="${lang === "es" ? "Descubrir nuevos productos en Amazon" : "Discover new products on Amazon"}">
               <svg class="scrape-icon" viewBox="0 0 16 16" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round"><circle cx="7" cy="7" r="4.5"/><path d="M10.5 10.5l2.8 2.8"/></svg>
               ${lang === "es" ? "Descubrir nuevos productos" : "Discover New Products"}
             </button>
@@ -3273,8 +3372,8 @@ async function start() {
           <h1 class="hero-title" data-reveal="fade-up" data-reveal-delay="200">${lang === "es" ? "Nunca Pagues de Más" : "Never Overpay Again"}</h1>
           <p class="hero-subtitle" data-reveal="fade-up" data-reveal-delay="300">${
             lang === "es"
-              ? "Rastrea precios de Mercado Libre, recibe alertas instantáneas cuando bajen y ahorra hasta un 40% en tus compras. Completamente gratis."
-              : "Track prices from Mercado Libre, get instant alerts when they drop, and save up to 40% on your purchases. Completely free."
+              ? "Rastrea precios de Amazon, recibe alertas instantáneas cuando bajen y ahorra hasta un 40% en tus compras. Completamente gratis."
+              : "Track prices from Amazon, get instant alerts when they drop, and save up to 40% on your purchases. Completely free."
           }</p>
           <div class="hero-cta" data-reveal="fade-up" data-reveal-delay="400">
             <a href="/register" class="btn-primary">
@@ -3392,8 +3491,8 @@ async function start() {
             <h3>${lang === "es" ? "Busca Productos" : "Search Products"}</h3>
             <p>${
               lang === "es"
-                ? "Encuentra cualquier producto de Mercado Libre usando nuestra búsqueda inteligente."
-                : "Find any product from Mercado Libre using our smart search."
+                ? "Encuentra cualquier producto de Amazon usando nuestra búsqueda inteligente."
+                : "Find any product from Amazon using our smart search."
             }</p>
           </div>
           <div class="feature-card" data-reveal="fade-up">
@@ -3523,8 +3622,7 @@ async function start() {
           <div class="footer-col" data-reveal="fade-up">
             <h4>${lang === "es" ? "Tiendas Soportadas" : "Supported Stores"}</h4>
             <ul>
-              <li>🛒 Mercado Libre México</li>
-              <li>📦 Amazon.com</li>
+              <li>📦 Amazon México</li>
             </ul>
           </div>
         </div>
@@ -3555,9 +3653,9 @@ async function start() {
           categoryDiscounts,
           userQueries,
         ] = await Promise.all([
-          supabaseDb.getHighlightedDealsFromCache(12),  // FIX: Use cache version
-          supabaseDb.getPopularProductsFromCache({ limit: 8 }),  // FIX: Use cache version
-          supabaseDb.getRecentProductsFromCache({ period: "recent", limit: 8 }),  // FIX: Use cache version (recent products instead of price drops)
+          supabaseDb.getHighlightedDealsFromCache(12), // FIX: Use cache version
+          supabaseDb.getPopularProductsFromCache({ limit: 8 }), // FIX: Use cache version
+          supabaseDb.getRecentProductsFromCache({ period: "recent", limit: 8 }), // FIX: Use cache version (recent products instead of price drops)
           supabaseDb.getDiscountsByCategory(),
           userData?.id
             ? supabaseDb.getUserSearchHistory(userData.id, 5)
@@ -3568,7 +3666,7 @@ async function start() {
           highlightedDeals: highlightedDeals.length,
           popularProducts: popularProducts.length,
           topPriceDrops: topPriceDrops.length,
-          categoryDiscounts: categoryDiscounts.length
+          categoryDiscounts: categoryDiscounts.length,
         });
 
         // If the user has search history, fetch matching products
@@ -3584,7 +3682,7 @@ async function start() {
         highlightedDeals = highlightedDeals.map((deal) => ({
           product_id: deal.product_id,
           product_title: deal.product_title,
-          current_price: parseFloat(deal.price || deal.current_price || 0),  // FIX: Use 'price' from cache
+          current_price: parseFloat(deal.price || deal.current_price || 0), // FIX: Use 'price' from cache
           rating: deal.rating,
           available_quantity: deal.available_quantity,
           sold_quantity: deal.sold_quantity,
@@ -3593,7 +3691,7 @@ async function start() {
           isGoodDeal: deal.isGoodDeal || false,
           savingsPercent: deal.savingsPercent || 0,
           savingsAmount: deal.savingsAmount || 0,
-          source: deal.source || "mercadolibre",
+          source: deal.source || "amazon",
           product_url: deal.product_url,
           thumbnail: deal.thumbnail,
         }));
@@ -3601,7 +3699,9 @@ async function start() {
         popularProducts = popularProducts.map((product) => ({
           product_id: product.product_id,
           product_title: product.product_title,
-          current_price: parseFloat(product.price || product.current_price || 0),  // FIX: Use 'price' from cache
+          current_price: parseFloat(
+            product.price || product.current_price || 0,
+          ), // FIX: Use 'price' from cache
           rating: product.rating,
           available_quantity: product.available_quantity,
           sold_quantity: product.sold_quantity,
@@ -3609,7 +3709,7 @@ async function start() {
           isBestPrice: product.isBestPrice || false,
           isGoodDeal: product.isGoodDeal || false,
           savingsPercent: product.savingsPercent || 0,
-          source: product.source || "mercadolibre",
+          source: product.source || "amazon",
           product_url: product.product_url,
           thumbnail: product.thumbnail,
         }));
@@ -3617,17 +3717,17 @@ async function start() {
         topPriceDrops = topPriceDrops.map((drop) => ({
           product_id: drop.product_id,
           product_title: drop.product_title,
-          current_price: parseFloat(drop.price || drop.current_price || 0),  // FIX: Use 'price' from cache
+          current_price: parseFloat(drop.price || drop.current_price || 0), // FIX: Use 'price' from cache
           rating: drop.rating,
           available_quantity: drop.available_quantity,
           sold_quantity: drop.sold_quantity,
           previousPrice: drop.previousPrice,
           dropAmount: drop.dropAmount,
           dropPercent: drop.dropPercent,
-          source: drop.source || "mercadolibre",
+          source: drop.source || "amazon",
           product_url: drop.product_url,
           thumbnail: drop.thumbnail,
-          dropDate: drop.periodStart || drop.scraped_at,  // FIX: Use scraped_at for recent products
+          dropDate: drop.periodStart || drop.scraped_at, // FIX: Use scraped_at for recent products
         }));
 
         // If we have interest-based products, merge them into Popular Products:
@@ -3637,11 +3737,11 @@ async function start() {
           const interestMapped = userInterestProducts.map((p) => ({
             product_id: p.product_id,
             product_title: p.product_title,
-            current_price: parseFloat(p.price || p.current_price || 0),  // FIX: Handle both field names
+            current_price: parseFloat(p.price || p.current_price || 0), // FIX: Handle both field names
             rating: p.rating,
             available_quantity: p.available_quantity,
             sold_quantity: p.sold_quantity,
-            source: p.source || "mercadolibre",
+            source: p.source || "amazon",
             product_url: p.product_url,
             thumbnail: p.thumbnail,
             trackCount: 1,
@@ -3669,13 +3769,36 @@ async function start() {
         thumbnail: getProductImageUrl(deal),
         price: deal.current_price || deal.price,
         original_price: deal.avgPrice,
-        rating: 4 + (deal.product_id ? (deal.product_id.split("").reduce((a, c) => a + c.charCodeAt(0), 0) % 10) / 10 : 0.5),
-        reviews: { total: 100 + (deal.product_id ? (deal.product_id.split("").reduce((a, c) => a + c.charCodeAt(0), 0) % 900) : 400) },
-        sold_quantity: deal.sold_quantity || (20 + (deal.product_id ? (deal.product_id.split("").reduce((a, c) => a + c.charCodeAt(0), 0) % 980) : 480)),
+        rating:
+          4 +
+          (deal.product_id
+            ? (deal.product_id
+                .split("")
+                .reduce((a, c) => a + c.charCodeAt(0), 0) %
+                10) /
+              10
+            : 0.5),
+        reviews: {
+          total:
+            100 +
+            (deal.product_id
+              ? deal.product_id
+                  .split("")
+                  .reduce((a, c) => a + c.charCodeAt(0), 0) % 900
+              : 400),
+        },
+        sold_quantity:
+          deal.sold_quantity ||
+          20 +
+            (deal.product_id
+              ? deal.product_id
+                  .split("")
+                  .reduce((a, c) => a + c.charCodeAt(0), 0) % 980
+              : 480),
         available_quantity: deal.available_quantity || 10,
-        source: deal.source || 'mercadolibre',
+        source: deal.source || "amazon",
         isBestPrice: deal.isBestPrice,
-        category: deal.category || detectCategory(deal.product_title)
+        category: deal.category || detectCategory(deal.product_title),
       };
 
       // Use the modern card renderer
@@ -3691,13 +3814,36 @@ async function start() {
         thumbnail: getProductImageUrl(product),
         price: product.current_price || product.price,
         original_price: product.previousPrice || product.avgPrice,
-        rating: 4 + (product.product_id ? (product.product_id.split("").reduce((a, c) => a + c.charCodeAt(0), 0) % 10) / 10 : 0.5),
-        reviews: { total: 100 + (product.product_id ? (product.product_id.split("").reduce((a, c) => a + c.charCodeAt(0), 0) % 900) : 400) },
-        sold_quantity: product.sold_quantity || (20 + (product.product_id ? (product.product_id.split("").reduce((a, c) => a + c.charCodeAt(0), 0) % 980) : 480)),
+        rating:
+          4 +
+          (product.product_id
+            ? (product.product_id
+                .split("")
+                .reduce((a, c) => a + c.charCodeAt(0), 0) %
+                10) /
+              10
+            : 0.5),
+        reviews: {
+          total:
+            100 +
+            (product.product_id
+              ? product.product_id
+                  .split("")
+                  .reduce((a, c) => a + c.charCodeAt(0), 0) % 900
+              : 400),
+        },
+        sold_quantity:
+          product.sold_quantity ||
+          20 +
+            (product.product_id
+              ? product.product_id
+                  .split("")
+                  .reduce((a, c) => a + c.charCodeAt(0), 0) % 980
+              : 480),
         available_quantity: product.available_quantity || 10,
-        source: product.source || 'mercadolibre',
+        source: product.source || "amazon",
         isBestPrice: product.isBestPrice,
-        category: product.category || detectCategory(product.product_title)
+        category: product.category || detectCategory(product.product_title),
       };
 
       // Use the modern card renderer
@@ -3810,7 +3956,7 @@ async function start() {
       </section>
     `;
 
-    // Top Mercado Libre Price Drops Section (CamelCamelCamel style)
+    // Top Price Drops Section (CamelCamelCamel style)
     const priceDropsSection = `
       <section class="ccc-section" id="price-drops">
         <div class="ccc-section-header">
@@ -4933,7 +5079,7 @@ async function start() {
           }
         </script>
       `,
-        category
+        category,
       ),
     );
   });
@@ -4994,56 +5140,85 @@ async function start() {
 
     // 🔍 DEBUG: Log category access
     console.log(`\n🏷️  [CATEGORY] ========== CATEGORY PAGE ==========`);
-    console.log(`🏷️  [CATEGORY] User accessed: "${categoryKey}" (${categoryName})`);
+    console.log(
+      `🏷️  [CATEGORY] User accessed: "${categoryKey}" (${categoryName})`,
+    );
     console.log(`🏷️  [CATEGORY] Language: ${lang}`);
-    console.log(`🏷️  [CATEGORY] Authenticated: ${hasToken ? 'Yes' : 'No'}`);
+    console.log(`🏷️  [CATEGORY] Authenticated: ${hasToken ? "Yes" : "No"}`);
 
     // Define category-specific search keywords for Apify scraping
     const categoryKeywords = {
-      electronics: ["smartphone", "laptop", "headphones", "tablet", "smartwatch"],
+      electronics: [
+        "smartphone",
+        "laptop",
+        "headphones",
+        "tablet",
+        "smartwatch",
+      ],
       home: ["furniture", "kitchen", "decor", "appliances", "bedding"],
       fashion: ["clothing", "shoes", "watch", "jewelry", "accessories"],
       sports: ["sports equipment", "fitness", "outdoor", "exercise", "camping"],
       beauty: ["cosmetics", "skincare", "perfume", "makeup", "beauty"],
       toys: ["toys", "games", "puzzle", "lego", "board games"],
       books: ["books", "kindle", "novels", "textbooks", "ebooks"],
-      automotive: ["car accessories", "auto parts", "tools", "motor oil", "tires"],
-      other: ["deals", "offers", "popular"]
+      automotive: [
+        "car accessories",
+        "auto parts",
+        "tools",
+        "motor oil",
+        "tires",
+      ],
+      other: ["deals", "offers", "popular"],
     };
 
     const keywords = categoryKeywords[categoryKey] || [categoryKey];
 
     // 🚀 DEBUG: Trigger background Apify scraping for fresh data
-    console.log(`🚀 [CATEGORY] Triggering Apify scraping for keywords: [${keywords.join(', ')}]`);
+    console.log(
+      `🚀 [CATEGORY] Triggering Apify scraping for keywords: [${keywords.join(", ")}]`,
+    );
 
     // Trigger scraping in background (non-blocking) - fire and forget
     keywords.forEach((keyword, index) => {
       // Stagger requests by 2 seconds to avoid rate limiting
       setTimeout(async () => {
         try {
-          console.log(`🕷️  [CATEGORY] Scraping keyword ${index + 1}/${keywords.length}: "${keyword}"`);
+          console.log(
+            `🕷️  [CATEGORY] Scraping keyword ${index + 1}/${keywords.length}: "${keyword}"`,
+          );
           const results = await apifyService.scrapeProducts({
             source: "all",
             query: keyword,
-            maxResults: 10 // Get 10 products per keyword
+            maxResults: 10, // Get 10 products per keyword
           });
 
-          console.log(`✅ [CATEGORY] Scraped ${results.length} products for "${keyword}"`);
+          console.log(
+            `✅ [CATEGORY] Scraped ${results.length} products for "${keyword}"`,
+          );
 
           // Store scraped products in cache
           if (results.length > 0) {
-            const storePromises = results.map(product => supabaseDb.cacheScrapedProduct(product));
+            const storePromises = results.map((product) =>
+              supabaseDb.cacheScrapedProduct(product),
+            );
             const stored = await Promise.all(storePromises);
-            const successCount = stored.filter(r => r !== null).length;
-            console.log(`💾 [CATEGORY] Stored ${successCount}/${results.length} products from "${keyword}"`);
+            const successCount = stored.filter((r) => r !== null).length;
+            console.log(
+              `💾 [CATEGORY] Stored ${successCount}/${results.length} products from "${keyword}"`,
+            );
           }
         } catch (error) {
-          console.error(`❌ [CATEGORY] Scraping failed for "${keyword}":`, error.message);
+          console.error(
+            `❌ [CATEGORY] Scraping failed for "${keyword}":`,
+            error.message,
+          );
         }
       }, index * 2000); // Stagger by 2 seconds
     });
 
-    console.log(`⏳ [CATEGORY] Background scraping initiated (${keywords.length} searches)`);
+    console.log(
+      `⏳ [CATEGORY] Background scraping initiated (${keywords.length} searches)`,
+    );
 
     // Get products for this category from cache (instant response)
     let categoryProducts = [];
@@ -5052,7 +5227,9 @@ async function start() {
         limit: 50,
         dealsOnly: false,
       });
-      console.log(`📦 [CATEGORY] Found ${categoryProducts.length} cached products in ${categoryKey}`);
+      console.log(
+        `📦 [CATEGORY] Found ${categoryProducts.length} cached products in ${categoryKey}`,
+      );
     } catch (error) {
       console.error(`❌ [CATEGORY] Error fetching products:`, error);
     }
@@ -5637,12 +5814,12 @@ SUPABASE_ANON_KEY=your_anon_key_from_supabase</pre>
 
   // ============================================
   // OAUTH CALLBACK ENDPOINT
-  // For third-party authentication (Mercado Libre, Google, etc.)
+  // For third-party authentication (Google, etc.)
   // ============================================
 
   /**
    * OAuth Callback Endpoint
-   * This is where external services (like Mercado Libre) redirect users after login
+   * This is where external services redirect users after login
    * URL to use in OAuth app settings: https://localhost:3000/auth/callback
    */
   app.get("/auth/callback", async (req, res) => {
@@ -7566,10 +7743,9 @@ State: ${state || "none"}</pre>
       );
     }
 
-    // Multi-source support
-    const hasMultipleSources = result.hasMultipleSources || false;
+    // Source data
+    const hasMultipleSources = false;
     const amazonProduct = result.sources?.amazon || null;
-    const mlProduct = result.sources?.mercadolibre || null;
 
     const description = product.description || "";
     const condition =
@@ -7583,16 +7759,17 @@ State: ${state || "none"}</pre>
     const isAmazon = product.source === "amazon" || id.startsWith("AMZN-");
 
     // Get all product images for gallery
-    const productImages = product.images && product.images.length > 0
-      ? product.images
-      : (product.thumbnail ? [product.thumbnail] : []);
+    const productImages =
+      product.images && product.images.length > 0
+        ? product.images
+        : product.thumbnail
+          ? [product.thumbnail]
+          : [];
 
     // Get appropriate retailer badge and button text
-    const retailerBadge = isAmazon
-      ? `<div id="retailerBadge" class="retailer-badge amazon-badge"><img src="https://upload.wikimedia.org/wikipedia/commons/a/a9/Amazon_logo.svg" alt="Amazon" style="height: 20px;" /></div>`
-      : `<div id="retailerBadge" class="retailer-badge ml-badge"><img src="https://http2.mlstatic.com/frontend-assets/ml-web-navigation/ui-navigation/5.21.22/mercadolibre/logo__large_plus.png" alt="Mercado Libre" style="height: 24px;" /></div>`;
+    const retailerBadge = `<div id="retailerBadge" class="retailer-badge amazon-badge"><img src="https://upload.wikimedia.org/wikipedia/commons/a/a9/Amazon_logo.svg" alt="Amazon" style="height: 20px;" /></div>`;
 
-    const viewButtonText = isAmazon ? "View on Amazon" : t(lang, "viewOnML");
+    const viewButtonText = "View on Amazon";
 
     // Check if user is tracking this product and get price statistics
     let trackedProduct = null;
@@ -7669,7 +7846,8 @@ State: ${state || "none"}</pre>
     if (specs.storage) productSpecs.push(`💿 ${specs.storage}`);
     if (specs.screenSize) productSpecs.push(`📱 ${specs.screenSize}`);
     if (specs.os) productSpecs.push(specs.os);
-    if (specs.connectivity && specs.connectivity.includes('5G')) productSpecs.push('📡 5G');
+    if (specs.connectivity && specs.connectivity.includes("5G"))
+      productSpecs.push("📡 5G");
 
     res.send(
       renderPage(
@@ -7694,18 +7872,26 @@ State: ${state || "none"}</pre>
           </div>
 
           <!-- Image Thumbnail Gallery -->
-          ${productImages.length > 1 ? `
+          ${
+            productImages.length > 1
+              ? `
           <div class="product-thumbnails-scroll">
-            ${productImages.map((img, idx) => `
+            ${productImages
+              .map(
+                (img, idx) => `
               <img
                 src="${img}"
-                class="thumbnail ${idx === 0 ? 'active' : ''}"
+                class="thumbnail ${idx === 0 ? "active" : ""}"
                 onclick="changeMainImage('${img}', ${idx})"
                 alt="${enhancedTitle} image ${idx + 1}"
               />
-            `).join('')}
+            `,
+              )
+              .join("")}
           </div>
-          ` : ''}
+          `
+              : ""
+          }
         </div>
 
         <!-- Product Information Card -->
@@ -7714,40 +7900,32 @@ State: ${state || "none"}</pre>
             ${retailerBadge}
 
             <!-- Multi-Source Dropdown (shows only if available on both platforms) -->
-            ${hasMultipleSources ? `
-            <div class="source-selector">
-              <label>${lang === "es" ? "Ver en:" : "View on:"}</label>
-              <select id="sourceDropdown" onchange="switchSource()">
-                <option value="amazon" ${isAmazon ? 'selected' : ''}>
-                  Amazon ${amazonProduct ? `- ${formatPrice(amazonProduct.price, amazonProduct.currency_id)}` : ''}
-                </option>
-                <option value="mercadolibre" ${!isAmazon ? 'selected' : ''}>
-                  Mercado Libre ${mlProduct ? `- ${formatPrice(mlProduct.price, mlProduct.currency_id)}` : ''}
-                </option>
-              </select>
-            </div>
-            ` : ''}
+            ${hasMultipleSources ? "" : ""}
 
             <!-- Brand Badge (Compact) -->
-            ${specs.brand ? `<div class="product-brand-badge-compact">${specs.brand.toUpperCase()}</div>` : ''}
+            ${specs.brand ? `<div class="product-brand-badge-compact">${specs.brand.toUpperCase()}</div>` : ""}
 
             <h1 class="product-title-clean">${enhancedTitle}</h1>
 
             <!-- Spec Chips Horizontal List (Compact) -->
-            ${productSpecs.length > 0 ? `
+            ${
+              productSpecs.length > 0
+                ? `
             <div class="spec-chips-row-compact">
-              ${productSpecs.map(spec => `<span class="spec-chip-compact">${spec}</span>`).join('')}
+              ${productSpecs.map((spec) => `<span class="spec-chip-compact">${spec}</span>`).join("")}
             </div>
-            ` : ''}
+            `
+                : ""
+            }
           <div class="product-price-section">
             <div class="product-price" id="productPrice">${formatPrice(product.price, product.currency || product.currency_id || "MXN")}</div>
 
             <!-- Currency Switcher (Next to Price) -->
             <div class="currency-switcher">
-              <button class="currency-btn ${lang === 'en' ? 'active' : ''}" data-currency="USD" onclick="switchCurrency('USD')">
+              <button class="currency-btn ${lang === "en" ? "active" : ""}" data-currency="USD" onclick="switchCurrency('USD')">
                 USD $
               </button>
-              <button class="currency-btn ${lang === 'es' ? 'active' : ''}" data-currency="MXN" onclick="switchCurrency('MXN')">
+              <button class="currency-btn ${lang === "es" ? "active" : ""}" data-currency="MXN" onclick="switchCurrency('MXN')">
                 MXN $
               </button>
             </div>
@@ -7766,7 +7944,7 @@ State: ${state || "none"}</pre>
           <div class="product-meta">
             <span class="condition">${condition}</span>
             <span class="stock" id="stockStatus">· ${available} ${t(lang, "available")}</span>
-            ${sold > 0 ? `<span class="sold-count" id="soldCount">· ${sold}+ ${lang === "es" ? "vendidos" : "sold"}</span>` : ''}
+            ${sold > 0 ? `<span class="sold-count" id="soldCount">· ${sold}+ ${lang === "es" ? "vendidos" : "sold"}</span>` : ""}
           </div>
           ${product.brand ? `<div class="seller-info"><strong>${product.brand}</strong></div>` : ""}
           ${product.seller?.nickname ? `<div class="seller-info" id="sellerInfo">${t(lang, "soldBy")}: <strong>${product.seller.nickname}</strong></div>` : ""}
@@ -7785,10 +7963,8 @@ State: ${state || "none"}</pre>
         </div>
       </div>
 
-      <!-- JavaScript for Multi-Source Switching -->
+      <!-- JavaScript for Product Page -->
       <script>
-        const productSources = ${JSON.stringify({ amazon: amazonProduct, mercadolibre: mlProduct })};
-        let currentSource = '${product.source}';
         const lang = '${lang}';
 
         function formatPrice(price, currency) {
@@ -7799,82 +7975,6 @@ State: ${state || "none"}</pre>
             minimumFractionDigits: 2
           }).format(price);
           return formatted;
-        }
-
-        function switchSource() {
-          const dropdown = document.getElementById('sourceDropdown');
-          currentSource = dropdown.value;
-
-          const productData = productSources[currentSource];
-          if (!productData) {
-            console.error('No product data for source:', currentSource);
-            return;
-          }
-
-          console.log('Switching to source:', currentSource, productData);
-
-          // Update price
-          document.getElementById('productPrice').textContent =
-            formatPrice(productData.price, productData.currency_id);
-
-          // Update stock status
-          const stockEl = document.getElementById('stockStatus');
-          const stockTextEl = document.getElementById('stockText');
-          const available = productData.available_quantity || 0;
-
-          if (available > 0) {
-            stockEl.textContent = '· ' + available + ' ' + (lang === 'es' ? 'disponibles' : 'available');
-            stockEl.className = 'stock';
-            if (stockTextEl) {
-              stockTextEl.textContent = lang === 'es' ? 'En Stock' : 'In Stock';
-              stockTextEl.parentElement.classList.remove('out-of-stock');
-            }
-          } else {
-            stockEl.textContent = '· ' + (lang === 'es' ? 'Agotado' : 'Out of Stock');
-            stockEl.className = 'stock out';
-            if (stockTextEl) {
-              stockTextEl.textContent = lang === 'es' ? 'Agotado' : 'Out of Stock';
-              stockTextEl.parentElement.classList.add('out-of-stock');
-            }
-          }
-
-          // Update sold count
-          const soldEl = document.getElementById('soldCount');
-          if (soldEl && productData.sold_quantity) {
-            soldEl.textContent = '· ' + productData.sold_quantity + '+ ' + (lang === 'es' ? 'vendidos' : 'sold');
-          }
-
-          // Update view button URL and text
-          const viewBtn = document.getElementById('viewButton');
-          if (viewBtn && productData.permalink) {
-            viewBtn.href = productData.permalink;
-            viewBtn.textContent = currentSource === 'amazon' ? 'View on Amazon' : (lang === 'es' ? 'Ver en Mercado Libre' : 'View on Mercado Libre');
-            viewBtn.className = 'action-button ' + (currentSource === 'amazon' ? 'amazon-btn' : '');
-          }
-
-          // Update retailer badge
-          const badge = document.getElementById('retailerBadge');
-          if (badge) {
-            if (currentSource === 'amazon') {
-              badge.innerHTML = '<img src="https://upload.wikimedia.org/wikipedia/commons/a/a9/Amazon_logo.svg" alt="Amazon" style="height: 20px;" />';
-              badge.className = 'retailer-badge amazon-badge';
-            } else {
-              badge.innerHTML = '<img src="https://http2.mlstatic.com/frontend-assets/ml-web-navigation/ui-navigation/5.21.22/mercadolibre/logo__large_plus.png" alt="Mercado Libre" style="height: 24px;" />';
-              badge.className = 'retailer-badge ml-badge';
-            }
-          }
-
-          // Update seller info
-          const sellerEl = document.getElementById('sellerInfo');
-          if (sellerEl && productData.seller) {
-            const sellerName = typeof productData.seller === 'string' ? productData.seller : productData.seller.nickname;
-            sellerEl.innerHTML = (lang === 'es' ? 'Vendido por:' : 'Sold by:') + ' <strong>' + sellerName + '</strong>';
-          }
-
-          // Update images
-          if (productData.images && productData.images.length > 0) {
-            updateImageGallery(productData.images);
-          }
         }
 
         function updateImageGallery(images) {
@@ -8253,11 +8353,6 @@ State: ${state || "none"}</pre>
           color: white;
         }
 
-        .retailer-badge.ml-badge {
-          background: #ffe600;
-          color: #333;
-        }
-
         /* Compact Price Section */
         .product-price-section {
           display: flex;
@@ -8494,7 +8589,7 @@ State: ${state || "none"}</pre>
           id: ${JSON.stringify(product?.id || id)},
           title: ${JSON.stringify(product?.title || "Unknown Product")},
           url: ${JSON.stringify(product?.permalink || "")},
-          source: ${JSON.stringify(product?.source || "mercadolibre")},
+          source: ${JSON.stringify(product?.source || "amazon")},
           price: ${product?.price || 0}
         };
 
@@ -8719,7 +8814,7 @@ State: ${state || "none"}</pre>
   /**
    * API: Get product by ID with callback pattern
    * URL: GET /api/products/:id
-   * Example: GET /api/products/MLM-001
+   * Example: GET /api/products/AMZN-B0CHX2F5QT
    */
   app.get("/api/products/:id", function (req, res) {
     const id = String(req.params.id || "");
@@ -8776,7 +8871,7 @@ State: ${state || "none"}</pre>
   });
 
   /**
-   * API: Get Mercado Libre categories
+   * API: Get product categories
    * URL: GET /api/categories
    */
   app.get("/api/categories", function (req, res) {
@@ -8824,10 +8919,10 @@ State: ${state || "none"}</pre>
 
   /**
    * POST /api/scrape
-   * Triggers the Apify Actor to scrape products from Amazon / Mercado Libre.
+   * Triggers the Apify Actor to scrape products from Amazon.
    * Stores results into Supabase tracked_products + price_history.
    * Body: { source, query, maxResults }
-   *   source      - 'amazon' | 'mercadolibre' | 'all'
+   *   source      - 'amazon'
    *   query       - search keyword
    *   maxResults  - how many products per source (default 20)
    */
@@ -8951,7 +9046,7 @@ State: ${state || "none"}</pre>
 
           return `
           <div class="home-product-card">
-            <a href="/product/${encodeURIComponent(product.product_id)}?source=${product.source || "mercadolibre"}" class="home-product-card-link">
+            <a href="/product/${encodeURIComponent(product.product_id)}?source=${product.source || "amazon"}" class="home-product-card-link">
               <div class="home-product-card-image">
                 ${badges.length > 0 ? `<div class="home-product-card-badges">${badges.join("")}</div>` : ""}
                 <img src="${getProductImageUrl(product)}"
@@ -9038,7 +9133,7 @@ State: ${state || "none"}</pre>
 
           return `
           <div class="home-product-card">
-            <a href="/product/${encodeURIComponent(product.product_id)}?source=${product.source || "mercadolibre"}" class="home-product-card-link">
+            <a href="/product/${encodeURIComponent(product.product_id)}?source=${product.source || "amazon"}" class="home-product-card-link">
               <div class="home-product-card-image">
                 ${badges.length > 0 ? `<div class="home-product-card-badges">${badges.join("")}</div>` : ""}
                 <img src="${getProductImageUrl(product)}"

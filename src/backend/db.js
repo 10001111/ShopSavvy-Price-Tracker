@@ -68,7 +68,7 @@ async function initDb() {
       product_id TEXT NOT NULL,
       product_title TEXT,
       product_url TEXT,
-      source TEXT DEFAULT 'mercadolibre',
+      source TEXT DEFAULT 'amazon',
       target_price REAL,
       current_price REAL,
       created_at TEXT NOT NULL,
