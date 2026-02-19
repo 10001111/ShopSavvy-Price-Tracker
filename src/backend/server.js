@@ -2987,142 +2987,63 @@ async function start() {
         item.dropDate || item.scraped_at || new Date().toISOString();
 
       return `
-      <article class="product-card-modern" data-product-id="${item.id}" data-category="${category}" data-drop-date="${dropDate}" role="article">
-        <a href="${productUrl}" class="product-card-link" aria-label="${item.title || t(lang, "product")}">
+      <article class="pc" data-product-id="${item.id}" data-category="${category}" data-drop-date="${dropDate}" role="article">
+        <a href="${productUrl}" class="pc-link" aria-label="${item.title || t(lang, "product")}">
 
-          <!-- Image Section with Lazy Loading -->
-          <div class="product-image-container">
-            <div class="product-image-skeleton" aria-hidden="true"></div>
+          <!-- Image -->
+          <div class="pc-img-wrap">
+            <div class="pc-img-skeleton" aria-hidden="true"></div>
             <img
               src="${item.thumbnail || "/images/product-placeholder.svg"}"
               alt="${item.title || t(lang, "product")}"
-              class="product-image"
+              class="pc-img"
               loading="lazy"
               onload="this.classList.add('loaded'); this.previousElementSibling.style.display='none'"
               onerror="this.src='/images/product-placeholder.svg'"
             />
-
-            <!-- Badges Container -->
-            <div class="badge-container">
-              ${
-                isBestPrice
-                  ? `<span class="badge badge-best-price ${discountPercent > 40 ? "badge-urgent" : ""}" role="status">
-                ${lang === "es" ? "🔥 Mejor Precio" : "🔥 Best Price"}
-              </span>`
-                  : ""
-              }
-
-              ${
-                hasDiscount && !isBestPrice
-                  ? `<span class="badge badge-discount" role="status">
-                -${discountPercent}% OFF
-              </span>`
-                  : ""
-              }
-
-              ${
-                isLowStock
-                  ? `<span class="badge badge-low-stock badge-urgent" role="status">
-                ${lang === "es" ? `Solo ${availableQty} disponibles` : `Only ${availableQty} left`}
-              </span>`
-                  : ""
-              }
-
-              <span class="badge badge-source">${sourceLabel}</span>
-            </div>
+            ${hasDiscount ? `<div class="pc-discount-pill">-${discountPercent}%</div>` : ""}
+            ${isLowStock ? `<div class="pc-stock-pill">${lang === "es" ? `¡Solo ${availableQty}!` : `Only ${availableQty} left!`}</div>` : ""}
           </div>
 
-          <!-- Content Section -->
-          <div class="product-content">
+          <!-- Body -->
+          <div class="pc-body">
 
-            <!-- Product Title (Enhanced with Specs) -->
-            <h3 class="product-title line-clamp-2">
-              ${enhancedTitle}
-            </h3>
+            <!-- Source label -->
+            <span class="pc-source">Amazon</span>
 
-            <!-- Product Specs Chips -->
-            <div class="chip-row">
-              ${specs.ram ? `<div class="chip chip-spec">💾 ${specs.ram}</div>` : ""}
-              ${specs.storage ? `<div class="chip chip-spec">💿 ${specs.storage}</div>` : ""}
-              ${specs.screenSize ? `<div class="chip chip-spec">📱 ${specs.screenSize}</div>` : ""}
-              ${specs.os ? `<div class="chip chip-spec">${specs.os}</div>` : ""}
-              ${specs.connectivity && specs.connectivity.includes("5G") ? `<div class="chip chip-spec">📡 5G</div>` : ""}
-            </div>
+            <!-- Title -->
+            <h3 class="pc-title">${enhancedTitle}</h3>
 
-            <!-- Rating & Social Proof Chips -->
-            <div class="chip-row">
-              ${
-                rating > 0
-                  ? `
-              <div class="chip chip-rating" aria-label="${lang === "es" ? "Calificación" : "Rating"}: ${rating.toFixed(1)}">
-                <svg class="chip-icon" viewBox="0 0 24 24" fill="currentColor">
-                  <path d="M12 2l3.09 6.26L22 9.27l-5 4.87 1.18 6.88L12 17.77l-6.18 3.25L7 14.14 2 9.27l6.91-1.01L12 2z"/>
-                </svg>
-                <span>${rating.toFixed(1)}</span>
-                ${reviewCount > 0 ? `<span class="text-tertiary">(${reviewCount})</span>` : ""}
+            <!-- Rating row -->
+            ${
+              rating > 0
+                ? `
+            <div class="pc-meta">
+              <div class="pc-stars">
+                <svg width="12" height="12" viewBox="0 0 24 24" fill="#f59e0b"><path d="M12 2l3.09 6.26L22 9.27l-5 4.87 1.18 6.88L12 17.77l-6.18 3.25L7 14.14 2 9.27l6.91-1.01L12 2z"/></svg>
+                <span class="pc-rating-val">${rating.toFixed(1)}</span>
+                ${reviewCount > 0 ? `<span class="pc-review-count">(${reviewCount.toLocaleString()})</span>` : ""}
               </div>
-              `
-                  : ""
-              }
-
-              ${
-                soldCount > 0
-                  ? `
-              <div class="chip chip-sold" aria-label="${lang === "es" ? "Vendidos" : "Sold"}: ${soldCount}+">
-                <svg class="chip-icon" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
-                  <path d="M20 21v-2a4 4 0 0 0-4-4H8a4 4 0 0 0-4 4v2"></path>
-                  <circle cx="12" cy="7" r="4"></circle>
-                </svg>
-                <span>${soldCount}+</span>
-              </div>
-              `
-                  : ""
-              }
-            </div>
-
-            <!-- Pricing Container -->
-            <div class="pricing-container">
-              <div class="price-row">
-                <span class="price-current" data-price="${item.price}" data-currency="${item.currency || item.currency_id || "MXN"}">
-                  ${formatPrice(item.price, item.currency || item.currency_id || "MXN")}
-                </span>
-
-                ${
-                  hasDiscount
-                    ? `
-                <span class="price-original" data-price="${comparePrice}" data-currency="${item.currency || item.currency_id || "MXN"}">
-                  ${formatPrice(comparePrice, item.currency || item.currency_id || "MXN")}
-                </span>
-                <span class="price-discount-label">
-                  -${discountPercent}% ${lang === "es" ? "descuento" : "off"}
-                </span>
-                `
-                    : ""
-                }
-              </div>
-            </div>
+              ${soldCount > 0 ? `<span class="pc-sold">${soldCount.toLocaleString()}+ ${lang === "es" ? "vendidos" : "sold"}</span>` : ""}
+            </div>`
+                : ""
+            }
 
             <!-- Hashtags -->
             ${(() => {
               const hashtags = generateHashtags(item);
               if (!hashtags.length) return "";
-              return `<div class="product-hashtags">${hashtags.map((tag) => `<a href="/?q=${encodeURIComponent(tag)}" class="product-hashtag" onclick="event.stopPropagation()">#${tag}</a>`).join("")}</div>`;
+              return `<div class="pc-tags">${hashtags.map((tag) => `<a href="/?q=${encodeURIComponent(tag)}" class="pc-tag" onclick="event.stopPropagation()">#${tag}</a>`).join("")}</div>`;
             })()}
 
-            <!-- Primary CTA Button -->
-            <button
-              class="cta-primary"
-              role="button"
-              aria-label="${lang === "es" ? "Ver detalles del producto" : "View product details"}"
-              onclick="this.classList.add('loading')"
-            >
-              <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
-                <circle cx="9" cy="21" r="1"></circle>
-                <circle cx="20" cy="21" r="1"></circle>
-                <path d="M1 1h4l2.68 13.39a2 2 0 0 0 2 1.61h9.72a2 2 0 0 0 2-1.61L23 6H6"></path>
-              </svg>
-              ${lang === "es" ? "Ver Producto" : "View Product"}
-            </button>
+            <!-- Price -->
+            <div class="pc-price-row">
+              <span class="pc-price">${formatPrice(item.price, item.currency || item.currency_id || "MXN")}</span>
+              ${hasDiscount ? `<span class="pc-price-was">${formatPrice(comparePrice, item.currency || item.currency_id || "MXN")}</span>` : ""}
+            </div>
+
+            <!-- CTA -->
+            <div class="pc-cta">${lang === "es" ? "Ver Producto" : "View Product"}</div>
 
           </div>
         </a>
