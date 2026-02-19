@@ -2290,7 +2290,8 @@ async function fetchAllProducts({
     rows.map((r) => ({
       id: r.product_id,
       title: r.product_title,
-      price: parseFloat(r.price || r.current_price || 0), // FIX: product_cache uses 'price', tracked_products uses 'current_price'
+      price: parseFloat(r.price || r.current_price || 0),
+      original_price: parseFloat(r.avg_price || r.original_price || 0) || null,
       currency_id: r.currency || "MXN",
       thumbnail: r.thumbnail || null,
       seller: r.seller ? { nickname: r.seller } : null,
@@ -2950,13 +2951,16 @@ async function start() {
       const isInStock = availableQty > 0;
       const isLowStock = isInStock && availableQty < 10;
 
-      // Calculate discount
-      const hasDiscount =
-        item.original_price && item.original_price > item.price;
+      // Calculate discount — use original_price, falling back to avgPrice
+      const comparePrice =
+        item.original_price && item.original_price > item.price
+          ? item.original_price
+          : item.avgPrice && item.avgPrice > item.price
+            ? item.avgPrice
+            : null;
+      const hasDiscount = comparePrice !== null;
       const discountPercent = hasDiscount
-        ? Math.round(
-            ((item.original_price - item.price) / item.original_price) * 100,
-          )
+        ? Math.round(((comparePrice - item.price) / comparePrice) * 100)
         : 0;
 
       // Determine if this is a "best price" (discount > 30% or marked as good deal)
@@ -3086,11 +3090,11 @@ async function start() {
                 ${
                   hasDiscount
                     ? `
-                <span class="price-original" data-price="${item.original_price}" data-currency="${item.currency || item.currency_id || "MXN"}">
-                  ${formatPrice(item.original_price, item.currency || item.currency_id || "MXN")}
+                <span class="price-original" data-price="${comparePrice}" data-currency="${item.currency || item.currency_id || "MXN"}">
+                  ${formatPrice(comparePrice, item.currency || item.currency_id || "MXN")}
                 </span>
                 <span class="price-discount-label">
-                  ${lang === "es" ? "Ahorra" : "Save"} ${discountPercent}%
+                  -${discountPercent}% ${lang === "es" ? "descuento" : "off"}
                 </span>
                 `
                     : ""
