@@ -6076,7 +6076,7 @@ body {
 .pc-img-wrap {
     position: relative;
     aspect-ratio: 1;
-    background: #f8f8f8;
+    background: var(--bg-secondary);
     overflow: hidden;
 }
 .pc-img {
@@ -6092,7 +6092,12 @@ body {
 .pc-img-skeleton {
     position: absolute;
     inset: 0;
-    background: linear-gradient(90deg, #f0f0f0 25%, #e8e8e8 50%, #f0f0f0 75%);
+    background: linear-gradient(
+        90deg,
+        var(--bg-secondary) 25%,
+        var(--bg-tertiary) 50%,
+        var(--bg-secondary) 75%
+    );
     background-size: 200% 100%;
     animation: pc-shimmer 1.4s ease-in-out infinite;
 }
@@ -6108,12 +6113,12 @@ body {
     position: absolute;
     top: 10px;
     left: 10px;
-    background: #ef4444;
-    color: #fff;
+    background: var(--color-danger);
+    color: var(--text-light);
     font-size: 12px;
     font-weight: 700;
     padding: 3px 9px;
-    border-radius: 20px;
+    border-radius: var(--radius-full);
     pointer-events: none;
     z-index: 2;
 }
@@ -6121,12 +6126,12 @@ body {
     position: absolute;
     top: 10px;
     right: 10px;
-    background: #f59e0b;
-    color: #fff;
+    background: var(--color-warning);
+    color: var(--text-light);
     font-size: 11px;
     font-weight: 700;
     padding: 3px 8px;
-    border-radius: 20px;
+    border-radius: var(--radius-full);
     pointer-events: none;
     z-index: 2;
 }
@@ -6172,7 +6177,7 @@ body {
 .pc-rating-val {
     font-size: 12px;
     font-weight: 700;
-    color: #92400e;
+    color: var(--color-warning);
 }
 .pc-review-count,
 .pc-sold {
@@ -6190,7 +6195,7 @@ body {
     color: var(--color-primary);
     background: color-mix(in srgb, var(--color-primary) 10%, transparent);
     padding: 2px 8px;
-    border-radius: 20px;
+    border-radius: var(--radius-full);
     text-decoration: none;
     transition: background 0.15s;
 }
@@ -6223,8 +6228,8 @@ body {
     margin-top: 10px;
     padding: 10px 16px;
     background: var(--color-primary);
-    color: #fff;
-    border-radius: 10px;
+    color: var(--text-light);
+    border-radius: var(--radius-md);
     font-size: 14px;
     font-weight: 600;
     text-align: center;
@@ -6233,7 +6238,7 @@ body {
         transform 0.15s;
 }
 .pc:hover .pc-cta {
-    background: var(--color-primary-hover, #1d4ed8);
+    background: var(--color-primary-hover);
     transform: translateY(-1px);
 }
 
