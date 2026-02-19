@@ -6109,23 +6109,27 @@ body {
         background-position: -200% 0;
     }
 }
-.pc-discount-pill {
-    position: absolute;
-    top: 10px;
-    left: 10px;
-    background: var(--color-danger);
-    color: var(--text-light);
-    font-size: 12px;
-    font-weight: 700;
-    padding: 3px 9px;
-    border-radius: var(--radius-full);
-    pointer-events: none;
-    z-index: 2;
-}
-.pc-stock-pill {
+/* Discount badge — top-right, bold and prominent */
+.pc-badge-off {
     position: absolute;
     top: 10px;
     right: 10px;
+    background: var(--color-danger);
+    color: var(--text-light);
+    font-size: 13px;
+    font-weight: 800;
+    padding: 4px 10px;
+    border-radius: var(--radius-full);
+    letter-spacing: 0.02em;
+    pointer-events: none;
+    z-index: 2;
+    box-shadow: 0 2px 8px rgba(0, 0, 0, 0.18);
+}
+/* Low stock badge — top-left */
+.pc-badge-stock {
+    position: absolute;
+    top: 10px;
+    left: 10px;
     background: var(--color-warning);
     color: var(--text-light);
     font-size: 11px;
@@ -6202,24 +6206,53 @@ body {
 .pc-tag:hover {
     background: color-mix(in srgb, var(--color-primary) 20%, transparent);
 }
-.pc-price-row {
+/* Price block — sale price dominant, original struck through beside it */
+.pc-price-block {
     display: flex;
     align-items: baseline;
     gap: 8px;
     flex-wrap: wrap;
     margin-top: auto;
-    padding-top: 6px;
+    padding-top: 4px;
 }
 .pc-price {
-    font-size: 20px;
+    font-size: 22px;
     font-weight: 800;
     color: var(--text-primary);
     line-height: 1;
 }
 .pc-price-was {
-    font-size: 13px;
-    color: var(--text-tertiary);
+    font-size: 14px;
+    color: var(--text-muted);
     text-decoration: line-through;
+    font-weight: 400;
+}
+/* "Save $X" green tag */
+.pc-save-tag {
+    display: inline-flex;
+    align-items: center;
+    gap: 4px;
+    background: color-mix(in srgb, var(--color-success) 12%, transparent);
+    color: var(--color-success);
+    font-size: 11px;
+    font-weight: 700;
+    padding: 3px 8px;
+    border-radius: var(--radius-full);
+    width: fit-content;
+}
+/* "Best price on Amazon" green tag */
+.pc-best-tag {
+    display: inline-flex;
+    align-items: center;
+    gap: 4px;
+    background: color-mix(in srgb, var(--color-success) 10%, transparent);
+    color: var(--color-success);
+    border: 1px solid color-mix(in srgb, var(--color-success) 30%, transparent);
+    font-size: 11px;
+    font-weight: 600;
+    padding: 3px 8px;
+    border-radius: var(--radius-full);
+    width: fit-content;
 }
 .pc-cta {
     display: flex;
