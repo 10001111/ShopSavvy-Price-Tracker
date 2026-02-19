@@ -531,17 +531,20 @@ async function cacheScrapedProduct(product) {
     product_title: product.title,
     product_url: product.url || null,
     source: product.source,
-    price: parseFloat(product.price) || 0, // FIX: Changed from current_price to price
+    price: parseFloat(product.price) || 0,
+    original_price: product.original_price
+      ? parseFloat(product.original_price)
+      : null,
     thumbnail:
       product.thumbnail || (product.images && product.images[0]) || null,
     images: product.images || [],
     description: product.description || null,
     seller: product.seller || null,
     rating: product.rating || null,
-    available_quantity: product.available_quantity || null, // ADD: Stock quantity
-    sold_quantity: product.sold_quantity || null, // ADD: Sold count
+    available_quantity: product.available_quantity || null,
+    sold_quantity: product.sold_quantity || null,
     condition: product.condition || "new",
-    currency: product.currency || "USD", // FIX: Changed default from MXN to USD
+    currency: product.currency || "USD",
     scraped_at: new Date().toISOString(),
     last_updated: new Date().toISOString(), // FIX: Changed from last_checked to last_updated
   };

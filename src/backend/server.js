@@ -2291,7 +2291,7 @@ async function fetchAllProducts({
       id: r.product_id,
       title: r.product_title,
       price: parseFloat(r.price || r.current_price || 0),
-      original_price: parseFloat(r.avg_price || r.original_price || 0) || null,
+      original_price: parseFloat(r.original_price || r.avg_price || 0) || null,
       currency_id: r.currency || "MXN",
       thumbnail: r.thumbnail || null,
       seller: r.seller ? { nickname: r.seller } : null,

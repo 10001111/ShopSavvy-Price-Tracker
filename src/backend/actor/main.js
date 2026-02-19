@@ -153,7 +153,7 @@ function detectCategory(title) {
             return;
           }
 
-          // Price – try multiple selectors
+          // Current price – try multiple selectors
           let price = null;
           const priceText =
             $("#a-price .a-price-whole").first().text().trim() ||
@@ -161,6 +161,24 @@ function detectCategory(title) {
             $("#price_block_yourPrice .a-price-whole").first().text().trim();
           if (priceText) {
             price = parseFloat(priceText.replace(/[^0-9.]/g, ""));
+          }
+
+          // Original / list price (crossed-out price Amazon shows as "Precio de lista")
+          let originalPrice = null;
+          const originalPriceText =
+            $(".basisPrice .a-offscreen").first().text().trim() ||
+            $(".a-text-price .a-offscreen").first().text().trim() ||
+            $("#priceblock_saleprice_lbl")
+              .next()
+              .find(".a-offscreen")
+              .text()
+              .trim() ||
+            $("span[data-a-strike='true'] .a-offscreen").first().text().trim();
+          if (originalPriceText) {
+            const parsed = parseFloat(
+              originalPriceText.replace(/[^0-9.]/g, ""),
+            );
+            if (parsed > 0) originalPrice = parsed;
           }
 
           // Images
@@ -270,6 +288,8 @@ function detectCategory(title) {
               asin,
               title,
               price,
+              original_price:
+                originalPrice && originalPrice > price ? originalPrice : null,
               currency: "MXN",
               category,
               images,
