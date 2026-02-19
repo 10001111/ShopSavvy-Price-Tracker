@@ -1821,202 +1821,71 @@ function getProductImageUrl(product) {
 // ============================================
 
 /**
- * Detect product category based on title keywords
- * @param {string} productTitle - Product title to analyze
- * @returns {string|null} Category ID or null if no match
+ * Detect product category based on title.
+ * Uses the same regex rules as generateHashtags so category and hashtags always agree.
+ * Returns the primary nav category ID or null.
  */
 function detectCategory(productTitle) {
   if (!productTitle) return null;
+  const t = productTitle.toLowerCase();
 
-  const lowerTitle = productTitle.toLowerCase();
+  // Order matters: more specific rules first
+  if (
+    /\biphone\b|\bsamsung galaxy\b|\bgoogle pixel\b|\bmotorola\b|\bxiaomi\b|\bredmi\b|\boneplus\b|\bsmartphone\b|\bcelular\b/.test(
+      t,
+    )
+  )
+    return "phones";
+  if (
+    /\bmacbook\b|\blaptop\b|\bnotebook\b|\bchromebook\b|\bcomputadora portátil\b|\bpc gamer\b/.test(
+      t,
+    )
+  )
+    return "computers";
+  if (
+    /\bplaystation\b|\bps5\b|\bps4\b|\bxbox\b|\bnintendo\b|\bvideojuego\b|\bvideo game\b/.test(
+      t,
+    )
+  )
+    return "gaming";
+  if (
+    /\bipad\b|\btablet\b|\bsmart tv\b|\btelevisi[oó]n\b|\btelevision\b|\bairpods\b|\bearbuds\b|\bheadphones\b|\baudifonos\b|\baudífonos\b|\bcamera\b|\bcámara\b|\bsmartwatch\b|\bapple watch\b|\bdrone\b|\bspeaker\b|\bbocina\b|\balexa\b|\becho\b|\bkindle\b|\be-reader\b/.test(
+      t,
+    )
+  )
+    return "electronics";
+  if (
+    /\blego\b|\bbarbie\b|\bhot wheels\b|\bfunko\b|\bnerf\b|\bplaymobil\b|\bjuguete\b|\bmuñeca\b|\bmuñeco\b|\bjuego de mesa\b|\bboard game\b|\bpuzzle\b|\brompecabezas\b/.test(
+      t,
+    )
+  )
+    return "toys";
+  if (
+    /\bnike\b|\badidas\b|\bsneakers\b|\bzapatos\b|\bshirt\b|\bcamisa\b|\bjeans\b|\bpantalon\b|\bvestido\b|\bdress\b|\bjacket\b|\bchaqueta\b|\bchamarra\b/.test(
+      t,
+    )
+  )
+    return "clothing";
+  if (
+    /\bdyson\b|\binstant pot\b|\bkitchenaid\b|\bblender\b|\blicuadora\b|\bvacuum\b|\baspiradora\b|\bcoffee maker\b|\bcafetera\b|\bmicrowave\b|\bmicroondas\b|\brefrigerador\b|\bsartén\b|\bsarten\b|\brecipiente\b|\bcontenedor\b|\bollas\b|\bcubiertos\b/.test(
+      t,
+    )
+  )
+    return "home-kitchen";
+  if (
+    /\btreadmill\b|\bcaminadora\b|\bdumbbell\b|\bpesas\b|\byoga\b|\bbicicleta\b|\bfitness\b|\bgimnasio\b|\bboxeo\b|\bdeportes\b/.test(
+      t,
+    )
+  )
+    return "sports-outdoors";
+  if (
+    /\bperfume\b|\bcolonia\b|\bshampoo\b|\bchamp[uú]\b|\bmakeup\b|\bmaquillaje\b|\bskincare\b|\bcream\b|\bcrema\b|\blipstick\b|\blabial\b|\beyeliner\b|\bmascarilla\b|\bserum\b/.test(
+      t,
+    )
+  )
+    return "beauty";
 
-  // Exclusion keywords: If product contains these, it CANNOT be in that category
-  const exclusionRules = {
-    phones: [
-      "case",
-      "cover",
-      "holder",
-      "mount",
-      "charger",
-      "cable",
-      "screen protector",
-      "funda",
-      "cargador",
-      "protector",
-      "soporte",
-    ],
-    computers: [
-      "toy",
-      "lego",
-      "juguete",
-      "game piece",
-      "pieza",
-      "case",
-      "bag",
-      "mochila",
-      "sticker",
-      "pegatina",
-      "poster",
-      "mousepad",
-      "alfombrilla",
-    ],
-    electronics: [
-      "toy",
-      "lego",
-      "juguete",
-      "book",
-      "libro",
-      "poster",
-      "sticker",
-      "clothing",
-      "shirt",
-      "camisa",
-      "toy version",
-      "replica juguete",
-    ],
-    beauty: ["toy", "lego", "juguete", "food", "comida", "kitchen appliance"],
-    toys: [], // Toys can contain any keywords
-    "sports-outdoors": [
-      "toy",
-      "lego",
-      "juguete",
-      "video game",
-      "videojuego",
-      "book",
-      "libro",
-    ],
-    clothing: ["doll clothes", "ropa muñeca", "toy", "juguete", "lego"],
-    "home-kitchen": [
-      "toy",
-      "lego",
-      "juguete",
-      "miniature",
-      "miniatura",
-      "doll house",
-      "casa muñecas",
-    ],
-  };
-
-  // Strong indicators: If ANY of these appear, force category
-  const strongIndicators = {
-    toys: [
-      "lego",
-      "playmobil",
-      "hot wheels",
-      "barbie",
-      "funko pop",
-      "nerf",
-      "juguete",
-      "muñeca",
-      "muñeco",
-      "juego de mesa",
-      "board game",
-      "puzzle",
-    ],
-    phones: [
-      "iphone 1",
-      "samsung galaxy s",
-      "google pixel",
-      "motorola edge",
-      "xiaomi redmi note",
-    ],
-    computers: [
-      "macbook",
-      "laptop ",
-      "desktop pc",
-      "gaming laptop",
-      "notebook computer",
-      "computadora portátil",
-      "pc gamer",
-    ],
-    beauty: [
-      "lipstick",
-      "mascara",
-      "eyeshadow",
-      "foundation",
-      "shampoo",
-      "conditioner",
-      "labial",
-      "rímel",
-      "champú",
-      "perfume",
-    ],
-  };
-
-  // Check strong indicators first (highest priority)
-  for (const [catId, indicators] of Object.entries(strongIndicators)) {
-    for (const indicator of indicators) {
-      if (lowerTitle.includes(indicator.toLowerCase())) {
-        console.log(
-          `[Category] Strong indicator "${indicator}" → ${catId} for "${productTitle.substring(0, 50)}"`,
-        );
-        return catId;
-      }
-    }
-  }
-
-  // Score-based detection: Count keyword matches per category
-  const categoryScores = {};
-  const categoryPriority = [
-    "phones",
-    "computers",
-    "electronics",
-    "beauty",
-    "toys",
-    "sports-outdoors",
-    "clothing",
-    "home-kitchen",
-  ];
-
-  for (const catId of categoryPriority) {
-    const catConfig = CATEGORIES[catId];
-    if (!catConfig) continue;
-
-    let score = 0;
-    let matchedKeywords = [];
-
-    // Check exclusion rules first
-    const exclusions = exclusionRules[catId] || [];
-    let isExcluded = false;
-
-    for (const exclusion of exclusions) {
-      if (lowerTitle.includes(exclusion.toLowerCase())) {
-        console.log(
-          `[Category] Excluded from ${catId}: contains "${exclusion}" in "${productTitle.substring(0, 50)}"`,
-        );
-        isExcluded = true;
-        break;
-      }
-    }
-
-    if (isExcluded) continue; // Skip this category
-
-    // Count matching keywords
-    for (const keyword of catConfig.keywords) {
-      if (lowerTitle.includes(keyword.toLowerCase())) {
-        score++;
-        matchedKeywords.push(keyword);
-      }
-    }
-
-    if (score > 0) {
-      categoryScores[catId] = { score, matchedKeywords };
-    }
-  }
-
-  // Return category with highest score
-  if (Object.keys(categoryScores).length > 0) {
-    const bestMatch = Object.entries(categoryScores).sort(
-      (a, b) => b[1].score - a[1].score,
-    )[0];
-
-    console.log(
-      `[Category] Best match: ${bestMatch[0]} (score: ${bestMatch[1].score}) for "${productTitle.substring(0, 50)}"`,
-    );
-    return bestMatch[0];
-  }
-
-  return null; // uncategorized
+  return null;
 }
 
 /**
