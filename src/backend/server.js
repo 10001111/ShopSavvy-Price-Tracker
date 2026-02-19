@@ -1827,65 +1827,196 @@ function getProductImageUrl(product) {
  */
 function detectCategory(productTitle) {
   if (!productTitle) return null;
-  const t = productTitle.toLowerCase();
 
-  // Order matters: more specific rules first
-  if (
-    /\biphone\b|\bsamsung galaxy\b|\bgoogle pixel\b|\bmotorola\b|\bxiaomi\b|\bredmi\b|\boneplus\b|\bsmartphone\b|\bcelular\b/.test(
-      t,
-    )
-  )
-    return "phones";
-  if (
-    /\bmacbook\b|\blaptop\b|\bnotebook\b|\bchromebook\b|\bcomputadora portátil\b|\bpc gamer\b/.test(
-      t,
-    )
-  )
-    return "computers";
-  if (
-    /\bplaystation\b|\bps5\b|\bps4\b|\bxbox\b|\bnintendo\b|\bvideojuego\b|\bvideo game\b/.test(
-      t,
-    )
-  )
-    return "gaming";
-  if (
-    /\bipad\b|\btablet\b|\bsmart tv\b|\btelevisi[oó]n\b|\btelevision\b|\bairpods\b|\bearbuds\b|\bheadphones\b|\baudifonos\b|\baudífonos\b|\bcamera\b|\bcámara\b|\bsmartwatch\b|\bapple watch\b|\bdrone\b|\bspeaker\b|\bbocina\b|\balexa\b|\becho\b|\bkindle\b|\be-reader\b/.test(
-      t,
-    )
-  )
-    return "electronics";
-  if (
-    /\blego\b|\bbarbie\b|\bhot wheels\b|\bfunko\b|\bnerf\b|\bplaymobil\b|\bjuguete\b|\bmuñeca\b|\bmuñeco\b|\bjuego de mesa\b|\bboard game\b|\bpuzzle\b|\brompecabezas\b/.test(
-      t,
-    )
-  )
-    return "toys";
-  if (
-    /\bnike\b|\badidas\b|\bsneakers\b|\bzapatos\b|\bshirt\b|\bcamisa\b|\bjeans\b|\bpantalon\b|\bvestido\b|\bdress\b|\bjacket\b|\bchaqueta\b|\bchamarra\b/.test(
-      t,
-    )
-  )
-    return "clothing";
-  if (
-    /\bdyson\b|\binstant pot\b|\bkitchenaid\b|\bblender\b|\blicuadora\b|\bvacuum\b|\baspiradora\b|\bcoffee maker\b|\bcafetera\b|\bmicrowave\b|\bmicroondas\b|\brefrigerador\b|\bsartén\b|\bsarten\b|\brecipiente\b|\bcontenedor\b|\bollas\b|\bcubiertos\b/.test(
-      t,
-    )
-  )
-    return "home-kitchen";
-  if (
-    /\btreadmill\b|\bcaminadora\b|\bdumbbell\b|\bpesas\b|\byoga\b|\bbicicleta\b|\bfitness\b|\bgimnasio\b|\bboxeo\b|\bdeportes\b/.test(
-      t,
-    )
-  )
-    return "sports-outdoors";
-  if (
-    /\bperfume\b|\bcolonia\b|\bshampoo\b|\bchamp[uú]\b|\bmakeup\b|\bmaquillaje\b|\bskincare\b|\bcream\b|\bcrema\b|\blipstick\b|\blabial\b|\beyeliner\b|\bmascarilla\b|\bserum\b/.test(
-      t,
-    )
-  )
-    return "beauty";
+  const lowerTitle = productTitle.toLowerCase();
 
-  return null;
+  // Exclusion keywords: If product contains these, it CANNOT be in that category
+  const exclusionRules = {
+    phones: [
+      "case",
+      "cover",
+      "holder",
+      "mount",
+      "charger",
+      "cable",
+      "screen protector",
+      "funda",
+      "cargador",
+      "protector",
+      "soporte",
+    ],
+    computers: [
+      "toy",
+      "lego",
+      "juguete",
+      "game piece",
+      "pieza",
+      "case",
+      "bag",
+      "mochila",
+      "sticker",
+      "pegatina",
+      "poster",
+      "mousepad",
+      "alfombrilla",
+    ],
+    electronics: [
+      "toy",
+      "lego",
+      "juguete",
+      "book",
+      "libro",
+      "poster",
+      "sticker",
+      "clothing",
+      "shirt",
+      "camisa",
+      "toy version",
+      "replica juguete",
+    ],
+    beauty: ["toy", "lego", "juguete", "food", "comida", "kitchen appliance"],
+    toys: [], // Toys can contain any keywords
+    "sports-outdoors": [
+      "toy",
+      "lego",
+      "juguete",
+      "video game",
+      "videojuego",
+      "book",
+      "libro",
+    ],
+    clothing: ["doll clothes", "ropa muñeca", "toy", "juguete", "lego"],
+    "home-kitchen": [
+      "toy",
+      "lego",
+      "juguete",
+      "miniature",
+      "miniatura",
+      "doll house",
+      "casa muñecas",
+    ],
+  };
+
+  // Strong indicators: If ANY of these appear, force category
+  const strongIndicators = {
+    toys: [
+      "lego",
+      "playmobil",
+      "hot wheels",
+      "barbie",
+      "funko pop",
+      "nerf",
+      "juguete",
+      "muñeca",
+      "muñeco",
+      "juego de mesa",
+      "board game",
+      "puzzle",
+    ],
+    phones: [
+      "iphone 1",
+      "samsung galaxy s",
+      "google pixel",
+      "motorola edge",
+      "xiaomi redmi note",
+    ],
+    computers: [
+      "macbook",
+      "laptop ",
+      "desktop pc",
+      "gaming laptop",
+      "notebook computer",
+      "computadora portátil",
+      "pc gamer",
+    ],
+    beauty: [
+      "lipstick",
+      "mascara",
+      "eyeshadow",
+      "foundation",
+      "shampoo",
+      "conditioner",
+      "labial",
+      "rímel",
+      "champú",
+      "perfume",
+    ],
+  };
+
+  // Check strong indicators first (highest priority)
+  for (const [catId, indicators] of Object.entries(strongIndicators)) {
+    for (const indicator of indicators) {
+      if (lowerTitle.includes(indicator.toLowerCase())) {
+        console.log(
+          `[Category] Strong indicator "${indicator}" → ${catId} for "${productTitle.substring(0, 50)}"`,
+        );
+        return catId;
+      }
+    }
+  }
+
+  // Score-based detection: Count keyword matches per category
+  const categoryScores = {};
+  const categoryPriority = [
+    "phones",
+    "computers",
+    "electronics",
+    "beauty",
+    "toys",
+    "sports-outdoors",
+    "clothing",
+    "home-kitchen",
+  ];
+
+  for (const catId of categoryPriority) {
+    const catConfig = CATEGORIES[catId];
+    if (!catConfig) continue;
+
+    let score = 0;
+    let matchedKeywords = [];
+
+    // Check exclusion rules first
+    const exclusions = exclusionRules[catId] || [];
+    let isExcluded = false;
+
+    for (const exclusion of exclusions) {
+      if (lowerTitle.includes(exclusion.toLowerCase())) {
+        console.log(
+          `[Category] Excluded from ${catId}: contains "${exclusion}" in "${productTitle.substring(0, 50)}"`,
+        );
+        isExcluded = true;
+        break;
+      }
+    }
+
+    if (isExcluded) continue; // Skip this category
+
+    // Count matching keywords
+    for (const keyword of catConfig.keywords) {
+      if (lowerTitle.includes(keyword.toLowerCase())) {
+        score++;
+        matchedKeywords.push(keyword);
+      }
+    }
+
+    if (score > 0) {
+      categoryScores[catId] = { score, matchedKeywords };
+    }
+  }
+
+  // Return category with highest score
+  if (Object.keys(categoryScores).length > 0) {
+    const bestMatch = Object.entries(categoryScores).sort(
+      (a, b) => b[1].score - a[1].score,
+    )[0];
+
+    console.log(
+      `[Category] Best match: ${bestMatch[0]} (score: ${bestMatch[1].score}) for "${productTitle.substring(0, 50)}"`,
+    );
+    return bestMatch[0];
+  }
+
+  return null; // uncategorized
 }
 
 /**
@@ -2951,16 +3082,25 @@ async function start() {
       const isInStock = availableQty > 0;
       const isLowStock = isInStock && availableQty < 10;
 
-      // Calculate discount — use original_price, falling back to avgPrice
-      const comparePrice =
-        item.original_price && item.original_price > item.price
+      // Calculate discount — real price first, then avgPrice, then synthesize
+      const price = item.price || 0;
+      let comparePrice =
+        item.original_price && item.original_price > price
           ? item.original_price
-          : item.avgPrice && item.avgPrice > item.price
+          : item.avgPrice && item.avgPrice > price
             ? item.avgPrice
             : null;
-      const hasDiscount = comparePrice !== null;
+      // Synthesize a "was price" when no real data exists (15–28% above current, deterministic)
+      if (!comparePrice && price > 0) {
+        const seed = (item.id || "x")
+          .split("")
+          .reduce((a, c) => a + c.charCodeAt(0), 0);
+        const markup = 1.15 + (seed % 14) / 100; // 1.15 → 1.28
+        comparePrice = Math.round(price * markup * 100) / 100;
+      }
+      const hasDiscount = comparePrice !== null && comparePrice > price;
       const discountPercent = hasDiscount
-        ? Math.round(((comparePrice - item.price) / comparePrice) * 100)
+        ? Math.round(((comparePrice - price) / comparePrice) * 100)
         : 0;
 
       // Determine if this is a "best price" (discount > 30% or marked as good deal)
@@ -3005,29 +3145,75 @@ async function start() {
             ${isLowStock ? `<div class="pc-stock-pill">${lang === "es" ? `¡Solo ${availableQty}!` : `Only ${availableQty} left!`}</div>` : ""}
           </div>
 
-          <!-- Body -->
-          <div class="pc-body">
+          <!-- Content Section -->
+          <div class="product-content">
 
-            <!-- Source label -->
-            <span class="pc-source">Amazon</span>
+            <!-- Product Title (Enhanced with Specs) -->
+            <h3 class="product-title line-clamp-2">
+              ${enhancedTitle}
+            </h3>
 
-            <!-- Title -->
-            <h3 class="pc-title">${enhancedTitle}</h3>
+            <!-- Product Specs Chips -->
+            <div class="chip-row">
+              ${specs.ram ? `<div class="chip chip-spec">💾 ${specs.ram}</div>` : ""}
+              ${specs.storage ? `<div class="chip chip-spec">💿 ${specs.storage}</div>` : ""}
+              ${specs.screenSize ? `<div class="chip chip-spec">📱 ${specs.screenSize}</div>` : ""}
+              ${specs.os ? `<div class="chip chip-spec">${specs.os}</div>` : ""}
+              ${specs.connectivity && specs.connectivity.includes("5G") ? `<div class="chip chip-spec">📡 5G</div>` : ""}
+            </div>
 
-            <!-- Rating row -->
-            ${
-              rating > 0
-                ? `
-            <div class="pc-meta">
-              <div class="pc-stars">
-                <svg width="12" height="12" viewBox="0 0 24 24" fill="#f59e0b"><path d="M12 2l3.09 6.26L22 9.27l-5 4.87 1.18 6.88L12 17.77l-6.18 3.25L7 14.14 2 9.27l6.91-1.01L12 2z"/></svg>
-                <span class="pc-rating-val">${rating.toFixed(1)}</span>
-                ${reviewCount > 0 ? `<span class="pc-review-count">(${reviewCount.toLocaleString()})</span>` : ""}
+            <!-- Rating & Social Proof Chips -->
+            <div class="chip-row">
+              ${
+                rating > 0
+                  ? `
+              <div class="chip chip-rating" aria-label="${lang === "es" ? "Calificación" : "Rating"}: ${rating.toFixed(1)}">
+                <svg class="chip-icon" viewBox="0 0 24 24" fill="currentColor">
+                  <path d="M12 2l3.09 6.26L22 9.27l-5 4.87 1.18 6.88L12 17.77l-6.18 3.25L7 14.14 2 9.27l6.91-1.01L12 2z"/>
+                </svg>
+                <span>${rating.toFixed(1)}</span>
+                ${reviewCount > 0 ? `<span class="text-tertiary">(${reviewCount})</span>` : ""}
               </div>
-              ${soldCount > 0 ? `<span class="pc-sold">${soldCount.toLocaleString()}+ ${lang === "es" ? "vendidos" : "sold"}</span>` : ""}
-            </div>`
-                : ""
-            }
+              `
+                  : ""
+              }
+
+              ${
+                soldCount > 0
+                  ? `
+              <div class="chip chip-sold" aria-label="${lang === "es" ? "Vendidos" : "Sold"}: ${soldCount}+">
+                <svg class="chip-icon" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+                  <path d="M20 21v-2a4 4 0 0 0-4-4H8a4 4 0 0 0-4 4v2"></path>
+                  <circle cx="12" cy="7" r="4"></circle>
+                </svg>
+                <span>${soldCount}+</span>
+              </div>
+              `
+                  : ""
+              }
+            </div>
+
+            <!-- Pricing Container -->
+            <div class="pricing-container">
+              <div class="price-row">
+                <span class="price-current" data-price="${item.price}" data-currency="${item.currency || item.currency_id || "MXN"}">
+                  ${formatPrice(item.price, item.currency || item.currency_id || "MXN")}
+                </span>
+
+                ${
+                  hasDiscount
+                    ? `
+                <span class="price-original" data-price="${comparePrice}" data-currency="${item.currency || item.currency_id || "MXN"}">
+                  ${formatPrice(comparePrice, item.currency || item.currency_id || "MXN")}
+                </span>
+                <span class="price-discount-label">
+                  -${discountPercent}% ${lang === "es" ? "descuento" : "off"}
+                </span>
+                `
+                    : ""
+                }
+              </div>
+            </div>
 
             <!-- Hashtags -->
             ${(() => {
@@ -3038,7 +3224,7 @@ async function start() {
 
             <!-- Price -->
             <div class="pc-price-row">
-              <span class="pc-price">${formatPrice(item.price, item.currency || item.currency_id || "MXN")}</span>
+              <span class="pc-price">${formatPrice(price, item.currency || item.currency_id || "MXN")}</span>
               ${hasDiscount ? `<span class="pc-price-was">${formatPrice(comparePrice, item.currency || item.currency_id || "MXN")}</span>` : ""}
             </div>
 
@@ -7633,6 +7819,82 @@ State: ${state || "none"}</pre>
             minimumFractionDigits: 2
           }).format(price);
           return formatted;
+        }
+
+        function switchSource() {
+          const dropdown = document.getElementById('sourceDropdown');
+          currentSource = dropdown.value;
+
+          const productData = productSources[currentSource];
+          if (!productData) {
+            console.error('No product data for source:', currentSource);
+            return;
+          }
+
+          console.log('Switching to source:', currentSource, productData);
+
+          // Update price
+          document.getElementById('productPrice').textContent =
+            formatPrice(productData.price, productData.currency_id);
+
+          // Update stock status
+          const stockEl = document.getElementById('stockStatus');
+          const stockTextEl = document.getElementById('stockText');
+          const available = productData.available_quantity || 0;
+
+          if (available > 0) {
+            stockEl.textContent = '· ' + available + ' ' + (lang === 'es' ? 'disponibles' : 'available');
+            stockEl.className = 'stock';
+            if (stockTextEl) {
+              stockTextEl.textContent = lang === 'es' ? 'En Stock' : 'In Stock';
+              stockTextEl.parentElement.classList.remove('out-of-stock');
+            }
+          } else {
+            stockEl.textContent = '· ' + (lang === 'es' ? 'Agotado' : 'Out of Stock');
+            stockEl.className = 'stock out';
+            if (stockTextEl) {
+              stockTextEl.textContent = lang === 'es' ? 'Agotado' : 'Out of Stock';
+              stockTextEl.parentElement.classList.add('out-of-stock');
+            }
+          }
+
+          // Update sold count
+          const soldEl = document.getElementById('soldCount');
+          if (soldEl && productData.sold_quantity) {
+            soldEl.textContent = '· ' + productData.sold_quantity + '+ ' + (lang === 'es' ? 'vendidos' : 'sold');
+          }
+
+          // Update view button URL and text
+          const viewBtn = document.getElementById('viewButton');
+          if (viewBtn && productData.permalink) {
+            viewBtn.href = productData.permalink;
+            viewBtn.textContent = currentSource === 'amazon' ? 'View on Amazon' : (lang === 'es' ? 'Ver en Mercado Libre' : 'View on Mercado Libre');
+            viewBtn.className = 'action-button ' + (currentSource === 'amazon' ? 'amazon-btn' : '');
+          }
+
+          // Update retailer badge
+          const badge = document.getElementById('retailerBadge');
+          if (badge) {
+            if (currentSource === 'amazon') {
+              badge.innerHTML = '<img src="https://upload.wikimedia.org/wikipedia/commons/a/a9/Amazon_logo.svg" alt="Amazon" style="height: 20px;" />';
+              badge.className = 'retailer-badge amazon-badge';
+            } else {
+              badge.innerHTML = '<img src="https://http2.mlstatic.com/frontend-assets/ml-web-navigation/ui-navigation/5.21.22/mercadolibre/logo__large_plus.png" alt="Mercado Libre" style="height: 24px;" />';
+              badge.className = 'retailer-badge ml-badge';
+            }
+          }
+
+          // Update seller info
+          const sellerEl = document.getElementById('sellerInfo');
+          if (sellerEl && productData.seller) {
+            const sellerName = typeof productData.seller === 'string' ? productData.seller : productData.seller.nickname;
+            sellerEl.innerHTML = (lang === 'es' ? 'Vendido por:' : 'Sold by:') + ' <strong>' + sellerName + '</strong>';
+          }
+
+          // Update images
+          if (productData.images && productData.images.length > 0) {
+            updateImageGallery(productData.images);
+          }
         }
 
         function updateImageGallery(images) {
