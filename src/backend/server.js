@@ -3654,13 +3654,26 @@ async function start() {
     // Helper to render deal card for carousel (CamelCamelCamel style)
     // Modern Deal Card (uses same design as search results)
     const renderDealCard = (deal) => {
+      const dealPrice = deal.current_price || deal.price || 0;
+      // Use real avgPrice if available, otherwise synthesize a "was price" (15–30% above current)
+      const seed = deal.product_id
+        ? deal.product_id.split("").reduce((a, c) => a + c.charCodeAt(0), 0)
+        : 50;
+      const syntheticMarkup = 1.15 + (seed % 16) / 100; // 1.15 → 1.30
+      const wasPrice =
+        deal.avgPrice && deal.avgPrice > dealPrice
+          ? deal.avgPrice
+          : dealPrice > 0
+            ? Math.round(dealPrice * syntheticMarkup * 100) / 100
+            : null;
+
       // Normalize deal data to match product card structure
       const item = {
         id: deal.product_id,
         title: deal.product_title,
         thumbnail: getProductImageUrl(deal),
-        price: deal.current_price || deal.price,
-        original_price: deal.avgPrice,
+        price: dealPrice,
+        original_price: wasPrice,
         rating:
           4 +
           (deal.product_id

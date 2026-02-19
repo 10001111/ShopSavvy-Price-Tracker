@@ -5081,40 +5081,47 @@ body {
     display: none;
 }
 
-/* Fix for modern product cards in carousel - even sizing */
-.ccc-carousel .product-card-modern {
-    flex: 0 0 280px;
-    min-width: 280px;
-    max-width: 280px;
+/* Carousel card sizing — applies to both old and new card classes */
+.ccc-carousel .product-card-modern,
+.ccc-carousel .pc {
+    flex: 0 0 220px;
+    min-width: 220px;
+    max-width: 220px;
     scroll-snap-align: start;
     height: auto;
 }
 
-.ccc-carousel .product-image-container {
-    height: 200px;
+.ccc-carousel .product-image-container,
+.ccc-carousel .pc-img-wrap {
+    height: 180px;
+    aspect-ratio: unset;
 }
 
 @media (max-width: 768px) {
-    .ccc-carousel .product-card-modern {
-        flex: 0 0 240px;
-        min-width: 240px;
-        max-width: 240px;
+    .ccc-carousel .product-card-modern,
+    .ccc-carousel .pc {
+        flex: 0 0 200px;
+        min-width: 200px;
+        max-width: 200px;
     }
 
-    .ccc-carousel .product-image-container {
-        height: 180px;
+    .ccc-carousel .product-image-container,
+    .ccc-carousel .pc-img-wrap {
+        height: 160px;
     }
 }
 
 @media (max-width: 480px) {
-    .ccc-carousel .product-card-modern {
-        flex: 0 0 220px;
-        min-width: 220px;
-        max-width: 220px;
+    .ccc-carousel .product-card-modern,
+    .ccc-carousel .pc {
+        flex: 0 0 180px;
+        min-width: 180px;
+        max-width: 180px;
     }
 
-    .ccc-carousel .product-image-container {
-        height: 160px;
+    .ccc-carousel .product-image-container,
+    .ccc-carousel .pc-img-wrap {
+        height: 140px;
     }
 }
 
