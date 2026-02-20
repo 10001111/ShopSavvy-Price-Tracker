@@ -515,6 +515,127 @@ async function addTrackedProduct({
 }
 
 /**
+ * Generate hashtags for a product based on its title.
+ * Returns an array of lowercase hashtag strings (without the # symbol).
+ * Used for category filtering via hashtag system.
+ * @param {Object} product - Product object with title
+ * @returns {Array<string>} Array of hashtag strings (e.g., ["phone", "electronics"])
+ */
+function generateHashtags(product) {
+  const title = (product.title || product.product_title || "").toLowerCase();
+  const tags = new Set();
+
+  // Hashtag rules: map title keywords → category hashtags
+  // Valid tags: electronics, phone, laptop, gaming, toys, clothing, home, sports, beauty
+  const rules = [
+    // Phones
+    {
+      match:
+        /\biphone\b|\bsamsung galaxy\b|\bgoogle pixel\b|\bmotorola\b|\bxiaomi\b|\bredmi\b|\boneplus\b|\bsmartphone\b|\bcelular\b|\btelefono\b|\bteléfono\b/,
+      tags: ["phone", "electronics"],
+    },
+    // Laptops / computers
+    {
+      match:
+        /\bmacbook\b|\blaptop\b|\bnotebook\b|\bchromebook\b|\bcomputadora\b/,
+      tags: ["laptop", "electronics"],
+    },
+    // Gaming consoles & accessories
+    {
+      match:
+        /\bplaystation\b|\bps5\b|\bps4\b|\bxbox\b|\bnintendo\b|\bgaming\b|\bvideojuego\b|\bvideo game\b|\bgame controller\b|\bmando\b/,
+      tags: ["gaming", "electronics"],
+    },
+    // General electronics (tablets, TVs, headphones, cameras, wearables, drones)
+    {
+      match:
+        /\bipad\b|\btablet\b|\bsmart tv\b|\btelevisi[oó]n\b|\btelevision\b|\b\btv\b|\bairpods\b|\bheadphones\b|\baudifonos\b|\baudífonos\b|\bcamera\b|\bcámara\b|\bsmartwatch\b|\bapple watch\b|\bdrone\b|\bearbuds\b|\bspeaker\b/,
+      tags: ["electronics"],
+    },
+    // Toys
+    {
+      match:
+        /\blego\b|\bbarbie\b|\bhot wheels\b|\bfunko\b|\bnerf\b|\bplaymobil\b|\bjuguete\b|\btoy\b|\bboard game\b|\bjuego de mesa\b/,
+      tags: ["toys"],
+    },
+    // Clothing & shoes
+    {
+      match:
+        /\bnike\b|\badidas\b|\bsneakers\b|\btenis\b|\bzapatos\b|\bshirt\b|\bcamisa\b|\bjeans\b|\bpants\b|\bpantalon\b|\bvestido\b|\bdress\b|\bjacket\b|\bchaqueta\b/,
+      tags: ["clothing"],
+    },
+    // Home & kitchen
+    {
+      match:
+        /\bdyson\b|\binstant pot\b|\bkitchenaid\b|\bblender\b|\blicuadora\b|\bvacuum\b|\baspiradora\b|\bcoffee maker\b|\bcafetera\b|\bmicrowave\b|\bmicroondas\b|\brefrigerator\b|\brefrigerador\b/,
+      tags: ["home"],
+    },
+    // Sports & outdoors
+    {
+      match:
+        /\btreadmill\b|\bcaminadora\b|\bweights\b|\bpesas\b|\bdumbbell\b|\byoga\b|\bbicicleta\b|\bbike\b|\bfitness\b|\bgymnasium\b|\bgimnasio\b/,
+      tags: ["sports"],
+    },
+    // Beauty
+    {
+      match:
+        /\bperfume\b|\bcolonia\b|\bshampoo\b|\bchamp[uú]\b|\bmakeup\b|\bmaquillaje\b|\bskincare\b|\bcream\b|\bcrema\b|\blipstick\b|\beyeliner\b/,
+      tags: ["beauty"],
+    },
+  ];
+
+  // Exclusions: Keywords that DISQUALIFY products from certain hashtags
+  const exclusions = {
+    phone: [
+      "case",
+      "cover",
+      "holder",
+      "mount",
+      "charger",
+      "cable",
+      "screen protector",
+      "funda",
+      "cargador",
+      "protector",
+      "soporte",
+    ],
+    laptop: [
+      "case",
+      "bag",
+      "mochila",
+      "sticker",
+      "pegatina",
+      "mousepad",
+      "alfombrilla",
+    ],
+    electronics: ["toy", "juguete", "replica", "poster", "sticker"],
+  };
+
+  // Apply rules
+  for (const rule of rules) {
+    if (rule.match.test(title)) {
+      for (const tag of rule.tags) {
+        // Check exclusions for this tag
+        const excludeKeywords = exclusions[tag] || [];
+        const isExcluded = excludeKeywords.some((kw) =>
+          title.includes(kw.toLowerCase()),
+        );
+
+        if (!isExcluded) {
+          tags.add(tag);
+        }
+      }
+    }
+  }
+
+  const result = Array.from(tags);
+  console.log(
+    `[Hashtags] "${title.substring(0, 50)}..." → [${result.join(", ")}]`,
+  );
+  return result;
+}
+
+/**
  * Cache a scraped product in the product_cache table (NOT tracked_products).
  * This stores search results for display without tracking them.
  * @param {Object} product - { id, title, url, source, price, ... }
@@ -525,6 +646,9 @@ async function cacheScrapedProduct(product) {
   console.log(`💾 [CACHE] Title: "${product.title?.substring(0, 50)}..."`);
   console.log(`💾 [CACHE] Source: ${product.source}`);
   console.log(`💾 [CACHE] Product ID: ${product.id}`);
+
+  // Generate hashtags for this product
+  const hashtags = generateHashtags(product);
 
   const productData = {
     product_id: product.id,
@@ -545,6 +669,7 @@ async function cacheScrapedProduct(product) {
     sold_quantity: product.sold_quantity || null,
     condition: product.condition || "new",
     currency: product.currency || "USD",
+    hashtags: hashtags, // NEW: Add hashtags for filtering
     scraped_at: new Date().toISOString(),
     last_updated: new Date().toISOString(), // FIX: Changed from last_checked to last_updated
   };
@@ -1154,11 +1279,100 @@ async function getRecentProductsFromCache({
 }
 
 /**
- * Get products by category from product_cache
+ * Get products by hashtag from product_cache
  * Used for category page filtering (fast database query, no search)
- * @param {string} category - Category to filter by
+ * @param {string} hashtag - Hashtag to filter by (e.g., "phone", "toys")
  * @param {object} options - Filter options
- * @returns {Promise<Array>} Products in the category
+ * @returns {Promise<Array>} Products matching the hashtag
+ */
+async function getProductsByHashtag(hashtag, options = {}) {
+  try {
+    const {
+      limit = 100,
+      minPrice = 0,
+      maxPrice = 999999,
+      source = "all",
+    } = options;
+
+    console.log(`[Hashtag Filter] Getting products with hashtag: #${hashtag}`);
+
+    let query = getSupabase()
+      .from("product_cache")
+      .select("*")
+      .contains("hashtags", [hashtag]) // PostgreSQL array contains operator
+      .gt("price", 0)
+      .gte("price", minPrice)
+      .lte("price", maxPrice);
+
+    // Only filter by available_quantity if the column exists and has valid data
+    // (Some products may have null or 0 available_quantity but are still valid)
+    // Removed: .gt("available_quantity", 0)
+
+    // Filter by source if specified
+    if (source !== "all") {
+      query = query.eq("source", source);
+    }
+
+    const { data: products, error } = await query
+      .order("scraped_at", { ascending: false })
+      .limit(limit);
+
+    if (error) {
+      console.error("[Hashtag Filter] Error:", error);
+      console.error(
+        "[Hashtag Filter] This might mean the hashtags column doesn't exist yet.",
+      );
+      console.error(
+        "[Hashtag Filter] Run migrations 012 and 013 in Supabase Dashboard!",
+      );
+
+      // FALLBACK: Try using old category-based search if hashtags column doesn't exist
+      console.log("[Hashtag Filter] Falling back to title search...");
+      return await searchProductCache(hashtag, { limit, source }).catch(
+        () => [],
+      );
+    }
+
+    // FALLBACK: If no products found with hashtags, try title search as temporary fix
+    if (!products || products.length === 0) {
+      console.log(
+        `[Hashtag Filter] No products with #${hashtag} tag, trying title search as fallback...`,
+      );
+      const fallbackResults = await searchProductCache(hashtag, {
+        limit,
+        source,
+      }).catch(() => []);
+
+      if (fallbackResults.length > 0) {
+        console.log(
+          `[Hashtag Filter] Fallback found ${fallbackResults.length} products via title search`,
+        );
+        console.log(
+          `[Hashtag Filter] ⚠️ REMINDER: Run migrations 012 & 013 to enable proper hashtag filtering!`,
+        );
+      }
+
+      return fallbackResults;
+    }
+
+    console.log(
+      `[Hashtag Filter] Found ${products?.length || 0} products with #${hashtag}`,
+    );
+    return products || [];
+  } catch (err) {
+    console.error("[Hashtag Filter] Exception:", err);
+    console.log("[Hashtag Filter] Falling back to title search...");
+    return await searchProductCache(hashtag, {
+      limit: options.limit || 100,
+      source: options.source || "all",
+    }).catch(() => []);
+  }
+}
+
+/**
+ * DEPRECATED: Get products by category from product_cache
+ * Replaced by getProductsByHashtag for better filtering accuracy
+ * @deprecated Use getProductsByHashtag instead
  */
 async function getProductsByCategory(category, options = {}) {
   try {
@@ -2139,6 +2353,7 @@ module.exports = {
   getTopPriceDrops,
   getDiscountsByCategory,
   getProductsByCategory,
+  getProductsByHashtag, // NEW: Hashtag-based filtering
   getProductCategories,
   // Discovery & Deals (from product_cache - for homepage)
   getHighlightedDealsFromCache,

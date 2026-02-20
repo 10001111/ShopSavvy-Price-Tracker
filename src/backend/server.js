@@ -2464,18 +2464,46 @@ async function fetchAllProducts({
     const searchStartTime = Date.now();
     console.log(`[PERF] 🔍 Starting search for "${query}" (source: ${source})`);
 
-    // OPTIMIZATION 1: Try exact match first (fastest)
-    let existing = await supabaseDb
-      .searchProductCache(query, { limit: pageSize, source })
-      .catch(() => []);
+    // NEW: Check if query is a hashtag/category filter
+    const VALID_HASHTAGS = [
+      "electronics",
+      "phone",
+      "laptop",
+      "gaming",
+      "toys",
+      "clothing",
+      "home",
+      "sports",
+      "beauty",
+    ];
+    const isHashtagQuery = VALID_HASHTAGS.includes(query.toLowerCase());
 
-    const exactMatchTime = Date.now() - searchStartTime;
-    console.log(
-      `[PERF] ⚡ Exact match search took ${exactMatchTime}ms, found ${existing.length} products`,
-    );
+    let existing = [];
 
-    // OPTIMIZATION 2: If no exact match, try fuzzy search on cached products
-    if (existing.length === 0) {
+    if (isHashtagQuery) {
+      // Use hashtag-based filtering for category navigation
+      console.log(`[Hashtag] Filtering by hashtag: #${query}`);
+      existing = await supabaseDb
+        .getProductsByHashtag(query.toLowerCase(), {
+          limit: pageSize * 2,
+          source,
+        })
+        .catch(() => []);
+      console.log(`[Hashtag] Found ${existing.length} products with #${query}`);
+    } else {
+      // OPTIMIZATION 1: Try exact match first (fastest) for regular searches
+      existing = await supabaseDb
+        .searchProductCache(query, { limit: pageSize, source })
+        .catch(() => []);
+
+      const exactMatchTime = Date.now() - searchStartTime;
+      console.log(
+        `[PERF] ⚡ Exact match search took ${exactMatchTime}ms, found ${existing.length} products`,
+      );
+    }
+
+    // OPTIMIZATION 2: If no exact match, try fuzzy search on cached products (skip for hashtag queries)
+    if (existing.length === 0 && !isHashtagQuery) {
       // Search for products with similar titles (broaden search)
       const fuzzyResults = await supabaseDb
         .searchProductCache(query, { limit: pageSize * 2, source, fuzzy: true })
@@ -2501,29 +2529,43 @@ async function fetchAllProducts({
         }),
       );
 
-      // Check if cache is stale (older than 6 hours)
-      const oldestResult = existing[0];
-      const cacheAge = oldestResult.scraped_at
-        ? Date.now() - new Date(oldestResult.scraped_at).getTime()
-        : Infinity;
-      const SIX_HOURS = 6 * 60 * 60 * 1000;
+      // Check if cache is stale (older than 6 hours) - skip for hashtag queries (they only show cached products)
+      if (!isHashtagQuery) {
+        const oldestResult = existing[0];
+        const cacheAge = oldestResult.scraped_at
+          ? Date.now() - new Date(oldestResult.scraped_at).getTime()
+          : Infinity;
+        const SIX_HOURS = 6 * 60 * 60 * 1000;
 
-      if (cacheAge > SIX_HOURS) {
-        // Refresh in background if stale
-        console.log(
-          `[fetchAllProducts] Cache stale (${Math.round(cacheAge / 3600000)}h old), refreshing in background`,
-        );
-        runScrapeAndStore().catch(() => {}); // Fire and forget
-      } else {
-        console.log(
-          `[fetchAllProducts] Cache fresh (${Math.round(cacheAge / 3600000)}h old), skipping refresh`,
-        );
+        if (cacheAge > SIX_HOURS) {
+          // Refresh in background if stale
+          console.log(
+            `[fetchAllProducts] Cache stale (${Math.round(cacheAge / 3600000)}h old), refreshing in background`,
+          );
+          runScrapeAndStore().catch(() => {}); // Fire and forget
+        } else {
+          console.log(
+            `[fetchAllProducts] Cache fresh (${Math.round(cacheAge / 3600000)}h old), skipping refresh`,
+          );
+        }
       }
     } else {
       // OPTIMIZATION 4: True cache miss
 
+      // For hashtag queries with no results, just return empty (don't scrape)
+      if (isHashtagQuery) {
+        console.log(`[Hashtag] No products found with #${query} in cache`);
+        promises.push(
+          Promise.resolve({
+            products: [],
+            total: 0,
+            totalPages: 0,
+            source: "supabase-cache",
+          }),
+        );
+      }
       // For homepage/featured products, scrape synchronously to ensure content
-      if (forceSynchronous) {
+      else if (forceSynchronous) {
         console.log(
           `[fetchAllProducts] No cached results for "${query}" — scraping synchronously (featured products)`,
         );
