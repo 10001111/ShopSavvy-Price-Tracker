@@ -2,9 +2,9 @@
 
 **[Live Demo](https://shopsavvy-price-tracker.onrender.com)** | **Bilingual EN/ES** | **Real-time Price Tracking**
 
-> AI-powered price tracker for Mexico — find the best deals across Amazon and Mercado Libre with intelligent hashtag-based filtering.
+> AI-powered price tracker for Mexico — find the best deals on Amazon with intelligent hashtag-based filtering.
 
-OfertaRadar is a full-stack web application that aggregates real-time product listings from Amazon Mexico and Mercado Libre using Apify's web scraping API, tracks price history with visual charts, and alerts users when prices drop on items they follow. The platform features intelligent hashtag-based category filtering, bilingual support (English/Spanish), currency conversion (USD/MXN), and a modern responsive UI with light/dark themes.
+OfertaRadar is a full-stack web application that aggregates real-time product listings from Amazon Mexico using Apify's web scraping API, tracks price history with visual charts, and alerts users when prices drop on items they follow. The platform features intelligent hashtag-based category filtering, bilingual support (English/Spanish), currency conversion (USD/MXN), and a modern responsive UI with light/dark themes.
 
 ---
 
@@ -18,7 +18,7 @@ OfertaRadar is a full-stack web application that aggregates real-time product li
 ## ✨ Key Features
 
 ### 🔍 Smart Search & Discovery
-- **Apify-Powered Scraping**: Real-time product data from Amazon Mexico and Mercado Libre via Apify's web scraping actors
+- **Apify-Powered Scraping**: Real-time product data from Amazon Mexico via Apify's web scraping actors
 - **Hashtag-Based Filtering**: Intelligent categorization system using hashtags (`#phone`, `#toys`, `#gaming`) with exclusion rules to prevent accessories from appearing in wrong categories
 - **9 Product Categories**: Electronics, Phones, Laptops, Gaming, Toys, Clothing, Home & Kitchen, Sports, Beauty
 - **Advanced Search**: Title-based fuzzy search with Redis caching (30-min TTL) for instant results
@@ -53,7 +53,7 @@ OfertaRadar is a full-stack web application that aggregates real-time product li
 - **SQLite Fallback**: Local development database with automatic schema migrations
 - **Hashtag System**: PostgreSQL array columns with GIN indexes for fast category filtering
 - **Server-Side Rendering**: HTML templates generated in Node.js for optimal SEO and performance
-- **Apify Actor Integration**: Custom actor (`f5pjkmpD15S3cqunX`) for scraping Amazon and Mercado Libre
+- **Apify Actor Integration**: Custom actor (`f5pjkmpD15S3cqunX`) for scraping Amazon Mexico
 
 ---
 
@@ -293,15 +293,15 @@ If `SUPABASE_URL` is not set, the app automatically uses SQLite:
 
 ### How It Works
 
-OfertaRadar uses **Apify's web scraping platform** to extract real-time product data from Amazon and Mercado Libre.
+OfertaRadar uses **Apify's web scraping platform** to extract real-time product data from Amazon Mexico.
 
-**Actor ID**: `f5pjkmpD15S3cqunX` (Custom actor for e-commerce scraping)
+**Actor ID**: `f5pjkmpD15S3cqunX` (Custom actor for Amazon e-commerce scraping)
 
 **Flow:**
 1. User searches for "laptop" or clicks a category
 2. Server checks Redis cache (30-min TTL)
 3. If cache miss, server calls Apify API with search query
-4. Apify actor scrapes Amazon/Mercado Libre product listings
+4. Apify actor scrapes Amazon Mexico product listings
 5. Results are cached in Redis and stored in Supabase `product_cache` table
 6. Hashtags are auto-generated based on product titles (exclusion rules applied)
 7. Results returned to user (typically < 3 seconds)
@@ -311,7 +311,7 @@ OfertaRadar uses **Apify's web scraping platform** to extract real-time product 
 ```javascript
 // Example: Scrape products for "iPhone 15"
 const results = await scrapeProducts({
-  source: 'amazon',      // 'amazon' | 'mercadolibre' | 'all'
+  source: 'amazon',      // Currently only 'amazon' supported
   query: 'iPhone 15',
   maxResults: 20
 });
